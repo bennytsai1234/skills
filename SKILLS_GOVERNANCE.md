@@ -6,17 +6,13 @@
 3. **路徑無關性 (Path Independence)**: 內部引用路徑應優先使用相對於 `~/skills/` 的 Canonical Path，而非工具特定的舊路徑。
 
 ## 目錄結構 (Directory Structure)
-- `~/skills/shared/`: 跨工具共用的通用技能（如網頁搜尋、文件處理）。
-- `~/skills/tooling/`: 特定工具專屬的技能。
-  - `openclaw/`: 依賴 OpenClaw 特定架構或 cron job 的技能。
-  - `hermes/`: 依賴 Hermes 特定工具集或人格的技能。
-  - `claude/`: 針對 Claude / Gemini CLI 優化的技能。
-- `~/skills/vendor/`: 第三方、內建或唯讀的技能鏡像。
+- `~/skills/`: 唯一保留的技能目錄，放置跨工具可重用的通用技能。
+- 工具本地目錄僅保留相容層或狀態資料，不再在 `~/skills/` 下額外維護 `tooling/` 或 `vendor/` 分層。
 
 ## 新增技能流程 (Adding New Skills)
 1. 在 `~/skills/` 對應的分類目錄（如 `shared/`）下建立新目錄。
 2. 完成開發後，在受影響工具的 `skills/` 相容層建立軟連結 (symlink)。
-   - 例如: `ln -s ~/skills/shared/my-new-skill ~/.openclaw/workspace/skills/my-new-skill`
+   - 例如: `ln -s ~/skills/my-new-skill ~/.openclaw/workspace/skills/my-new-skill`
 3. 確保將變更提交至 `~/skills/` 的 Git 倉庫。
 
 ## 相容性維護 (Compatibility Layer)
