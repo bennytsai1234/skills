@@ -73,7 +73,8 @@ def fail(message):
     url = run(["eval", "window.location.href"], ignore_errors=True, raw=True)
     print(f"ERROR: {message}", file=sys.stderr)
     if url:
-        print(f"URL: {url.strip('\"')}", file=sys.stderr)
+        url_clean = url.strip('"')
+        print(f"URL: {url_clean}", file=sys.stderr)
     snippet = re.sub(r"\s+", " ", body)[:400]
     if snippet:
         print(f"Page: {snippet}", file=sys.stderr)
