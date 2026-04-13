@@ -210,14 +210,25 @@ UPDATED_DATE=$(date +%Y-%m-%dT%H:%M:00+08:00)
 
 ### Pipeline Step C｜生成封面圖
 
+**腳本路徑**：`~/skills/image-generate/scripts/gemini_generate.py`
+
+**Step 1 — 展開 prompt**：根據 `$COVER_TITLE`（文章標題）+ `$COVER_TAGS`（tags），展開成完整英文視覺 prompt。展開規則：
+
+- 從標題提取核心視覺概念，翻譯成英文描述性畫面
+- 推斷畫風：tech/系統 → `cinematic digital illustration`；AI → `sci-fi futuristic`；資安 → `dark cyberpunk-adjacent`；個人/心得 → `warm editorial illustration`
+- 構圖固定：`blog post cover image, wide 16:9`
+- 光線依畫風推斷：tech → `cool blue ambient`；personal → `warm golden light`；security → `deep shadows with red and blue accent lights`
+- 品質詞固定：`dark background with subtle gradient, ultra-detailed, sharp focus, high quality, no text, no watermark, no logo`
+
+**Step 2 — 呼叫腳本**：
+
 ```bash
-python3 ~/skills/image-generate/scripts/gen_cover.py \
-  --title "$COVER_TITLE" \
-  --tags "$COVER_TAGS" \
-  --slug "$SLUG"
+python3 ~/skills/image-generate/scripts/gemini_generate.py \
+  --prompt "<展開後的完整英文 prompt>" \
+  --output ~/projects/openclaw-blog/src/assets/post-covers/$SLUG.png
 ```
 
-- 成功 → 輸出 `SAVED:/path/to/image.png`，記下路徑，frontmatter 加入：
+- 成功（exit 0 且檔案存在）→ frontmatter 加入：
   ```yaml
   coverImage:
     src: "@/assets/post-covers/<SLUG>.png"

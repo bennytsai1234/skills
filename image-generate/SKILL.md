@@ -13,7 +13,7 @@ description: Use when the user asks to generate, create, or draw any image. Gene
 
 - 不要使用 `browser_*` 工具手動操作 Gemini 網頁。
 - 不要自己 `browser_navigate`、`browser_click`、`browser_type` 去拼湊流程。
-- 一律只允許呼叫 `scripts/gemini_generate.py` 或 `scripts/gen_cover.py`。
+- 一律只允許呼叫 `scripts/gemini_generate.py`。
 - 如果腳本失敗，直接回報錯誤並停止；不要 fallback 成手動點網頁。
 
 ## 使用時機
@@ -88,20 +88,44 @@ $SEND_FILE_CMD /tmp/generated-image.png
 
 ---
 
-## 封面圖（選用：部落格整合）
+## 封面圖（部落格整合）
 
-僅在生成部落格封面時使用此腳本：
+部落格封面圖**不需要** `gen_cover.py`，直接按照 Step 1 的展開規則把文章標題與 tags 轉成完整 prompt，再呼叫 `gemini_generate.py`。
 
-```bash
-python3 ~/skills/image-generate/scripts/gen_cover.py \
-  --title "文章標題" \
-  --tags "tag1,tag2" \
-  --slug "YYYY-MM-DD-post-slug"
+### 展開方式
+
+給定文章標題 + tags，展開成視覺 prompt 時需要：
+
+- **視覺主題**：從標題擷取核心概念（技術名稱、主題），翻譯成英文描述性視覺畫面
+- **畫風**：tech/系統類 → cinematic digital illustration；個人/心得類 → warm editorial illustration；AI 類 → sci-fi, futuristic；資安類 → dark, cyberpunk-adjacent
+- **構圖**：封面固定 wide 16:9、dark background with subtle gradient
+- **光線**：依畫風推斷（tech → cool blue ambient；personal → warm golden light；security → deep shadows with accent lights）
+- **品質詞**：ultra-detailed, sharp focus, high quality, no text, no watermark, no logo
+
+### 範例
+
+```
+輸入：
+  title: "用 Rust 實作高效能 API Server"
+  tags: rust, backend, performance
+
+展開後 prompt：
+  "blog post cover image, high-performance Rust server architecture with
+   elegant data flow and metallic amber tones, dark cinematic digital
+   illustration, wide 16:9 shot with structured geometric layout,
+   dramatic side lighting with amber and cool blue contrast, powerful
+   and precise mood, dark background with subtle gradient,
+   ultra-detailed, sharp focus, high quality render,
+   no text, no watermark, no logo"
 ```
 
-成功輸出 `SAVED:/path/to/image.png`，失敗輸出 `FAILED:reason`。
+### 呼叫方式
 
-若未提供 `--output`，圖片預設存至 `BLOG_ASSETS_DIR`，預設值為：`~/projects/blog/src/assets/post-covers/`
+```bash
+python3 ~/skills/image-generate/scripts/gemini_generate.py \
+  --prompt "<展開後的完整英文 prompt>" \
+  --output ~/projects/blog/src/assets/post-covers/<YYYY-MM-DD-slug>.png
+```
 
 frontmatter 寫法：
 ```yaml
@@ -110,27 +134,31 @@ coverImage:
   alt: "文章標題"
 ```
 
+
 ---
 
-## 初次設定（profile 尚未登入時）
+## 初次設定（尚未登入時）
+
+用有頭模式開一個 Chrome 視窗，在裡面登入 Google 帳號，session 會儲存到 profile 目錄：
 
 ```bash
-google-chrome --remote-debugging-port=9222 --no-first-run \
-  --user-data-dir=~/.cache/skills/image-generate/gemini-profile \
-  https://gemini.google.com/app
+playwright-cli open --headed --profile=~/.cache/skills/image-generate/gemini-profile https://gemini.google.com/app
 ```
 
-可用 `GEMINI_PROFILE_DIR` 覆蓋預設 profile 目錄。登入一次後，後續可 headless 重用。
+登入一次後，後續腳本自動重用同一個 profile，不需要再次登入。
+
+可用 `GEMINI_PROFILE_DIR` 覆蓋預設 profile 目錄。
 
 ## 依賴
 
+- `playwright-cli`（`npm install -g playwright-cli`）
 - `google-chrome`（`/usr/bin/google-chrome`）
-- `agent-browser`（`npm install -g agent-browser`）
-- `Xvfb`（`/usr/bin/Xvfb`）
+- `python3` 3.10+
 - 生成時間約 15–60 秒，timeout 180 秒
 
 ## 注意事項
 
-- 腳本直接在 Gemini 聊天輸入框打字（前綴 `Generate an image:`），不點「建立圖像」按鈕，以避免 style picker 干擾。
-- 生成完畢後不會刪除對話，僅導航回首頁確保下次運行乾淨。
-- 啟動時會自動清理 WSL 環境中的孤兒 Xvfb/Chrome 進程和過期 lock 檔。
+- 腳本**先開 Google 搜尋頁**點擊 Gemini 連結進入，而非直接導航到 `gemini.google.com`。這樣可以帶上正確的 Referer header，避免 Google 回傳 502。
+- 使用 **headed（有視窗）模式**，headless Chrome 會被 Google 偵測並 502 封鎖。
+- 腳本送出 prompt 後以輪詢方式等待圖片出現，並透過 Voyager URL fetch 下載原始尺寸圖片，失敗時 fallback 到 JS canvas 提取。
+- 每次生成完畢後會導航回首頁，確保下次運行狀態乾淨。

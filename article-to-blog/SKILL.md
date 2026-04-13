@@ -141,7 +141,7 @@ draft: false
 
 套用 `_blog-publisher-base/SKILL.md` 的 Pipeline Step A → F。
 
-封面圖一樣走 `gen_cover.py`，失敗不阻斷發布。
+封面圖直接由 Agent 展開 prompt 後呼叫 `gemini_generate.py`（同 base Pipeline Step C），失敗不阻斷發布。
 
 執行摘要：
 
