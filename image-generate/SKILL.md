@@ -7,8 +7,6 @@ description: Use when the user asks to generate, create, or draw any image. Gene
 
 透過 Gemini 網頁版（Gemini Flash Image）生成圖片。
 
-這份 skill 必須以 `~/.openclaw/workspace/skills/image-generate` 為唯一來源；不要改去呼叫 `~/.hermes/skills/...` 的副本。
-
 **核心原則：用戶要什麼就生成什麼。** 這個 skill 不限制內容，prompt 照用戶指定的送出。
 
 ## 強限制
@@ -23,7 +21,7 @@ description: Use when the user asks to generate, create, or draw any image. Gene
 - 「幫我生成一張...」、「畫一個...」、「產生圖片」
 - 任何需要圖片的情況
 
-## 標準流程（Telegram 對話）
+## 標準流程
 
 ### Step 1｜展開提示詞
 
@@ -69,11 +67,13 @@ Size: 111 KB (1024x559)
 
 生成成功後，至少要回覆圖片檔案路徑與結果。
 
-如果當前執行環境有 Telegram 整合，可額外傳回去：
+如果當前執行環境有自己的檔案回傳腳本，可額外傳回去：
 
 ```bash
-/home/benny/.openclaw/scripts/send-telegram-file.sh /tmp/generated-image.png ""
+$SEND_FILE_CMD /tmp/generated-image.png
 ```
+
+若沒有這類整合，直接回報輸出檔案路徑即可。
 
 失敗時告知用戶原因，不要靜默放棄。
 
@@ -88,7 +88,7 @@ Size: 111 KB (1024x559)
 
 ---
 
-## 封面圖（選用：openclaw blog 整合）
+## 封面圖（選用：部落格整合）
 
 僅在生成部落格封面時使用此腳本：
 
@@ -101,7 +101,7 @@ python3 ~/skills/image-generate/scripts/gen_cover.py \
 
 成功輸出 `SAVED:/path/to/image.png`，失敗輸出 `FAILED:reason`。
 
-如果你在 openclaw blog 專案裡使用，圖片預設存至：`~/projects/openclaw-blog/src/assets/post-covers/`
+若未提供 `--output`，圖片預設存至 `BLOG_ASSETS_DIR`，預設值為：`~/projects/blog/src/assets/post-covers/`
 
 frontmatter 寫法：
 ```yaml
@@ -116,11 +116,11 @@ coverImage:
 
 ```bash
 google-chrome --remote-debugging-port=9222 --no-first-run \
-  --user-data-dir=~/.openclaw/agents/main/agent/browser-profiles/gemini \
+  --user-data-dir=~/.cache/skills/image-generate/gemini-profile \
   https://gemini.google.com/app
 ```
 
-如果本機已存在 `~/.openclaw/agents/main/agent/browser-profiles/gemini`，`gemini_generate.py` 會優先沿用那個已登入 profile；否則退回 `~/.hermes/browser-profiles/gemini`。在視窗裡完成 Google 登入後關掉視窗。後續全程 headless。
+可用 `GEMINI_PROFILE_DIR` 覆蓋預設 profile 目錄。登入一次後，後續可 headless 重用。
 
 ## 依賴
 

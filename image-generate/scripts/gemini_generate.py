@@ -9,7 +9,7 @@ Requirements:
   - Xvfb installed (sudo apt install xvfb)
   - Profile must be logged in. First-time login:
       google-chrome --remote-debugging-port=9222 --no-first-run \
-        --user-data-dir=~/.openclaw/agents/main/agent/browser-profiles/gemini \
+        --user-data-dir=~/.cache/skills/image-generate/gemini-profile \
         https://gemini.google.com/app
     Sign in, then close Chrome.
 """
@@ -31,16 +31,14 @@ import atexit
 # Profile dir
 # ---------------------------------------------------------------------------
 
-_OPENCLAW_PROFILE = os.path.expanduser(
-    "~/.openclaw/agents/main/agent/browser-profiles/gemini"
-)
-_HERMES_PROFILE = os.path.expanduser("~/.hermes/browser-profiles/gemini")
+_DEFAULT_PROFILE = os.path.expanduser("~/.cache/skills/image-generate/gemini-profile")
 
 
 def _resolve_profile_dir():
-    if os.path.isdir(_OPENCLAW_PROFILE):
-        return _OPENCLAW_PROFILE
-    return _HERMES_PROFILE
+    override = os.environ.get("GEMINI_PROFILE_DIR", "").strip()
+    if override:
+        return os.path.expanduser(override)
+    return _DEFAULT_PROFILE
 
 
 PROFILE_DIR = _resolve_profile_dir()

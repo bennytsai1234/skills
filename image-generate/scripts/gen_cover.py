@@ -17,7 +17,7 @@ import os
 import re
 
 BLOG_ASSETS = os.path.expanduser(
-    "~/projects/openclaw-blog/src/assets/post-covers"
+    os.environ.get("BLOG_ASSETS_DIR", "~/projects/blog/src/assets/post-covers")
 )
 
 SKILL_DIR = os.path.dirname(os.path.abspath(__file__))
