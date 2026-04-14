@@ -142,7 +142,7 @@ coverImage:
 用有頭模式開一個 Chrome 視窗，在裡面登入 Google 帳號，session 會儲存到 profile 目錄：
 
 ```bash
-playwright-cli open --headed --profile=~/.cache/skills/image-generate/gemini-profile https://gemini.google.com/app
+playwright-cli open --headed --profile $HOME/.cache/skills/image-generate/gemini-profile https://gemini.google.com/app
 ```
 
 登入一次後，後續腳本自動重用同一個 profile，不需要再次登入。
