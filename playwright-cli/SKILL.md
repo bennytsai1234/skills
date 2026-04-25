@@ -184,15 +184,22 @@ playwright-cli open --browser=webkit
 playwright-cli open --browser=msedge
 
 # Use persistent profile (by default profile is in-memory)
+# --persistent is a BOOLEAN flag — do NOT use =value syntax
+# Wrong:  playwright-cli open --persistent=/path  (will error)
+# Correct: playwright-cli open --persistent
 playwright-cli open --persistent
+
 # Use persistent profile with custom directory
-playwright-cli open --profile=/path/to/profile
+# Use SPACE separator, not = sign
+# Wrong:  playwright-cli open --profile=/path/to/profile  (will error)
+# Correct: playwright-cli open --profile /path/to/profile
+playwright-cli open --profile /path/to/profile
 
 # Connect to browser via extension
 playwright-cli attach --extension
 
 # Start with config file
-playwright-cli open --config=my-config.json
+playwright-cli open --config my-config.json
 
 # Close the browser
 playwright-cli close
