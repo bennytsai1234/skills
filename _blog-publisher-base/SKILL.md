@@ -221,7 +221,11 @@ draft: false
 若答案是「感覺像是一開始就講完了、讀到最後沒有力氣了」，找出對應段落重寫。
 
 
-### 自檢輸出（寫在執行摘要裡，不寫進文章）
+### 自檢輸出（寫在執行日誌，非文章內容）
+
+⚠️ **重要**：自檢報告是給 cron delivery 的內部執行摘要用的，**千萬不要**寫進 Markdown body。
+
+variant 在 Pipeline Step D 結束後，只把自檢結果輸出到 STDOUT（這樣會進入 cron log），不要 append 到 POST_PATH 檔案裡。
 
 ```
 ## 自檢報告
