@@ -293,7 +293,13 @@ python3 ~/skills/image-generate/scripts/gemini_generate.py \
 
 ### Pipeline Step D｜寫入 Markdown 檔案
 
-把 variant 寫好的 body 套進 frontmatter，寫入 `$POST_PATH`。寫入後跑一次完整的 L1–L4 自檢。
+把 variant 寫好的 body 套進 frontmatter，寫入 `$POST_PATH`。**新建檔案或整篇重寫時，一律直接用 `write` 覆寫完整內容，不要對整篇文章做 `edit`。** 只有在「已經 read 過最新檔案內容，且只改很小一段」的情況下，才使用 `edit`。
+
+若同日同 slug 檔案已存在：
+- 需要整篇重寫或大幅改寫 → 直接 `write` 覆寫完整檔案
+- 只修一小段文字 / frontmatter 單欄位 → 先 `read`，確認最新內容後再 `edit`
+
+寫入後跑一次完整的 L1–L4 自檢。
 
 寫入前最後再檢查一次：
 
@@ -368,5 +374,6 @@ Light Issue 時在「狀態」那行補一句：`模式：Light Issue（原因�
 - **tags 塞進 `"AI"`、`"LLM"`、`"morning report"`** → 部落格的 tag 頁被這些空標籤灌爆。只填具體對象。
 - **直接 `git add -A`** → 會把 digest-selection-log、封面暫存檔都 commit 進 blog repo。只 add 指定檔案與 post-covers。
 - **把研究素材（web_fetch / web_search dump）寫在 `src/content/post/` 下** → 雖然 Astro 的 post glob 只吃 `.md/.mdx` 不會建錯，但會污染 repo。研究暫存檔一律放 `~/ai-intel/research-artifacts/<date>-<slug>-research.json`；blog repo 已經 gitignore 掉 `src/content/post/*-research.json`，不要刻意繞過。
+- **剛寫完全文又立刻用 `edit` 大範圍補改** → 很容易因為 `oldText` 不再精準命中而整個 cron 判定失敗。整篇覆寫請直接 `write`；小修才用 `edit`，而且一定先 `read` 最新內容。
 - **Body 開頭寫 `# 標題`** → 前端會渲染出兩個 H1。
 - **用 `npm run check`** → 有些 variant 以前是這樣寫，現在統一用 `npm run build`，後者會同時驗 schema + build 產物，更可靠。
