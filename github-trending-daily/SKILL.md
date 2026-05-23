@@ -6,7 +6,7 @@ description: 每天台北時間 07:30 執行。從 GitHub Trending 當日排行�
 # github-trending-daily（GitHub 熱門專案速讀）
 
 **發文時段**：每天 `07:30`（台北）
-**定位**：從 GitHub Trending 當日排行榜中挑 3–5 個最有價值的專案，讓讀者早上快速掌握當天最值得關注的開源專案。
+**定位**：從 GitHub Trending 當日排行榜中挑 3 個最有價值的專案，讓讀者早上快速掌握當天最值得關注的開源專案。
 
 風格規則、schema、L1–L4 自檢、發佈管線全部繼承 `_blog-publisher-base/SKILL.md`。
 
@@ -33,6 +33,14 @@ SERIES        = (空，非系列文)
 curl -s "https://github.com/trending?since=daily" | grep -oP 'href="/[^/]+/[^"]+' | head -20
 ```
 
+解析 HTML 時只能使用以下其中一種：
+
+- `web_fetch`
+- `curl` 搭配 `grep` / `sed` / `awk`
+- Python 標準庫（例如 `re`、`html.parser`）
+
+**不要依賴 `bs4` / `BeautifulSoup` 或其他未保證安裝的第三方套件。** 任何臨時 inline Python script 都必須假設只有標準庫可用。
+
 若抓取失敗：`exit 1`。
 
 ---
@@ -43,7 +51,7 @@ curl -s "https://github.com/trending?since=daily" | grep -oP 'href="/[^/]+/[^"]+
 
 ---
 
-## Step 3｜挑選 3–5 個值得寫的專案
+## Step 3｜挑選 3 個值得寫的專案
 
 挑選標準：
 
@@ -58,7 +66,7 @@ curl -s "https://github.com/trending?since=daily" | grep -oP 'href="/[^/]+/[^"]+
 - 已經紅超過一個月的舊專案
 - 過去 7 天內已經寫過的專案
 
-從命中清單挑 3–5 個進入 Step 4。
+從命中清單挑 `3` 個進入 Step 4。只有前三名之外還有明顯更強的候選時，才允許加到第 4 個。
 
 ---
 
@@ -68,7 +76,7 @@ curl -s "https://github.com/trending?since=daily" | grep -oP 'href="/[^/]+/[^"]+
 
 1. `web_fetch` 讀取 GitHub 倉庫的 README
 2. `web_fetch` 看一下專案的程式碼結構
-3. 找一下有沒有官方的 demo 或相關介紹文章
+3. 若 README 已足夠，先不要再補介紹文章；只有產品定位不清楚時，才補官方 demo 或介紹頁
 4. 確認它的 star 數、contributor 數、授權條款
 
 整理出：
@@ -81,7 +89,7 @@ curl -s "https://github.com/trending?since=daily" | grep -oP 'href="/[^/]+/[^"]+
 
 ## Step 5｜寫作
 
-目標 **1200–1800 字**，3–5 個專案，平均每個專案 250–350 字。
+目標 **900–1200 字**，預設 3 個專案，平均每個專案 200–280 字。
 
 ### Frontmatter
 
@@ -100,7 +108,7 @@ draft: false
 走 **快節奏、濃縮精華型**：
 
 1. **開頭直接破題**：一句話說明今天 GitHub Trending 的整體趨勢
-2. **每個專案 2–3 段**：一句话介绍 + 核心技术点 + 适合谁
+2. **每個專案 2 段內解決**：一句話介紹 + 核心技術點 + 適合誰
 3. **用專案名稱當小節標題**
 4. **結尾一句話**：點出今天趨勢的共通主題
 
