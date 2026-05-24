@@ -1,8 +1,0 @@
-{
-  "ownerId": "kn7f6g2r31qsb1ts8cf5x7rpk180fn9j",
-  "slug": "playwright-cli",
-  "version": "0.1.6",
-  "publishedAt": 1775829600000,
-  "source": "https://github.com/microsoft/playwright-cli",
-  "installedVia": "playwright-cli install --skills"
-}
