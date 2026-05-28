@@ -1,5 +1,5 @@
 ---
-name: openclaw
+name: openclaw-ops
 description: "Use when operating OpenClaw itself: checking versions, updating the CLI, managing the gateway service, verifying health, and handling restart edge cases after upgrades."
 version: 1.1.0
 author: Hermes Agent
