@@ -1,0 +1,5 @@
+interface:
+  display_name: "Project Genius"
+  short_description: "Plan software products before AI coding."
+  icon: "sparkles"
+  brand_color: "#5b5ce2"
