@@ -27,11 +27,11 @@ In the observed case:
 - older backups showed:
   - `openai-codex/gpt-5.5`
   - then `codex/gpt-5.4`
-- current config showed:
-  - `agents.defaults.model.primary = openai/gpt-5.4`
-- while `agents.defaults.models.openai/gpt-5.4.agentRuntime.id = codex`
+  - then `openai-codex/gpt-5.4`
+- current config shows:
+  - `agents.defaults.model.primary = minimax/MiniMax-M2.7`
 
-That means the apparent model name changed less than the actual execution route.
+That means the active route is now `minimax/MiniMax-M2.7`. The apparent model name changed less than the actual execution route in prior updates; the same pattern may repeat.
 
 ## Commands to run
 
@@ -87,7 +87,7 @@ Observed signatures:
 - `auth refresh request timed out after 10s`
 - `Your authentication token has been invalidated. Please try signing in again.`
 - `Failed to extract accountId from token`
-- fallback from the requested GPT-5 route to `minimax/MiniMax-M2.7`
+- fallback away from `minimax/MiniMax-M2.7` (previously this was the fallback; it is now the primary route)
 
 ## Recommended operator sequence
 
@@ -102,7 +102,7 @@ Observed signatures:
 
 If the operator expected the older route, restore the exact model family they had before the rewrite instead of guessing.
 
-In the observed single-user case behind this note, the only correct route was `openai-codex/gpt-5.4`. Nearby-looking alternatives such as `codex/gpt-5.4` and `openai/gpt-5.4` were not acceptable substitutes. If you already know the sole known-good route for the machine, restore that exact string first and do not experiment.
+The current known-good route is `minimax/MiniMax-M2.7`. Nearby-looking alternatives are not acceptable substitutes. If you already know the sole known-good route for the machine, restore that exact string first and do not experiment.
 
 ### Case A: old route was `codex/gpt-5.4`
 
@@ -123,25 +123,37 @@ openclaw gateway status --deep
 systemctl --user status openclaw-gateway.service --no-pager -n 25
 ```
 
-In the observed case, this produced a service log line like:
+### Case C: current known-good route is `minimax/MiniMax-M2.7`
+
+```bash
+openclaw models set minimax/MiniMax-M2.7
+systemctl --user restart openclaw-gateway.service
+openclaw models status
+openclaw gateway status --deep
+systemctl --user status openclaw-gateway.service --no-pager -n 25
+```
+
+A successful restart should produce a service log line like:
 
 ```text
-[gateway] agent model: openai-codex/gpt-5.4
+[gateway] agent model: minimax/MiniMax-M2.7
 ```
 
 That is stronger verification than checking only `openclaw config get agents.defaults.model.primary`.
 
-Then, if failures persist:
+Then, if failures persist and the provider uses **OAuth** (not a static API key), re-run login:
 
 ```bash
-openclaw models auth login --provider openai-codex
+openclaw models auth login --provider minimax
 ```
+
+> **API key providers skip this step entirely.** If `openclaw models auth list` shows `api_key` for the provider (e.g. `minimax:global [minimax/api_key]`), the key is stored in `auth-profiles.json` and survives updates unchanged — no re-login needed.
 
 ## Post re-login verification
 
-Do not assume the provider will recreate `openai-codex:default`.
+Do not assume the provider will recreate a default profile automatically.
 
-In one successful cleanup + re-login sequence:
+In one successful cleanup + re-login sequence (openai-codex era):
 
 - all `openai-codex` profiles were removed first
 - the operator logged in again
@@ -152,13 +164,13 @@ In one successful cleanup + re-login sequence:
 - `openclaw models status` reported the profile as `ok`
 - validity was about 10 days, not 7
 
-That means the post-login success criteria should be:
+For the current MiniMax-M2.7 route, apply the same pattern against the `minimax` provider. Post-login success criteria:
 
-- exactly one `openai-codex` OAuth profile is present
+- exactly one `minimax` OAuth profile is present
 - its status is `ok`
-- there is no stale duplicate `openai-codex` profile
+- there is no stale duplicate `minimax` profile
 - there is no stale `lastGood` / cooldown / failure entry tied to a removed profile
-- default model remains `openai-codex/gpt-5.4`
+- default model remains `minimax/MiniMax-M2.7`
 
 Recommended checks:
 

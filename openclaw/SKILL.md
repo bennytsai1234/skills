@@ -157,13 +157,13 @@ This is the fastest ground-truth command because it checks both runtime state an
    OpenClaw updates may sync plugins and may create config backups during rewrite. If behavior changes after update, inspect `~/.openclaw/openclaw.json.bak` and confirm which plugins were installed or updated.
 
 5. **Ignoring stale auth-profile state after a model-route change.**
-   If Codex/OpenAI auth starts failing after an update, inspect both auth profiles and auth state:
+   If a provider's auth starts failing after an update, inspect both auth profiles and auth state:
    ```bash
    openclaw models auth list
    cat ~/.openclaw/agents/main/agent/auth-profiles.json
    cat ~/.openclaw/agents/main/agent/auth-state.json
    ```
-   Watch for `lastGood` still pointing at an older OAuth profile with `expires = 0`, `unknown`, cooldown markers, or prior auth failures. A valid `openai-codex:default` profile can coexist with a stale email-scoped profile that still influences routing/debugging.
+   Watch for `lastGood` still pointing at an older OAuth profile with `expires = 0`, `unknown`, cooldown markers, or prior auth failures. **This pitfall only applies to OAuth providers (e.g. `openai-codex`). Static API key providers (e.g. `minimax`, `minimax-portal`) store the key in `auth-profiles.json` and it survives updates without any re-login.**
 
 6. **Using only process-list checks.**
    A process existing is weaker than `openclaw gateway status --deep`. Prefer the OpenClaw-native status command for the final verification pass.
@@ -191,9 +191,9 @@ If the gateway is up but model behavior changed after an update:
    ```bash
    rg -n "auth refresh|token has been invalidated|Failed to extract accountId|model fallback decision" /tmp/openclaw/openclaw-*.log
    ```
-6. If the update changed the default model route, restore the intended default model first, then restart and re-test:
+6. If the update changed the default model route, restore the intended default model first, then restart and re-test. The current known-good model is `minimax/MiniMax-M2.7`:
    ```bash
-   openclaw models set <known-good-model>
+   openclaw models set minimax/MiniMax-M2.7
    systemctl --user restart openclaw-gateway.service
    openclaw models status
    openclaw gateway status --deep
@@ -202,9 +202,9 @@ If the gateway is up but model behavior changed after an update:
    ```bash
    systemctl --user status openclaw-gateway.service --no-pager -n 25
    ```
-8. If auth is still broken after restoring the desired model route, re-run provider login:
+8. If auth is still broken after restoring the desired model route, re-run provider login. **Note: this step only applies to OAuth-based providers (e.g. `openai-codex`). If your provider uses a static API key (e.g. `minimax`), the key persists through updates and re-login is not needed.**
    ```bash
-   openclaw models auth login --provider openai-codex
+   openclaw models auth login --provider openai-codex   # OAuth providers only
    ```
 9. After re-login, inspect the resulting profile shape before declaring victory:
    ```bash
