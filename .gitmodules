@@ -4,3 +4,9 @@
 [submodule "ui-ux-pro-max-skill"]
 	path = ui-ux-pro-max-skill
 	url = https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
+[submodule "superpowers"]
+	path = superpowers
+	url = https://github.com/obra/superpowers.git
+[submodule "mattpocock-skills"]
+	path = mattpocock-skills
+	url = https://github.com/mattpocock/skills.git
