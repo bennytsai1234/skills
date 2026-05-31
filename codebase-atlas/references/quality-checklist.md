@@ -34,7 +34,7 @@ complete.
   to the user's explicit choice.
 - No unrelated `.agents/` files were deleted.
 - Both workflows (investigate, change) exist.
-- The four technique docs were copied into `<project>_techniques/`.
+- The five technique docs were copied into `<project>_techniques/`.
 - The adapter exists and embeds the entry router.
 - Index links to all module docs.
 - Index includes an Architecture Decisions section (empty at initialization).
@@ -62,7 +62,7 @@ complete.
 - Investigate and change are internal modules routed by the adapter; both select
   relevant module context and any necessary boundary context before code
   inspection.
-- The four technique docs under `<project>_techniques/` are self-contained (no
+- The five technique docs under `<project>_techniques/` are self-contained (no
   references to external skills, files, or tools) and are referenced by the
   workflows on demand, never inlined.
 - Investigate covers the read-only questions (explanation, ownership,

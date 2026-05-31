@@ -36,7 +36,10 @@ Do not output this layer to the user.
    - **Profiling** — capture a real measurement (timing, profiler, query log,
      bundle analysis), not an inferred bottleneck; record a baseline.
    - **Feasibility / ownership / explanation** — answer from atlas plus the
-     minimum code needed.
+     minimum code needed. For an open "should we do X / how should we design Y"
+     question with several interdependent unresolved decisions, follow
+     `{{TECHNIQUES_DIR}}/design-grilling.md` — interview one question at a time,
+     each with a recommended answer — instead of guessing a single answer.
    - **Risk assessment** — name callers, persistence, generated artifacts,
      downstream systems, and rollback path; state each risk with plain-language
      likelihood and severity.

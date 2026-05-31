@@ -38,6 +38,7 @@ docs/
     tdd.md
     verification.md
     code-review.md
+    design-grilling.md
   <project>_adapter.md
 ```
 
@@ -89,8 +90,8 @@ adapter, which reads the index and routes to one of two workflows:
 - `docs/<project>_change_workflow.md` for every code edit, with discipline
   scaled to the task (trivial → fast; hard or risky → full).
 
-Shared discipline docs (debugging, TDD, verification, code review) live under
-`docs/<project>_techniques/` and are read on demand.
+Shared discipline docs (debugging, TDD, verification, code review, design
+grilling) live under `docs/<project>_techniques/` and are read on demand.
 
 Code-changing workflows use a plain Before / After gate as the user-facing
 checkpoint. Supporting analysis may guide the agent, but it must not replace
@@ -104,7 +105,8 @@ the Before / After explanation.
 - `references/quality-checklist.md`: final review checklist.
 - `assets/templates/`: Markdown templates used for generated atlas files.
 - `assets/techniques/`: distilled, self-contained discipline docs (debugging,
-  TDD, verification, code review) copied verbatim into each generated atlas.
+  TDD, verification, code review, design grilling) copied verbatim into each
+  generated atlas.
 
 ## License
 

@@ -46,7 +46,7 @@ one sentence what the project does, and routes to one of two workflows:
 - Change workflow (write — every code edit): {{CHANGE_WORKFLOW_LINK}}
 
 Shared, self-contained discipline docs (debugging, TDD, verification, code
-review) live under `{{TECHNIQUES_DIR}}/` and are read on demand.
+review, design grilling) live under `{{TECHNIQUES_DIR}}/` and are read on demand.
 
 ## Module List
 

@@ -258,10 +258,10 @@ before asking for configuration decisions:
 5. Split the project into stable modules using change-boundary quality, not a
    hard module count.
 6. Create or update the canonical atlas under `docs/` using templates from
-   `assets/templates/`, then copy the four technique docs from
+   `assets/templates/`, then copy the five technique docs from
    `assets/techniques/` verbatim into `docs/<project>_techniques/`
-   (debugging.md, tdd.md, verification.md, code-review.md). Technique docs are
-   constant content and need no placeholder replacement.
+   (debugging.md, tdd.md, verification.md, code-review.md, design-grilling.md).
+   Technique docs are constant content and need no placeholder replacement.
 7. Generate two canonical workflow docs:
    - `investigate`: all read-only work — explanations, ownership and feasibility
      questions, investigations, behavior checks, reviews, reproductions,

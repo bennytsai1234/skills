@@ -166,6 +166,12 @@ impact. Use it when any trigger matches:
   migration, framework replacement, package downgrade with data loss).
 - The internal task type is Migration or contains an irreversible step.
 
+When the decision involves several interdependent unresolved decisions or
+unclear requirements — not a clean A/B — first resolve it by following
+`{{TECHNIQUES_DIR}}/design-grilling.md`: interview one question at a time, each
+with a recommended answer, exploring the atlas and code to answer where
+possible. Then present the options below.
+
 When triggered, present this instead of the plain Before / After:
 
 ```markdown

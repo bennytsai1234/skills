@@ -86,6 +86,7 @@ English default rendered in the working language).
 | `tdd.md` | superpowers:test-driven-development + mattpocock:tdd (vertical tracer-bullet slices; honest "no correct seam" finding) | Change(feature/bugfix) |
 | `verification.md` | superpowers:verification-before-completion (evidence before claims) | Change post-edit |
 | `code-review.md` | superpowers:requesting-code-review + receiving-code-review | Investigate(review) |
+| `design-grilling.md` | mattpocock:grill-me + grill-with-docs essence (retargeted to the atlas, not CONTEXT.md/ADR) | Change Decision Gate, Investigate feasibility/approach — gated to genuine ambiguity only |
 
 Folded in, not standalone (YAGNI; promote later if they earn it):
 

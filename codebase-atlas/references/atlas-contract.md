@@ -94,6 +94,7 @@ docs/
     tdd.md
     verification.md
     code-review.md
+    design-grilling.md
   <project>_adapter.md
 ```
 
@@ -111,6 +112,7 @@ docs/
     tdd.md
     verification.md
     code-review.md
+    design-grilling.md
   <project>_<reference>_adapter.md
 ```
 
@@ -132,7 +134,8 @@ Replace all placeholders with concrete project values. Do not leave template
 tokens such as `{{ATLAS_TITLE}}` or `{{DELIVERY_POLICY}}` in generated docs.
 
 Copy the discipline docs under `assets/techniques/` (`debugging.md`, `tdd.md`,
-`verification.md`, `code-review.md`) verbatim into `docs/<project>_techniques/`.
+`verification.md`, `code-review.md`, `design-grilling.md`) verbatim into
+`docs/<project>_techniques/`.
 They are constant content with no placeholders to replace.
 
 ## Index Requirements
@@ -185,7 +188,8 @@ hints the agent picks — they are no longer separate workflows.
   investigations, behavior checks, reviews, reproductions, profiling, CI or
   build failure analysis, and risk assessment. It never edits files; it hands
   off to `change` when a fix is needed. It reads `debugging.md` (why-broken /
-  CI) and `code-review.md` (review) on demand, and zooms out to the module map
+  CI), `code-review.md` (review), and `design-grilling.md` (open
+  feasibility/approach questions) on demand, and zooms out to the module map
   when unfamiliar with an area.
 - `change` (write): all code-changing tasks. It opens by judging a discipline
   tier, classifies the task into one of ten internal types, and pulls in the
@@ -245,8 +249,10 @@ user-facing checkpoint; do not replace it with secondary engineering reports.
 The `change` workflow must escalate to a Decision Gate when the change alters
 module boundaries, affects external API contracts, involves irreversible
 operations, has multiple viable approaches with different trade-offs, or is
-classified internally as a migration. The Decision Gate presents options and
-trade-offs before the Before / After step.
+classified internally as a migration. When the decision tree is deep or
+requirements are unclear, the Decision Gate first resolves them via
+`design-grilling.md` (one question at a time, each with a recommended answer);
+it then presents options and trade-offs before the Before / After step.
 
 The `change` workflow must run a minimum verification step after edits, scaled
 to the tier and following `verification.md`. The verification result is included
