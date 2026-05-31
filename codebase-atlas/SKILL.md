@@ -41,7 +41,7 @@ Use this language for the introduction, confirmation dialog, and generated
 atlas documents. Keep this step silent; do not report the language decision
 until the confirmation dialog.
 
-### Step 1: Detect Old Atlas Silently
+### Step 1: Detect Old Atlas And Platforms Silently
 
 Before outputting anything, scan only for old Codebase Atlas artifacts:
 
@@ -102,11 +102,11 @@ More importantly, every file-editing operation first explains in plain language:
 - Before: what the current situation is and where the problem is.
 - After: what will become true after the change.
 
-This Before / After is the only thing you need to judge.
-You do not need to read code or understand technical details. If the Before
-description matches the real problem and the After description is the result you
-want, you can confirm. If the agent misunderstood, the Before will be wrong and
-you can catch it immediately.
+This Before / After is the main thing you need to judge. By default the agent
+reports in plain language, so you can usually confirm from the Before / After
+alone without reading code. If the Before description matches the real problem
+and the After description is the result you want, you can confirm. If the agent
+misunderstood, the Before will be wrong and you can catch it immediately.
 
 This initialization only needs to happen once.
 ```
@@ -182,7 +182,21 @@ before asking for configuration decisions:
    Recommended: B for developer-maintained projects, A for projects managed
    by non-developers.
    ```
-8. Present the platform adapter decision in this plain-language shape,
+8. Present the delivery-policy decision in this plain-language shape, translated
+   into the working language:
+
+   ```markdown
+   After I build the atlas, should I commit it to git?
+
+   A. No commit — just write the files; you review and commit yourself
+      (recommended).
+   B. Commit only — commit the atlas locally.
+   C. Commit and push — commit and push to the remote.
+   ```
+
+   Recommended: A, so you can review the generated atlas before it enters
+   history. This same policy also governs how later change work is delivered.
+9. Present the platform adapter decision in this plain-language shape,
    translated into the working language. Show detected platforms pre-selected.
 
    If both `.claude/` and `.agents/` were detected:
@@ -234,19 +248,19 @@ before asking for configuration decisions:
    D. None — skip adapter generation
    ```
 
-9. Use this confirmation shape for preserved rules:
+10. Use this confirmation shape for preserved rules:
 
-   ```text
-   [Category]
-   Rule: <specific inherited rule>
-   Handling: <how this rule will be recorded or applied>
-   ```
+    ```text
+    [Category]
+    Rule: <specific inherited rule>
+    Handling: <how this rule will be recorded or applied>
+    ```
 
-   The user must be able to judge whether the agent correctly understood the
-   existing project guidance.
-10. Wait for user confirmation before starting the full scan.
+    The user must be able to judge whether the agent correctly understood the
+    existing project guidance.
+11. Wait for user confirmation before starting the full scan.
 
-## Main Workflow
+## Initialization Workflow
 
 1. Read `references/atlas-contract.md`.
 2. Run the language detection, old-atlas detection, introduction, and pre-scan
@@ -273,7 +287,11 @@ before asking for configuration decisions:
      ten task types to internal hints, and pulls in the technique docs on demand
      instead of inlining them.
    Set `{{TECHNIQUES_DIR}}` in both workflows to the relative path from `docs/`
-   to the techniques folder (`<project>_techniques`).
+   to the techniques folder (`<project>_techniques`). Also replace the other
+   init-time tokens in both workflows — `{{ATLAS_TITLE}}`, `{{REPORTING_LEVEL}}`,
+   and `{{DELIVERY_POLICY}}` — but leave the runtime tokens `{{DATE}}` and
+   `{{SLUG}}` in the change workflow intact (see the placeholder map in
+   `references/atlas-contract.md`).
 8. Generate adapters for all platforms selected in the Step 3 confirmation. Each
    adapter embeds the entry router: read the index, confirm the project in one
    sentence, then route — the user wants to know → investigate, the user wants
@@ -300,9 +318,10 @@ before asking for configuration decisions:
    - If Codex was selected: create `.agents/skills/<project-slug>/` if it does
      not exist, then generate `.agents/skills/<project-slug>/SKILL.md` using the
      same thin-adapter pattern.
-   - In every adapter, set `{{PROJECT_NAME}}`, `{{PROJECT_SLUG}}`,
-     `{{DELIVERY_POLICY}}`, and `{{REPORTING_LEVEL}}` to their chosen values, and
-     set `{{INDEX_FILE}}`, `{{INVESTIGATE_WORKFLOW_FILE}}`, and
+   - In every adapter, set `{{PROJECT_NAME}}`, `{{DELIVERY_POLICY}}`, and
+     `{{REPORTING_LEVEL}}` to their chosen values; in the Claude Code and Codex
+     adapters also set `{{PROJECT_SLUG}}` (the generic adapter has no slug token).
+     Set `{{INDEX_FILE}}`, `{{INVESTIGATE_WORKFLOW_FILE}}`, and
      `{{CHANGE_WORKFLOW_FILE}}` to the relative paths from the adapter's location
      to those `docs/` files (e.g., from `.claude/skills/<project-slug>-atlas/`
      use `../../../docs/<project>_index.md`).

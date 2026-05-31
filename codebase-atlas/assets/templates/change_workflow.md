@@ -20,18 +20,19 @@ being wrong is expensive; do not apply heavy process to trivial work.
 
 - **T0 — trivial:** no behaviour-logic change, reversible, single file (typo,
   comment, constant, obviously-safe one-liner). No debugging/TDD. One-line
-  Before/After. Skip the committed plan. Verify with the single most relevant
+  Before/After. Skip the plan file. Verify with the single most relevant
   check.
 - **T1 — normal:** contained, reversible, diagnosis is clear. Light path: fix an
   obvious confirmed root cause; add one focused test when a cheap seam exists.
-  Short committed plan. Type-appropriate test subset.
+  Short plan as uncommitted scratch. Type-appropriate test subset.
 - **T2 — hard / risky:** intermittent/async/stateful bug, multi-module, external
   API, irreversible, performance regression, or a diagnosis you are not sure of.
   Full discipline; usually triggers the Decision Gate; full verification.
 
 **Hard floor:** any change that is irreversible, crosses more than one module,
 alters an external API contract, or is a migration is **at least T2** regardless
-of size — these are exactly the Decision Gate triggers.
+of size — conditions that usually also trip the Decision Gate (multi-module work
+that leaves boundaries intact may not).
 
 **Control:** judge the tier automatically. If the user says "be quick" / "be
 thorough" (or similar), honour that override — but never drop below the hard
@@ -114,14 +115,18 @@ Change structure, never behaviour, and keep the full suite green throughout.
 1. Confirm with the user using the Before / After format below.
 1. Wait for explicit user confirmation before editing any files.
 1. Record the plan, scaled to the tier — this is engineering scratch, not the
-   user-facing confirmation:
-   - **T0:** skip the committed plan.
-   - **T1 / T2:** write `docs/changes/{{DATE}}-{{SLUG}}.md` (create
-     `docs/changes/` if needed) with these fields — task type, the confirmed
-     Before, the confirmed After, expected file scope, validation steps, and
-     rollback path. Run `git add docs/changes/{{DATE}}-{{SLUG}}.md` and
-     `git commit -m "plan: {{SLUG}}"`. Do not edit source files until this
-     commit succeeds.
+   user-facing confirmation. `{{DATE}}` and `{{SLUG}}` are filled here per
+   change; they are not initialization placeholders:
+   - **T0:** skip the plan file.
+   - **T1:** write `docs/changes/{{DATE}}-{{SLUG}}.md` (create `docs/changes/`
+     if needed) with these fields — task type, the confirmed Before, the
+     confirmed After, expected file scope, validation steps, and rollback path.
+     Leave it as uncommitted scratch. Do not edit source files until it exists.
+   - **T2:** write the same plan file. If the delivery policy allows commits
+     (`commit only` / `commit and push`), run
+     `git add docs/changes/{{DATE}}-{{SLUG}}.md` and
+     `git commit -m "plan: {{SLUG}}"` before editing source; under `no commit`,
+     leave it uncommitted. Do not edit source files until the plan file exists.
 1. Implement the change.
 1. Verify by reading and following `{{TECHNIQUES_DIR}}/verification.md`, scaled
    to the tier. Include the verification result in the user-facing report. If

@@ -39,7 +39,8 @@ complete.
 - Index links to all module docs.
 - Index includes an Architecture Decisions section (empty at initialization).
 - Local Markdown links resolve.
-- No unreplaced placeholders remain.
+- No unreplaced init-time placeholders remain (the runtime tokens `{{DATE}}` and
+  `{{SLUG}}` in the change workflow are intentionally kept).
 
 ## Module Quality
 
@@ -81,8 +82,9 @@ complete.
   feature, optimization, refactor, release, dependency, migration, config,
   hotfix, cleanup) and runs the tier-appropriate minimum verification (following
   `verification.md`) after edits.
-- Change writes and commits a plan to `docs/changes/` before editing at tier T1
-  or T2; T0 skips it.
+- Change writes a plan to `docs/changes/` before editing at T1 or T2 (T0 skips
+  it): T1 leaves it as uncommitted scratch; T2 commits it (`plan: <slug>`) only
+  when the delivery policy allows commits, otherwise leaves it uncommitted.
 - Investigate requires a Before / After gate before any follow-up edit and hands
   off to change rather than editing itself.
 - Workflows use Before / After as the user-facing confirmation gate, not
@@ -114,9 +116,10 @@ Before the final report:
    user-facing report rules respect the selected reporting level.
 3. Confirm the adapter routes to both workflows (investigate, change) and that
    the technique docs were copied in and are referenced on demand.
-4. Confirm all placeholders have been replaced with concrete project content,
-   including `{{TECHNIQUES_DIR}}`, `{{INDEX_FILE}}`,
-   `{{INVESTIGATE_WORKFLOW_FILE}}`, and `{{CHANGE_WORKFLOW_FILE}}`.
+4. Confirm every init-time placeholder is replaced per the placeholder map in
+   `references/atlas-contract.md`, and that the runtime tokens `{{DATE}}` and
+   `{{SLUG}}` remain intact in the change workflow (they are filled per change,
+   not at initialization).
 
 ## Final Report
 

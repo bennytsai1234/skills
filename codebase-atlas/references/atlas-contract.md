@@ -9,7 +9,9 @@ generated docs concise, navigable, and grounded in repository-persistent facts.
 
 Resolve these before the full scan:
 
-- `mode`: `standalone` or `reference-assisted`.
+- `mode`: `standalone` or `reference-assisted`. Derived from
+  `reference_template_mode` (standalone when `none`, reference-assisted
+  otherwise) — never asked as a separate question.
 - `working_language`: explicit repository language rule first, user's
   initialization request language second, English third.
 - `reference_template_mode`: `none`, `partial reference`, or `full alignment`.
@@ -130,13 +132,51 @@ Use the templates under `assets/templates/`:
 - `adapter.md`
 - `claude_code_adapter.md` (Claude Code only)
 
-Replace all placeholders with concrete project values. Do not leave template
-tokens such as `{{ATLAS_TITLE}}` or `{{DELIVERY_POLICY}}` in generated docs.
+Replace every init-time placeholder with concrete project values. Do not leave
+init-time tokens such as `{{ATLAS_TITLE}}` or `{{DELIVERY_POLICY}}` in generated
+docs. The only exceptions are the two runtime tokens `{{DATE}}` and `{{SLUG}}` in
+the change workflow — leave them intact; the daily workflow fills them per change.
+See the placeholder map below.
 
 Copy the discipline docs under `assets/techniques/` (`debugging.md`, `tdd.md`,
 `verification.md`, `code-review.md`, `design-grilling.md`) verbatim into
 `docs/<project>_techniques/`.
 They are constant content with no placeholders to replace.
+
+## Placeholder Map
+
+Replace every token below at initialization **except** the two runtime tokens,
+which must survive verbatim into the generated change workflow.
+
+Init-time tokens (replace with concrete values):
+
+| Token | Value | Appears in |
+|---|---|---|
+| `{{ATLAS_TITLE}}` | Project name; `<project>_<reference>` in reference-assisted mode | index, both workflows |
+| `{{PROJECT_NAME}}` | Human-readable project name | adapters |
+| `{{PROJECT_SLUG}}` | kebab-case project slug | Claude Code / Codex adapters only |
+| `{{ATLAS_MODE}}` | `standalone` or `reference-assisted` (derived) | index |
+| `{{WORKING_LANGUAGE}}` | Selected working language | index |
+| `{{REFERENCE_TEMPLATE_MODE}}` | `none` / `partial reference` / `full alignment` | index |
+| `{{DELIVERY_POLICY}}` | `no commit` / `commit only` / `commit and push` | index, both workflows, adapters |
+| `{{REPORTING_LEVEL}}` | `plain` or `technical` | index, both workflows, adapters |
+| `{{WORKFLOW_ENTRYPOINT_POLICY}}` | One-line summary of which adapters were generated (e.g. "Generic + Claude Code") | index |
+| `{{WORKFLOW_ENTRYPOINTS}}` | List of generated adapter paths/links | index |
+| `{{REFERENCE_BOUNDARY}}` | Reference boundary block in reference-assisted mode; empty otherwise | index |
+| `{{PROJECT_OPERATING_CONSTRAINTS}}` | Inherited project rules | index |
+| `{{ARCHITECTURE_DECISIONS}}` | Empty-table marker at initialization | index |
+| `{{TECHNIQUES_DIR}}` | Relative path from the doc to `<project>_techniques/` | index, both workflows |
+| `{{INVESTIGATE_WORKFLOW_LINK}}` / `{{CHANGE_WORKFLOW_LINK}}` | Relative links from the index to each workflow | index |
+| `{{INDEX_FILE}}` / `{{INVESTIGATE_WORKFLOW_FILE}}` / `{{CHANGE_WORKFLOW_FILE}}` | Relative paths from the adapter to those `docs/` files | adapters |
+| `{{MODULE_LINKS}}` / `{{MODULE_SUMMARIES}}` | Generated module links and routing summaries | index |
+| `{{MODULE_TITLE}}` | Module name | each module doc |
+
+Runtime tokens (leave intact — the daily change workflow fills them per change):
+
+| Token | Value |
+|---|---|
+| `{{DATE}}` | The change date (`YYYY-MM-DD`) when a plan is written |
+| `{{SLUG}}` | The per-change plan slug |
 
 ## Index Requirements
 
@@ -181,7 +221,7 @@ decide whether to start there.
 ## Workflow Requirements
 
 Generate two canonical workflows, split on the read/write boundary. The ten
-change task types and the six validate question types are demoted to internal
+change task types and the investigate read-question types are demoted to internal
 hints the agent picks — they are no longer separate workflows.
 
 - `investigate` (read-only): explanations, ownership and feasibility questions,
@@ -223,19 +263,20 @@ The `change` workflow opens by judging how much discipline the task warrants and
 scales technique use, plan recording, and verification to it:
 
 - **T0 trivial** (no behaviour-logic change, reversible, single file): no
-  debugging/TDD; one-line Before/After; skip the committed plan; run the single
+  debugging/TDD; one-line Before/After; skip the plan file; run the single
   most relevant check.
 - **T1 normal** (contained, reversible, clear diagnosis): light technique path;
-  one focused test when a cheap seam exists; short committed plan;
+  one focused test when a cheap seam exists; short plan as uncommitted scratch;
   type-appropriate test subset.
 - **T2 hard/risky** (intermittent/async/stateful bug, multi-module, external
   API, irreversible, performance regression, or uncertain diagnosis): full
   discipline; usually triggers the Decision Gate; full verification.
 
 Hard floor: irreversible, cross-module, external-API, and migration work is at
-least T2 — the same conditions as the Decision Gate. The agent judges the tier
-automatically; a plain user override ("be quick" / "be thorough") is honoured
-but never drops below the hard floor.
+least T2 — conditions that usually also trip the Decision Gate, though
+multi-module work that leaves boundaries intact may not. The agent judges the
+tier automatically; a plain user override ("be quick" / "be thorough") is
+honoured but never drops below the hard floor.
 
 ### Gates and verification
 
@@ -260,9 +301,11 @@ in the user-facing report regardless of reporting level. If verification fails,
 the workflow does not claim completion.
 
 At tier T1 or T2 the `change` workflow writes a short engineering plan to
-`docs/changes/<YYYY-MM-DD>-<slug>.md` and commits it (`plan: <slug>`) before
-editing source files; T0 skips this. The plan is internal scratch and does not
-replace the Before / After gate.
+`docs/changes/<YYYY-MM-DD>-<slug>.md` before editing source files; T0 skips this.
+At T1 the plan is uncommitted scratch. At T2 the workflow commits it
+(`plan: <slug>`) only when the delivery policy allows commits (`commit only` or
+`commit and push`); under `no commit` the plan stays uncommitted. The plan is
+internal scratch and does not replace the Before / After gate.
 
 Before any proposed implementation route, workflows must calibrate scope:
 owning module, boundary modules, contracts, shared state, persistence, generated
@@ -312,7 +355,9 @@ detection and user confirmation.
 - **Template:** `assets/templates/claude_code_adapter.md`
 - **Frontmatter required:**
   - `name: <project-slug>-atlas`
-  - `description: "Use this for every task in this project — reads the atlas before acting."`
+  - `description` (render in the working language selected in Step 0; English
+    shown here): `Codebase Atlas entrypoint for <PROJECT_NAME> — reads the atlas
+    index and routes before acting.`
 - Set `{{INDEX_FILE}}`, `{{INVESTIGATE_WORKFLOW_FILE}}`, and
   `{{CHANGE_WORKFLOW_FILE}}` to relative paths from
   `.claude/skills/<project-slug>-atlas/` to `docs/`
@@ -326,7 +371,7 @@ detection and user confirmation.
 - **Path:** `.agents/skills/<project-slug>/SKILL.md`
 - Uses the same thin-adapter pattern with frontmatter `name` and `description`.
 - `description` format (render in the working language selected in Step 0;
-  English shown here): `Codebase Atlas entrypoint for <PROJECT_NAME>; reads the atlas index and routes before acting.`
+  English shown here): `Codebase Atlas entrypoint for <PROJECT_NAME> — reads the atlas index and routes before acting.`
 - Set `{{INDEX_FILE}}`, `{{INVESTIGATE_WORKFLOW_FILE}}`, and
   `{{CHANGE_WORKFLOW_FILE}}` to relative paths from
   `.agents/skills/<project-slug>/` to `docs/`

@@ -1,6 +1,6 @@
 ---
 name: {{PROJECT_SLUG}}-atlas
-description: "Use this for every task in this project — reads the atlas before acting."
+description: "Codebase Atlas entrypoint for {{PROJECT_NAME}} — reads the atlas index and routes before acting."
 ---
 
 # {{PROJECT_NAME}} Codebase Atlas

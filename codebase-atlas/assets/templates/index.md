@@ -5,8 +5,9 @@
 - Use this index to locate the relevant module before inspecting code.
 - Keep this document high level; put details in the module documents.
 - Codebase Atlas is normally run once to initialize this map.
-- For later understanding, change, validation, or mixed work, use the main
-  workflow listed below instead of running Codebase Atlas again.
+- For later understanding, change, validation, or mixed work, enter through the
+  adapter (entry router), which reads this index and routes to the workflows
+  below — do not run Codebase Atlas again.
 - Run Codebase Atlas again only for an explicit rebuild, refresh, regenerate, or
   rescan. That means scanning the full codebase again and rebuilding this index
   from current repository reality.

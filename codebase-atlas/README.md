@@ -2,7 +2,7 @@
 
 Codebase Atlas is a small Markdown protocol for creating a durable navigation
 layer for a repository. It scans a project once, writes a compact atlas under
-`docs/`, and gives future agents a main workflow that routes ordinary work
+`docs/`, and gives future agents an entry router that routes ordinary work
 before editing code.
 
 ## Design Manifesto
@@ -99,7 +99,7 @@ the Before / After explanation.
 
 ## Skill Files
 
-- `SKILL.md`: trigger rules and main workflow.
+- `SKILL.md`: trigger rules and the initialization workflow.
 - `references/atlas-contract.md`: output contract and generation rules.
 - `references/modes.md`: standalone and reference-assisted guidance.
 - `references/quality-checklist.md`: final review checklist.

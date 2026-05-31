@@ -60,7 +60,8 @@ Do not output this layer to the user.
 
 ## Reporting Rules
 
-- Before / After is the only human confirmation interface.
+- Before / After is the only confirmation gate before any follow-up edit; a pure
+  investigation answer needs no gate.
 - Reporting level for this project: {{REPORTING_LEVEL}}
   - Plain: do not expose module names, file paths, function names, or code
     snippets in user-facing reports.
