@@ -122,7 +122,7 @@ In-place evolution, not a rewrite.
 |---|---|
 | `references/modes.md` | keep |
 | `assets/templates/module.md` | keep |
-| `assets/templates/change_plan.md` | keep (used tier-scaled) |
+| `assets/templates/change_plan.md` | delete — its fields are inlined into the change workflow's plan step so the generated atlas stays self-contained (no dependency on the skill's assets at daily-use time) |
 | `assets/templates/index.md` | modify: workflow links 4→2, add techniques pointer |
 | `assets/templates/understand_workflow.md` | rename → `investigate_workflow.md`; merge validate's 6 question types + zoom-out hint |
 | `assets/templates/validate_workflow.md` | delete (absorbed) |

@@ -31,15 +31,19 @@ docs/
   <project>_index.md
   <project>/
     <module_slug>.md
-  <project>_understand_workflow.md
+  <project>_investigate_workflow.md
   <project>_change_workflow.md
-  <project>_validate_workflow.md
-  <project>_main_workflow.md
+  <project>_techniques/
+    debugging.md
+    tdd.md
+    verification.md
+    code-review.md
   <project>_adapter.md
 ```
 
-The default adapter is always generated. It stays thin and points back to the
-canonical main workflow under `docs/`.
+The adapter is always generated. It embeds the entry router — read the index,
+confirm the project in one sentence, route read→investigate / write→change —
+and points to the index and the two workflows under `docs/`.
 
 ## How It Works
 
@@ -51,8 +55,8 @@ canonical main workflow under `docs/`.
 4. Inspect repository structure, entrypoints, source roots, tests, configs, and
    existing docs.
 5. Split the project into stable modules.
-6. Write a module index with inherited operating constraints, module notes,
-   four workflow docs, and the default adapter.
+6. Write a module index with inherited operating constraints, module notes, two
+   workflow docs, the distilled technique docs, and the adapter.
 7. Run the quality checklist.
 
 ## Modes
@@ -76,14 +80,17 @@ the concrete handling that will be written into the atlas.
 
 ## Daily Use After Initialization
 
-Do not rerun Codebase Atlas for ordinary work. Use the generated workflow docs:
+Do not rerun Codebase Atlas for ordinary work. Daily work enters through the
+adapter, which reads the index and routes to one of two workflows:
 
-- `docs/<project>_main_workflow.md` for daily routing across all task types.
-- `docs/<project>_understand_workflow.md` for explanations and investigations.
-- `docs/<project>_change_workflow.md` for bugs, features, optimizations, and
-  refactors.
-- `docs/<project>_validate_workflow.md` for checks, reviews, reproductions, and
-  risk assessments.
+- `docs/<project>_investigate_workflow.md` for read-only work — explanations,
+  investigations, reviews, reproductions, profiling, CI failures, and risk
+  assessments.
+- `docs/<project>_change_workflow.md` for every code edit, with discipline
+  scaled to the task (trivial → fast; hard or risky → full).
+
+Shared discipline docs (debugging, TDD, verification, code review) live under
+`docs/<project>_techniques/` and are read on demand.
 
 Code-changing workflows use a plain Before / After gate as the user-facing
 checkpoint. Supporting analysis may guide the agent, but it must not replace
@@ -96,6 +103,8 @@ the Before / After explanation.
 - `references/modes.md`: standalone and reference-assisted guidance.
 - `references/quality-checklist.md`: final review checklist.
 - `assets/templates/`: Markdown templates used for generated atlas files.
+- `assets/techniques/`: distilled, self-contained discipline docs (debugging,
+  TDD, verification, code review) copied verbatim into each generated atlas.
 
 ## License
 

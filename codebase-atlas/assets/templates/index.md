@@ -38,10 +38,15 @@ in each module's Known Risks or Do Not Do section.
 
 ## Workflow Docs
 
-- Main workflow: {{MAIN_WORKFLOW_LINK}}
-- Understand workflow: {{UNDERSTAND_WORKFLOW_LINK}}
-- Change workflow: {{CHANGE_WORKFLOW_LINK}}
-- Validate workflow: {{VALIDATE_WORKFLOW_LINK}}
+Daily work enters through the adapter, which reads this index first, confirms in
+one sentence what the project does, and routes to one of two workflows:
+
+- Investigate workflow (read — explain, locate, review, reproduce, profile,
+  assess risk): {{INVESTIGATE_WORKFLOW_LINK}}
+- Change workflow (write — every code edit): {{CHANGE_WORKFLOW_LINK}}
+
+Shared, self-contained discipline docs (debugging, TDD, verification, code
+review) live under `{{TECHNIQUES_DIR}}/` and are read on demand.
 
 ## Module List
 

@@ -87,10 +87,13 @@ docs/
   <project>_index.md
   <project>/
     <module_slug>.md
-  <project>_understand_workflow.md
+  <project>_investigate_workflow.md
   <project>_change_workflow.md
-  <project>_validate_workflow.md
-  <project>_main_workflow.md
+  <project>_techniques/
+    debugging.md
+    tdd.md
+    verification.md
+    code-review.md
   <project>_adapter.md
 ```
 
@@ -101,10 +104,13 @@ docs/
   <project>_<reference>_index.md
   <project>_<reference>/
     <module_slug>.md
-  <project>_<reference>_understand_workflow.md
+  <project>_<reference>_investigate_workflow.md
   <project>_<reference>_change_workflow.md
-  <project>_<reference>_validate_workflow.md
-  <project>_<reference>_main_workflow.md
+  <project>_<reference>_techniques/
+    debugging.md
+    tdd.md
+    verification.md
+    code-review.md
   <project>_<reference>_adapter.md
 ```
 
@@ -117,14 +123,17 @@ Use the templates under `assets/templates/`:
 
 - `index.md`
 - `module.md`
-- `understand_workflow.md`
+- `investigate_workflow.md`
 - `change_workflow.md`
-- `validate_workflow.md`
-- `main_workflow.md`
 - `adapter.md`
+- `claude_code_adapter.md` (Claude Code only)
 
 Replace all placeholders with concrete project values. Do not leave template
 tokens such as `{{ATLAS_TITLE}}` or `{{DELIVERY_POLICY}}` in generated docs.
+
+Copy the discipline docs under `assets/techniques/` (`debugging.md`, `tdd.md`,
+`verification.md`, `code-review.md`) verbatim into `docs/<project>_techniques/`.
+They are constant content with no placeholders to replace.
 
 ## Index Requirements
 
@@ -138,7 +147,9 @@ The index must include:
   architecture, testing, release flow, maintenance state, CI, and work style.
 - Rebuild semantics: rerunning Codebase Atlas means a full rescan and atlas
   rebuild from current repository reality.
-- Links to the main workflow and three internal workflow docs.
+- Links to the two workflow docs (investigate, change) and a pointer to the
+  techniques folder. The adapter is the daily entrypoint and reads the index
+  first.
 - Links to every module doc.
 - Routing-oriented summaries for each module: what it owns, when future work
   should start there, and what symptoms or task types point to it.
@@ -166,58 +177,70 @@ decide whether to start there.
 
 ## Workflow Requirements
 
-Generate four canonical workflows:
+Generate two canonical workflows, split on the read/write boundary. The ten
+change task types and the six validate question types are demoted to internal
+hints the agent picks — they are no longer separate workflows.
 
-- `understand`: introductions, explanations, feasibility questions, ownership
-  questions, and investigations.
-- `change`: all code-changing tasks. The change workflow internally
-  classifies the task into one of ten types — bug, feature, optimization,
-  refactor, release, dependency, migration, config, hotfix, cleanup — and
-  applies type-specific verification and rollback expectations.
-- `validate`: checks, reviews, reproductions, verification, profiling, CI or
-  build failure investigation, and risk assessment. The validate workflow
-  internally classifies the question into one of six types — behavior check,
-  review, reproduction, profiling, CI failure, risk assessment — and applies
-  type-specific evidence expectations.
-- `main`: the universal daily entrypoint that reads the index first, confirms
-  in plain language what the project does, and routes to understand, change,
-  validate, or a combination.
+- `investigate` (read-only): explanations, ownership and feasibility questions,
+  investigations, behavior checks, reviews, reproductions, profiling, CI or
+  build failure analysis, and risk assessment. It never edits files; it hands
+  off to `change` when a fix is needed. It reads `debugging.md` (why-broken /
+  CI) and `code-review.md` (review) on demand, and zooms out to the module map
+  when unfamiliar with an area.
+- `change` (write): all code-changing tasks. It opens by judging a discipline
+  tier, classifies the task into one of ten internal types, and pulls in the
+  technique docs on demand instead of inlining them.
+
+The entry router lives in the adapter, not in a separate workflow doc: it reads
+the index first, confirms in one plain sentence what the project does, and
+routes read→investigate / write→change, composing them for mixed intent and
+passing conclusions forward so later steps do not reread the index. After each
+task it asks whether anything else needs handling and routes the next request
+without rereading the index.
 
 All workflows must:
 
 - Inspect code only after reading relevant atlas context.
-- Use generated workflows for ordinary work instead of rerunning Codebase Atlas.
+- Read a technique doc from `<project>_techniques/` only when the task calls for
+  it; never inline technique content into the workflow docs.
 - Record the same delivery policy as the index.
-- Keep technical details for internal reasoning and report to the user
-  according to the selected reporting level.
-  - Plain: plain language only, no module names, file paths, or code snippets.
-  - Technical: include module names, file paths, and relevant code context.
-- Require atlas updates only when module boundaries, ownership, external APIs,
-  or documented repository facts change.
-
-Every internal workflow must choose the relevant module context and any
-necessary boundary context before inspecting code.
-
-The `main` workflow must:
-
-- Be the only entrypoint for daily operations.
-- Receive any request, read the index first, and confirm in one plain sentence
-  what the project does.
-- Route automatically to understand, change, validate, or a composed execution.
-- Pass conclusions forward during composed execution so later workflows do not
-  reread the index or module docs unless they need context that was not already
-  gathered.
-- After each completed task, ask whether anything else needs handling. If the
-  user continues, route the new request without rereading the index, while
-  preserving plain-language reporting and Before / After gates.
-- Use reporting-level-appropriate user reports and avoid exposing internal
-  reasoning as the user-facing summary.
+- Report to the user according to the selected reporting level (plain: no module
+  names, file paths, or code; technical: include them), keeping internal
+  reasoning separate from the user-facing summary.
+- Require atlas updates only when module boundaries, ownership, external APIs, or
+  documented repository facts change.
+- Choose the relevant module context and any necessary boundary context before
+  inspecting code.
 - Treat Before / After as the only human confirmation interface.
 
+### Discipline tiers (the `change` workflow)
+
+The `change` workflow opens by judging how much discipline the task warrants and
+scales technique use, plan recording, and verification to it:
+
+- **T0 trivial** (no behaviour-logic change, reversible, single file): no
+  debugging/TDD; one-line Before/After; skip the committed plan; run the single
+  most relevant check.
+- **T1 normal** (contained, reversible, clear diagnosis): light technique path;
+  one focused test when a cheap seam exists; short committed plan;
+  type-appropriate test subset.
+- **T2 hard/risky** (intermittent/async/stateful bug, multi-module, external
+  API, irreversible, performance regression, or uncertain diagnosis): full
+  discipline; usually triggers the Decision Gate; full verification.
+
+Hard floor: irreversible, cross-module, external-API, and migration work is at
+least T2 — the same conditions as the Decision Gate. The agent judges the tier
+automatically; a plain user override ("be quick" / "be thorough") is honoured
+but never drops below the hard floor.
+
+### Gates and verification
+
 The `change` workflow must require a plain Before / After gate before file
-edits. `understand` and `validate` must require the same gate before any
-follow-up edit. The gate is the user-facing checkpoint; do not replace it with
-secondary engineering reports.
+edits; `investigate` must require the same gate before any follow-up edit. The
+Before statement must state the diagnosed root cause or nature of the problem in
+plain language, and the After must state how the result will be verified — this
+is what lets the user catch a shallow or wrong diagnosis. The gate is the
+user-facing checkpoint; do not replace it with secondary engineering reports.
 
 The `change` workflow must escalate to a Decision Gate when the change alters
 module boundaries, affects external API contracts, involves irreversible
@@ -225,16 +248,15 @@ operations, has multiple viable approaches with different trade-offs, or is
 classified internally as a migration. The Decision Gate presents options and
 trade-offs before the Before / After step.
 
-The `change` workflow must run a minimum verification step after edits are
-applied — at least the type-appropriate subset of tests, build, lint, or
-manual reproduction described in its template. The verification result is
-included in the user-facing report regardless of reporting level. If
-verification fails, the workflow does not claim completion.
+The `change` workflow must run a minimum verification step after edits, scaled
+to the tier and following `verification.md`. The verification result is included
+in the user-facing report regardless of reporting level. If verification fails,
+the workflow does not claim completion.
 
-For changes that touch more than three files or cross more than one module,
-the `change` workflow writes a short engineering plan to
-`docs/changes/<YYYY-MM-DD>-<slug>.md` before editing. This plan is internal
-scratch and does not replace the Before / After gate.
+At tier T1 or T2 the `change` workflow writes a short engineering plan to
+`docs/changes/<YYYY-MM-DD>-<slug>.md` and commits it (`plan: <slug>`) before
+editing source files; T0 skips this. The plan is internal scratch and does not
+replace the Before / After gate.
 
 Before any proposed implementation route, workflows must calibrate scope:
 owning module, boundary modules, contracts, shared state, persistence, generated
@@ -280,28 +302,36 @@ detection and user confirmation.
 
 ### Claude Code Adapter (when selected)
 
-- **Path:** `.claude/skills/<project-slug>-atlas.md`
+- **Path:** `.claude/skills/<project-slug>-atlas/SKILL.md`
 - **Template:** `assets/templates/claude_code_adapter.md`
 - **Frontmatter required:**
   - `name: <project-slug>-atlas`
   - `description: "Use this for every task in this project — reads the atlas before acting."`
-- `{{MAIN_WORKFLOW_FILE}}` is a relative path from `.claude/skills/` to `docs/`
-  (e.g., `../../docs/<project>_main_workflow.md`).
-- Create `.claude/skills/` at the project root if it does not exist.
+- Set `{{INDEX_FILE}}`, `{{INVESTIGATE_WORKFLOW_FILE}}`, and
+  `{{CHANGE_WORKFLOW_FILE}}` to relative paths from
+  `.claude/skills/<project-slug>-atlas/` to `docs/`
+  (e.g., `../../../docs/<project>_index.md`). Also set `{{PROJECT_NAME}}`,
+  `{{PROJECT_SLUG}}`, `{{DELIVERY_POLICY}}`, and `{{REPORTING_LEVEL}}`.
+- Create `.claude/skills/` and the `.claude/skills/<project-slug>-atlas/`
+  directory at the project root if they do not exist.
 
 ### Codex Adapter (when selected)
 
 - **Path:** `.agents/skills/<project-slug>/SKILL.md`
 - Uses the same thin-adapter pattern with frontmatter `name` and `description`.
-- `description` format: `使用 <PROJECT_NAME> Codebase Atlas main workflow；canonical workflow 是 <relative-path>。` (or English equivalent in the working language).
-- `{{MAIN_WORKFLOW_FILE}}` is a relative path from `.agents/skills/<project-slug>/` to `docs/`
-  (e.g., `../../../docs/<project>_main_workflow.md`).
+- `description` format (render in the working language selected in Step 0;
+  English shown here): `Codebase Atlas entrypoint for <PROJECT_NAME>; reads the atlas index and routes before acting.`
+- Set `{{INDEX_FILE}}`, `{{INVESTIGATE_WORKFLOW_FILE}}`, and
+  `{{CHANGE_WORKFLOW_FILE}}` to relative paths from
+  `.agents/skills/<project-slug>/` to `docs/`
+  (e.g., `../../../docs/<project>_index.md`).
 - Create `.agents/skills/<project-slug>/` if it does not exist.
 
 ### All Adapters Must
 
-- Point to the canonical `main` workflow, not the individual workflow docs.
-- Include the delivery policy.
-- Remind the agent to start from the atlas index before any operation.
-- Stay extremely thin — do not copy any workflow body.
+- Embed the entry router and point to the index and the two workflows, not to a
+  single workflow as the sole target.
+- Include the delivery policy and reporting level.
+- Read the atlas index before any operation.
+- Stay thin — do not copy any workflow body or technique content.
 - Be included in delete-and-rebuild detection during Step 1 of a rebuild.
