@@ -82,9 +82,12 @@ complete.
   feature, optimization, refactor, release, dependency, migration, config,
   hotfix, cleanup) and runs the tier-appropriate minimum verification (following
   `verification.md`) after edits.
-- Change writes a plan to `docs/changes/` before editing at T1 or T2 (T0 skips
-  it): T1 leaves it as uncommitted scratch; T2 commits it (`plan: <slug>`) only
-  when the delivery policy allows commits, otherwise leaves it uncommitted.
+- Change writes a plan to `docs/changes/planning/` before editing at T1 or T2
+  (T0 skips it): T1 leaves it as uncommitted scratch; T2 commits it
+  (`plan: <slug>`) only when the delivery policy allows commits, otherwise
+  leaves it uncommitted. After verification passes, the plan moves to
+  `docs/changes/completed/`; a plan produced without implementation stays in
+  `docs/changes/planning/`.
 - Investigate requires a Before / After gate before any follow-up edit and hands
   off to change rather than editing itself.
 - Workflows use Before / After as the user-facing confirmation gate, not

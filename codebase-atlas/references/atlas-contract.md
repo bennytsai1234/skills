@@ -301,11 +301,14 @@ in the user-facing report regardless of reporting level. If verification fails,
 the workflow does not claim completion.
 
 At tier T1 or T2 the `change` workflow writes a short engineering plan to
-`docs/changes/<YYYY-MM-DD>-<slug>.md` before editing source files; T0 skips this.
-At T1 the plan is uncommitted scratch. At T2 the workflow commits it
+`docs/changes/planning/<YYYY-MM-DD>-<slug>.md` before editing source files; T0
+skips this. At T1 the plan is uncommitted scratch. At T2 the workflow commits it
 (`plan: <slug>`) only when the delivery policy allows commits (`commit only` or
-`commit and push`); under `no commit` the plan stays uncommitted. The plan is
-internal scratch and does not replace the Before / After gate.
+`commit and push`); under `no commit` the plan stays uncommitted. Once
+verification passes and the change is complete, the plan moves to
+`docs/changes/completed/<YYYY-MM-DD>-<slug>.md`; a plan produced without
+implementation stays in `docs/changes/planning/`. The plan is internal scratch
+and does not replace the Before / After gate.
 
 Before any proposed implementation route, workflows must calibrate scope:
 owning module, boundary modules, contracts, shared state, persistence, generated

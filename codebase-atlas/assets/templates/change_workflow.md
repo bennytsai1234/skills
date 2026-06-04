@@ -115,16 +115,18 @@ Change structure, never behaviour, and keep the full suite green throughout.
 1. Confirm with the user using the Before / After format below.
 1. Wait for explicit user confirmation before editing any files.
 1. Record the plan, scaled to the tier — this is engineering scratch, not the
-   user-facing confirmation. `{{DATE}}` and `{{SLUG}}` are filled here per
+   user-facing confirmation. Plan files live in two folders: not-yet-implemented
+   plans go in `docs/changes/planning/`, completed ones in
+   `docs/changes/completed/`. `{{DATE}}` and `{{SLUG}}` are filled here per
    change; they are not initialization placeholders:
    - **T0:** skip the plan file.
-   - **T1:** write `docs/changes/{{DATE}}-{{SLUG}}.md` (create `docs/changes/`
-     if needed) with these fields — task type, the confirmed Before, the
+   - **T1:** write `docs/changes/planning/{{DATE}}-{{SLUG}}.md` (create the
+     folder if needed) with these fields — task type, the confirmed Before, the
      confirmed After, expected file scope, validation steps, and rollback path.
      Leave it as uncommitted scratch. Do not edit source files until it exists.
-   - **T2:** write the same plan file. If the delivery policy allows commits
-     (`commit only` / `commit and push`), run
-     `git add docs/changes/{{DATE}}-{{SLUG}}.md` and
+   - **T2:** write the same plan file (also under `docs/changes/planning/`). If
+     the delivery policy allows commits (`commit only` / `commit and push`), run
+     `git add docs/changes/planning/{{DATE}}-{{SLUG}}.md` and
      `git commit -m "plan: {{SLUG}}"` before editing source; under `no commit`,
      leave it uncommitted. Do not edit source files until the plan file exists.
 1. Implement the change.
@@ -132,6 +134,11 @@ Change structure, never behaviour, and keep the full suite green throughout.
    to the tier. Include the verification result in the user-facing report. If
    verification fails, do not claim completion: fix and re-verify, or report the
    failure honestly and ask how to proceed.
+1. Once verification passes and the change is truly complete, move the plan file
+   from `docs/changes/planning/` to `docs/changes/completed/{{DATE}}-{{SLUG}}.md`
+   (keep the same name; create the folder if needed). If this session produced
+   only a plan without implementing it (e.g. the user deferred it, or it is a
+   design-interview artifact), leave the plan in `docs/changes/planning/`.
 1. Finish with one plain-language sentence describing what changed and how it
    was verified.
 
