@@ -168,6 +168,9 @@ This is the fastest ground-truth command because it checks both runtime state an
 6. **Using only process-list checks.**
    A process existing is weaker than `openclaw gateway status --deep`. Prefer the OpenClaw-native status command for the final verification pass.
 
+7. **Misreading intentional nvm-only WSL service warnings as a failure.**
+   On Benny's WSL setup, OpenClaw may warn that the service uses a version-manager Node and that no system Node is installed. This is intentional: the machine uses a single nvm-managed Node/npm installation, and the OpenClaw systemd service points directly at that nvm Node. Treat this as non-fatal when CLI version, gateway version, runtime, and connectivity probe are all healthy.
+
 ## Post-Update Model/Auth Triage
 
 If the gateway is up but model behavior changed after an update:
