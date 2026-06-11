@@ -315,16 +315,19 @@ before asking for configuration decisions:
      ```
      The skill name `/<project-slug>-atlas` is always in kebab-case regardless
      of language.
-   - If Codex was selected: create `.agents/skills/<project-slug>/` if it does
-     not exist, then generate `.agents/skills/<project-slug>/SKILL.md` using the
-     same thin-adapter pattern.
+   - If Codex was selected: create `.agents/skills/<project-slug>-atlas/` if it
+     does not exist, then generate
+     `.agents/skills/<project-slug>-atlas/SKILL.md` using
+     `assets/templates/codex_adapter.md`. The frontmatter `name` must be
+     `<project-slug>-atlas`, matching the Claude Code adapter naming pattern.
    - In every adapter, set `{{PROJECT_NAME}}`, `{{DELIVERY_POLICY}}`, and
      `{{REPORTING_LEVEL}}` to their chosen values; in the Claude Code and Codex
      adapters also set `{{PROJECT_SLUG}}` (the generic adapter has no slug token).
      Set `{{INDEX_FILE}}`, `{{INVESTIGATE_WORKFLOW_FILE}}`, and
      `{{CHANGE_WORKFLOW_FILE}}` to the relative paths from the adapter's location
      to those `docs/` files (e.g., from `.claude/skills/<project-slug>-atlas/`
-     use `../../../docs/<project>_index.md`).
+     or `.agents/skills/<project-slug>-atlas/` use
+     `../../../docs/<project>_index.md`).
    - All adapters embed the entry router and point to the index and the two
      workflows — never to a single workflow as the sole target.
    - If a rebuild detects existing adapter files, include them in the

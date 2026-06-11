@@ -131,6 +131,7 @@ Use the templates under `assets/templates/`:
 - `change_workflow.md`
 - `adapter.md`
 - `claude_code_adapter.md` (Claude Code only)
+- `codex_adapter.md` (Codex only)
 
 Replace every init-time placeholder with concrete project values. Do not leave
 init-time tokens such as `{{ATLAS_TITLE}}` or `{{DELIVERY_POLICY}}` in generated
@@ -371,15 +372,18 @@ detection and user confirmation.
 
 ### Codex Adapter (when selected)
 
-- **Path:** `.agents/skills/<project-slug>/SKILL.md`
-- Uses the same thin-adapter pattern with frontmatter `name` and `description`.
-- `description` format (render in the working language selected in Step 0;
-  English shown here): `Codebase Atlas entrypoint for <PROJECT_NAME> — reads the atlas index and routes before acting.`
+- **Path:** `.agents/skills/<project-slug>-atlas/SKILL.md`
+- **Template:** `assets/templates/codex_adapter.md`
+- **Frontmatter required:**
+  - `name: <project-slug>-atlas`
+  - `description` (render in the working language selected in Step 0; English
+    shown here): `Codebase Atlas entrypoint for <PROJECT_NAME> — reads the atlas
+    index and routes before acting.`
 - Set `{{INDEX_FILE}}`, `{{INVESTIGATE_WORKFLOW_FILE}}`, and
   `{{CHANGE_WORKFLOW_FILE}}` to relative paths from
-  `.agents/skills/<project-slug>/` to `docs/`
+  `.agents/skills/<project-slug>-atlas/` to `docs/`
   (e.g., `../../../docs/<project>_index.md`).
-- Create `.agents/skills/<project-slug>/` if it does not exist.
+- Create `.agents/skills/<project-slug>-atlas/` if it does not exist.
 
 ### All Adapters Must
 

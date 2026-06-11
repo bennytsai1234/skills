@@ -117,9 +117,11 @@ Before the final report:
    description of when future work should start there.
 2. Reread the adapter and confirm its entry router reads the index first and its
    user-facing report rules respect the selected reporting level.
-3. Confirm the adapter routes to both workflows (investigate, change) and that
+3. Confirm platform skill frontmatter names and directories match the adapter
+   contract: both Claude Code and Codex use `<project-slug>-atlas`.
+4. Confirm the adapter routes to both workflows (investigate, change) and that
    the technique docs were copied in and are referenced on demand.
-4. Confirm every init-time placeholder is replaced per the placeholder map in
+5. Confirm every init-time placeholder is replaced per the placeholder map in
    `references/atlas-contract.md`, and that the runtime tokens `{{DATE}}` and
    `{{SLUG}}` remain intact in the change workflow (they are filled per change,
    not at initialization).
