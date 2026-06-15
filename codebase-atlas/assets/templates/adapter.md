@@ -1,40 +1,67 @@
 # {{PROJECT_NAME}} Codebase Atlas
 
-This is the Codebase Atlas entrypoint and router for this project. It is the
-only entrypoint for daily work — follow it for every operation.
+Self-contained entrypoint and router for daily work on this project. It carries
+its own discipline — there are no separate workflow docs to read.
 
-## Entry (read the index first, then route)
+## Entry
 
 1. Preserve the user's original request.
-1. Open `{{INDEX_FILE}}` before any other operation.
-1. Confirm in one plain sentence what this project does.
-1. Route by intent:
-   - The user wants to **know** something — explain, locate, feasibility,
-     ownership, behavior check, review, reproduction, profiling, CI failure,
-     risk assessment → follow `{{INVESTIGATE_WORKFLOW_FILE}}`.
-   - The user wants to **change** something — any code edit → follow
-     `{{CHANGE_WORKFLOW_FILE}}`.
-   - Mixed or unclear → start with investigate, then decide whether a change is
-     needed.
-1. When composing, pass conclusions forward; do not reread the index or module
-   docs unless the next step needs context not already gathered.
-1. For any operation that edits files, provide Before / After and wait for
-   explicit user confirmation before editing.
-1. Finish according to this delivery policy: {{DELIVERY_POLICY}}
-1. After a task completes, ask in plain language whether anything else needs
-   handling. If the user continues, route the next request without rereading the
-   index.
+2. Read `{{INDEX_FILE}}` once, then confirm in one plain sentence what this
+   project does.
+3. Pick only the relevant module doc(s) from the index — never read them all. If
+   unfamiliar with the area, zoom out to the module map first, then narrow.
+4. Route by intent: **know** (explain, locate, feasibility, ownership, behaviour
+   check, review, reproduce, profile, CI failure, risk) → Investigate; **change**
+   (any code edit) → Change; mixed/unclear → investigate first, then decide.
+5. Pass conclusions forward; do not reread the index or module docs across steps
+   unless you need context not yet gathered.
 
-## Reporting
+## Investigate (read-only)
 
-- Before / After is the only human confirmation interface.
-- Reporting level: {{REPORTING_LEVEL}}
-  - Plain: do not mention module names, file paths, or code snippets to the user.
-  - Technical: include module names, file paths, and relevant code context.
+Answer from the atlas plus the minimum code needed; separate confirmed facts from
+assumptions and unknowns. Never edit — if a fix is needed, hand off to Change
+after the user agrees. Apply discipline as the question calls for it: debugging =
+reproduce → rank hypotheses → bisect; review = read the diff against the owning
+and boundary modules; open design questions = interview one question at a time,
+each with a recommended answer.
 
-## Do Not Do
+## Change (any edit)
 
-- Do not rerun Codebase Atlas initialization unless the user explicitly asks for
-  a full rebuild.
-- Do not skip reading the atlas index.
-- Do not edit files before the user confirms Before / After.
+Judge a discipline tier, then scale effort:
+
+- **T0 trivial** (no logic change, reversible, single file): one-line
+  Before/After; skip the plan file; run the single most relevant check.
+- **T1 normal** (contained, reversible, clear diagnosis): add one focused test
+  when a cheap seam exists; write a scratch plan
+  `docs/changes/planning/{{DATE}}-{{SLUG}}.md` before editing source.
+- **T2 hard/risky** (async/stateful bug, multi-module, external API,
+  irreversible, perf regression, uncertain diagnosis): full discipline; same plan
+  file; usually a Decision Gate.
+
+**Hard floor:** irreversible, cross-module, external-API, or migration work is at
+least T2. Honour a plain "be quick / be thorough" override, but never below the
+floor.
+
+**Before / After gate** (the only confirmation interface) — wait for explicit
+confirmation before editing any file:
+- **Before**: current state and the diagnosed root cause, in plain language.
+- **After**: what becomes true, and how it will be verified.
+
+**Decision Gate** — when a change alters module boundaries, an external API, is
+irreversible or a migration, or has two or more viable approaches: present
+Context / Options (A/B with trade-offs) / Recommendation and wait for a choice
+before the Before/After. Record cross-module decisions in the index's
+Architecture Decisions table; module-level ones in that module's Known Risks.
+
+After edits, verify scaled to the tier; the verification result is always in the
+report — never claim completion on a failed check. Once complete, move the plan
+to `docs/changes/completed/{{DATE}}-{{SLUG}}.md`. Update atlas docs only when
+module boundaries, ownership, or external APIs change — incrementally, no rescan.
+
+## Reporting & delivery
+
+- Reporting level: {{REPORTING_LEVEL}} — Plain: no module names, paths, or code in
+  user-facing reports. Technical: include them.
+- Delivery policy: {{DELIVERY_POLICY}}
+- Do not rerun Codebase Atlas initialization unless the user explicitly asks for a
+  full rebuild.

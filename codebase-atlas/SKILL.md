@@ -53,9 +53,13 @@ Before outputting anything, scan only for old Codebase Atlas artifacts:
    user after the skill introduction.
 5. After the introduction, wait for the user to decide whether to delete and
    rebuild before continuing.
-6. If the user chooses delete and rebuild, delete both:
-   - Old atlas docs.
-   - Generated Codebase Atlas entrypoints that point to those old docs.
+6. If the user chooses delete and rebuild, delete all of these:
+   - Old atlas docs (index and module docs).
+   - Legacy structures from earlier atlas versions: `*_investigate_workflow.md`,
+     `*_change_workflow.md`, and `*_techniques/` folders.
+   - Generated Codebase Atlas entrypoints (adapters) that point to those old docs.
+   - Any "run the atlas skill before every operation" mandate that a previous
+     atlas wrote into `CLAUDE.md` (remove only that block, not the whole file).
 7. Do not delete unrelated `.agents/` content or any file whose Codebase Atlas
    origin cannot be confirmed.
 8. If the user wants to preserve any part, read only the parts the user asked
@@ -196,7 +200,21 @@ before asking for configuration decisions:
 
    Recommended: A, so you can review the generated atlas before it enters
    history. This same policy also governs how later change work is delivered.
-9. Present the platform adapter decision in this plain-language shape,
+9. Present the technique-docs decision in this plain-language shape, translated
+   into the working language:
+
+   ```markdown
+   The entrypoint already carries short reminders for the common disciplines
+   (debugging, testing, verification, code review, design questions). Do you also
+   want full standalone technique docs copied into your repo?
+
+   A. No — rely on the built-in reminders (recommended; keeps the atlas light).
+   B. Yes — copy the five full technique docs into the atlas.
+   ```
+
+   Recommended: A. The verbatim docs add ~2500 words to every repo for content
+   the assistant already knows; choose B only if you want the curated long form.
+10. Present the platform adapter decision in this plain-language shape,
    translated into the working language. Show detected platforms pre-selected.
 
    If both `.claude/` and `.agents/` were detected:
@@ -248,7 +266,7 @@ before asking for configuration decisions:
    D. None — skip adapter generation
    ```
 
-10. Use this confirmation shape for preserved rules:
+11. Use this confirmation shape for preserved rules:
 
     ```text
     [Category]
@@ -258,7 +276,7 @@ before asking for configuration decisions:
 
     The user must be able to judge whether the agent correctly understood the
     existing project guidance.
-11. Wait for user confirmation before starting the full scan.
+12. Wait for user confirmation before starting the full scan.
 
 ## Initialization Workflow
 
@@ -271,65 +289,44 @@ before asking for configuration decisions:
    reference-assisted guidance.
 5. Split the project into stable modules using change-boundary quality, not a
    hard module count.
-6. Create or update the canonical atlas under `docs/` using templates from
-   `assets/templates/`, then copy the five technique docs from
-   `assets/techniques/` verbatim into `docs/<project>_techniques/`
+6. Create the canonical atlas under `docs/` using templates from
+   `assets/templates/`: the index (`index.md`) and one module doc per stable
+   module (`module.md`). The index holds the navigation map only — no process and
+   no internal decision metadata.
+7. Only if the user opted in to full technique docs (Step 3), copy the five docs
+   from `assets/techniques/` verbatim into `docs/<project>_techniques/`
    (debugging.md, tdd.md, verification.md, code-review.md, design-grilling.md).
-   Technique docs are constant content and need no placeholder replacement.
-7. Generate two canonical workflow docs:
-   - `investigate`: all read-only work — explanations, ownership and feasibility
-     questions, investigations, behavior checks, reviews, reproductions,
-     profiling, CI or build failure analysis, and risk assessment. Never edits
-     files; hands off to change when a fix is needed.
-   - `change`: all code-changing tasks. It opens by judging a discipline tier
-     (T0 trivial / T1 normal / T2 hard, with a hard floor at T2 for
-     irreversible, cross-module, external-API, or migration work), demotes the
-     ten task types to internal hints, and pulls in the technique docs on demand
-     instead of inlining them.
-   Set `{{TECHNIQUES_DIR}}` in both workflows to the relative path from `docs/`
-   to the techniques folder (`<project>_techniques`). Also replace the other
-   init-time tokens in both workflows — `{{ATLAS_TITLE}}`, `{{REPORTING_LEVEL}}`,
-   and `{{DELIVERY_POLICY}}` — but leave the runtime tokens `{{DATE}}` and
-   `{{SLUG}}` in the change workflow intact (see the placeholder map in
-   `references/atlas-contract.md`).
-8. Generate adapters for all platforms selected in the Step 3 confirmation. Each
-   adapter embeds the entry router: read the index, confirm the project in one
-   sentence, then route — the user wants to know → investigate, the user wants
-   to change → change.
+   They are constant content and need no placeholder replacement. By default
+   (opt-out) do not create this folder — the adapter's inline discipline pointers
+   cover the same ground.
+8. Generate the self-contained adapter(s) for all platforms selected in Step 3.
+   Each adapter is the single entrypoint: it embeds the entry router (read the
+   index, confirm the project in one sentence, route know→investigate /
+   change→change) and carries the change/investigate discipline inline — there
+   are no separate workflow docs.
    - Always generate `docs/<project>_adapter.md` using
      `assets/templates/adapter.md` (generic, no frontmatter).
-   - If Claude Code was selected: create `.claude/skills/` at the project root
-     if it does not exist, then create `.claude/skills/<project-slug>-atlas/` if
-     it does not exist, and generate
+   - If Claude Code was selected: create `.claude/skills/<project-slug>-atlas/`
+     (and `.claude/skills/`) if needed, then generate
      `.claude/skills/<project-slug>-atlas/SKILL.md` using
      `assets/templates/claude_code_adapter.md`.
-     After generating the skill adapter, create or update `CLAUDE.md` at the
-     project root. If `CLAUDE.md` does not exist, create it. If it exists,
-     append only if the invocation line is not already present. Render the
-     following meaning in the working language selected in Step 0; do not
-     insert this English template verbatim unless English was selected:
-     ```
-     ## At The Start Of Every Conversation
-
-     Before any operation, run the `/<project-slug>-atlas` skill.
-     ```
-     The skill name `/<project-slug>-atlas` is always in kebab-case regardless
-     of language.
-   - If Codex was selected: create `.agents/skills/<project-slug>-atlas/` if it
-     does not exist, then generate
-     `.agents/skills/<project-slug>-atlas/SKILL.md` using
+   - If Codex was selected: create `.agents/skills/<project-slug>-atlas/` if
+     needed, then generate `.agents/skills/<project-slug>-atlas/SKILL.md` using
      `assets/templates/codex_adapter.md`. The frontmatter `name` must be
      `<project-slug>-atlas`, matching the Claude Code adapter naming pattern.
    - In every adapter, set `{{PROJECT_NAME}}`, `{{DELIVERY_POLICY}}`, and
-     `{{REPORTING_LEVEL}}` to their chosen values; in the Claude Code and Codex
-     adapters also set `{{PROJECT_SLUG}}` (the generic adapter has no slug token).
-     Set `{{INDEX_FILE}}`, `{{INVESTIGATE_WORKFLOW_FILE}}`, and
-     `{{CHANGE_WORKFLOW_FILE}}` to the relative paths from the adapter's location
-     to those `docs/` files (e.g., from `.claude/skills/<project-slug>-atlas/`
-     or `.agents/skills/<project-slug>-atlas/` use
-     `../../../docs/<project>_index.md`).
-   - All adapters embed the entry router and point to the index and the two
-     workflows — never to a single workflow as the sole target.
+     `{{REPORTING_LEVEL}}`; in the Claude Code and Codex adapters also set
+     `{{PROJECT_SLUG}}`. Set `{{INDEX_FILE}}` to the relative path from the
+     adapter's location to the index (e.g., from
+     `.claude/skills/<project-slug>-atlas/` use
+     `../../../docs/<project>_index.md`). Leave the runtime tokens `{{DATE}}` and
+     `{{SLUG}}` intact (see the placeholder map in
+     `references/atlas-contract.md`).
+   - Do **not** write a forced "run the atlas skill before every operation"
+     mandate into `CLAUDE.md`. The skill's `description` makes it discoverable
+     when a task needs repo navigation. At most, if `CLAUDE.md` has no pointer to
+     the atlas, add a single plain-language line noting the navigation map lives
+     at `docs/<project>_index.md`. Render it in the Step 0 working language.
    - If a rebuild detects existing adapter files, include them in the
      delete-and-rebuild confirmation (Step 1) before overwriting.
 9. Run `references/quality-checklist.md` before reporting completion.
@@ -340,9 +337,9 @@ before asking for configuration decisions:
   notes and remove stale boundaries during rebuilds.
 - Generated docs must describe repository-persistent facts, not facts about the
   current agent, model, editor, shell, chat session, or temporary workspace.
-- Code-changing workflows must require a plain Before / After gate before
-  edits. This gate is the user-facing checkpoint; do not replace it with
-  secondary engineering reports:
+- Code-changing work must require a plain Before / After gate before edits. This
+  gate is the user-facing checkpoint; do not replace it with secondary
+  engineering reports:
   - **Before**: current state and what is wrong, missing, confusing, or risky.
   - **After**: what the change will make true.
 - Before proposing a change, calibrate scope: owning module, boundary modules,
@@ -359,10 +356,10 @@ before asking for configuration decisions:
 ## When Not To Use This Skill
 
 Do not run Codebase Atlas for ordinary daily work after an atlas exists. The
-generated adapter already routes daily work: read-only tasks (explanations,
-investigations, reviews, reproductions, profiling, CI failures, risk
-assessment) go to the investigate workflow, and every code edit goes to the
-change workflow, which scales its discipline to the task. Use the generated
+generated adapter is self-contained and already handles daily work: read-only
+tasks (explanations, investigations, reviews, reproductions, profiling, CI
+failures, risk assessment) follow its investigate path, and every code edit
+follows its change path, which scales discipline to the task. Use the generated
 atlas for all of these instead of rerunning Codebase Atlas.
 
 Rerun Codebase Atlas only when the user explicitly asks for a rebuild,

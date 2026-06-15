@@ -31,20 +31,23 @@ docs/
   <project>_index.md
   <project>/
     <module_slug>.md
-  <project>_investigate_workflow.md
-  <project>_change_workflow.md
-  <project>_techniques/
+  <project>_adapter.md
+  <project>_techniques/        # optional, only if you opt in
     debugging.md
     tdd.md
     verification.md
     code-review.md
     design-grilling.md
-  <project>_adapter.md
 ```
 
-The adapter is always generated. It embeds the entry router — read the index,
-confirm the project in one sentence, route read→investigate / write→change —
-and points to the index and the two workflows under `docs/`.
+The adapter is the single, self-contained entrypoint. It embeds the entry
+router — read the index, confirm the project in one sentence, route
+know→investigate / change→change — **and** carries the change/investigate
+discipline (tiers, Before/After gate, Decision Gate, plan lifecycle,
+verification) inline. There are no separate workflow docs, so a routine task
+loads only the entrypoint skill plus the index and one or two module docs. The
+full technique docs are copied in only when you opt in; otherwise the adapter's
+one-line discipline pointers cover them.
 
 ## How It Works
 
@@ -56,8 +59,8 @@ and points to the index and the two workflows under `docs/`.
 4. Inspect repository structure, entrypoints, source roots, tests, configs, and
    existing docs.
 5. Split the project into stable modules.
-6. Write a module index with inherited operating constraints, module notes, two
-   workflow docs, the distilled technique docs, and the adapter.
+6. Write the index (navigation map + inherited operating constraints), the module
+   docs, and the self-contained adapter. Copy the technique docs only on opt-in.
 7. Run the quality checklist.
 
 ## Modes
@@ -82,20 +85,20 @@ the concrete handling that will be written into the atlas.
 ## Daily Use After Initialization
 
 Do not rerun Codebase Atlas for ordinary work. Daily work enters through the
-adapter, which reads the index and routes to one of two workflows:
+self-contained adapter, which reads the index and handles the task itself:
 
-- `docs/<project>_investigate_workflow.md` for read-only work — explanations,
-  investigations, reviews, reproductions, profiling, CI failures, and risk
-  assessments.
-- `docs/<project>_change_workflow.md` for every code edit, with discipline
-  scaled to the task (trivial → fast; hard or risky → full).
+- Read-only work — explanations, investigations, reviews, reproductions,
+  profiling, CI failures, risk assessments — follows its investigate path.
+- Every code edit follows its change path, with discipline scaled to the task
+  (trivial → fast; hard or risky → full).
 
-Shared discipline docs (debugging, TDD, verification, code review, design
-grilling) live under `docs/<project>_techniques/` and are read on demand.
+The adapter is not force-loaded on every conversation. Its skill `description`
+makes it discoverable when a task needs repo navigation, so unrelated
+conversations pay no context cost.
 
-Code-changing workflows use a plain Before / After gate as the user-facing
-checkpoint. Supporting analysis may guide the agent, but it must not replace
-the Before / After explanation.
+Code-changing work uses a plain Before / After gate as the user-facing
+checkpoint. Supporting analysis may guide the agent, but it must not replace the
+Before / After explanation.
 
 ## Skill Files
 
@@ -103,10 +106,11 @@ the Before / After explanation.
 - `references/atlas-contract.md`: output contract and generation rules.
 - `references/modes.md`: standalone and reference-assisted guidance.
 - `references/quality-checklist.md`: final review checklist.
-- `assets/templates/`: Markdown templates used for generated atlas files.
+- `assets/templates/`: Markdown templates for generated atlas files (index,
+  module, and the self-contained adapters).
 - `assets/techniques/`: distilled, self-contained discipline docs (debugging,
-  TDD, verification, code review, design grilling) copied verbatim into each
-  generated atlas.
+  TDD, verification, code review, design grilling), copied into a generated atlas
+  only when the user opts in.
 
 ## License
 
