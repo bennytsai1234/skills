@@ -1,7 +1,7 @@
 ---
 name: openclaw-ops
-description: "Use when operating OpenClaw itself: checking versions, updating the CLI, managing the gateway service, verifying health, and handling restart edge cases after upgrades."
-version: 1.1.0
+description: "Use when operating OpenClaw itself: checking versions, updating the CLI, managing the gateway service, verifying health, handling restart edge cases after upgrades, cleaning up plugins/stale install-index state, and migrating plaintext secrets to SecretRefs."
+version: 1.2.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -27,6 +27,8 @@ Use this skill when you need to:
 - Restart or verify the OpenClaw gateway service
 - Confirm whether a failed-looking update actually succeeded
 - Inspect managed-service status after an upgrade
+- Add/remove plugins or providers, or chase down "version drift" / "conflicting plugin install metadata" warnings that persist after an uninstall
+- Migrate plaintext secrets in `openclaw.json` / auth profiles to SecretRefs
 
 Do **not** use this skill for:
 - General npm troubleshooting unrelated to OpenClaw
@@ -194,9 +196,9 @@ If the gateway is up but model behavior changed after an update:
    ```bash
    rg -n "auth refresh|token has been invalidated|Failed to extract accountId|model fallback decision" /tmp/openclaw/openclaw-*.log
    ```
-6. If the update changed the default model route, restore the intended default model first, then restart and re-test. The current known-good model is `minimax/MiniMax-M2.7`:
+6. If the update changed the default model route, restore the intended default model first, then restart and re-test. The current known-good default is `minimax/MiniMax-M3` (with `minimax-portal/MiniMax-M2.7` and `minimax/MiniMax-M2.5` as fallbacks):
    ```bash
-   openclaw models set minimax/MiniMax-M2.7
+   openclaw models set minimax/MiniMax-M3
    systemctl --user restart openclaw-gateway.service
    openclaw models status
    openclaw gateway status --deep
@@ -216,10 +218,45 @@ If the gateway is up but model behavior changed after an update:
    cat ~/.openclaw/agents/main/agent/auth-state.json
    ```
 
+## Plugin & State Maintenance
+
+Adding/removing plugins is rarely "just an uninstall". `openclaw plugins uninstall <id>`
+needs `--force` to run non-interactively, and it leaves auth profiles and stale
+install-index records behind.
+
+The big trap: **"Plugin version drift" / "conflicting plugin install metadata" / "Left
+plugin install index in place" warnings that persist after a plugin is gone.** The records
+are cached in up to three layers and all must be cleared:
+1. `~/.openclaw/plugins/installs.json` (legacy index — not regenerated in 2026.6.x; back up & delete it),
+2. the `installed_plugin_index` table in `~/.openclaw/state/openclaw.sqlite` (`install_records_json` blob),
+3. the legacy shared npm workspace `~/.openclaw/npm/` (`package.json` deps + `node_modules/@openclaw/<id>`).
+
+Then `openclaw plugins registry --refresh` + restart. Always `openclaw backup create` first.
+
+See `references/plugin-and-state-cleanup.md` for the full procedure, plus how the `codex`
+plugin owns the `openai` ChatGPT-OAuth provider and how to remove vs keep it.
+
+## Secrets Migration (plaintext → SecretRef)
+
+To clear the `doctor` **Security** warning and reach `openclaw secrets audit --check`
+`plaintext=0`, migrate secrets to a SecretRef provider. Key facts:
+- `openclaw secrets configure` **requires an interactive TTY** — the agent cannot drive it;
+  prep the inputs and hand the user the exact steps.
+- On a single-user WSL host, use the **`file`** backend. It does **not** write secret values
+  itself — pre-populate a 0600 JSON file with the current values, then map fields to JSON pointers.
+- `secrets audit --check` exiting non-zero is normal when findings exist. An openai OAuth
+  profile remains as `legacy=1` (out of scope; expected if you keep openai).
+- After apply: `openclaw secrets reload` → `openclaw models status` (refs show as
+  `ref(file:/...)`) → `openclaw gateway status --deep` to confirm the gateway resolves them.
+
+See `references/secrets-migration.md` for the field→pointer mapping and the pre-populate script.
+
 ## Reference Notes
 
 - `references/update-and-restart.md` — condensed notes from a real successful upgrade where `openclaw update` returned an unhealthy-restart warning even though the CLI and gateway had already moved to the new version.
 - `references/model-route-and-auth-triage.md` — post-update triage for cases where OpenClaw rewrites the default model/provider route and Codex/OpenAI auth starts failing or timing out.
+- `references/plugin-and-state-cleanup.md` — removing/keeping plugins and providers, and clearing version-drift / install-index / metadata-conflict warnings that survive an uninstall (three-layer cleanup).
+- `references/secrets-migration.md` — migrating plaintext config + auth-profile keys to `file` SecretRefs (TTY-only `secrets configure`, pre-populate gotcha, field→pointer map, verification).
 
 ## Verification Checklist
 

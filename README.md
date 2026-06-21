@@ -18,5 +18,6 @@ This repository is the canonical home for reusable Codex and agent skills.
 ## Current Skills
 
 - `codebase-atlas`
+- `hermes-ops`
 - `openclaw-ops`
 - `project-genius`
