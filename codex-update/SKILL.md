@@ -1,66 +1,85 @@
 ---
 name: codex-update
-description: "Update the OpenAI Codex CLI on a controlled Windows (PowerShell) environment, including the -NoProfile workaround for the broken built-in `codex update`."
+description: "Update the OpenAI Codex CLI on a controlled Windows environment, including the PSModulePath fix for the broken built-in `codex update` (Get-FileHash not recognized)."
 ---
 
 # Codex CLI Update (Windows / 受控環境)
 
 在銀行受控 Windows 環境更新 Codex CLI 的標準作法與已知踩雷點。
-所有指令以官方安裝腳本為準，不引入第三方相依、不關閉 TLS 驗證。
+以官方安裝腳本為準，不引入第三方相依、不關閉 TLS 驗證、不改全域設定。
 
 ## TL;DR
 
 ```powershell
-# 1) 直接用官方安裝腳本（與 `codex update` 同一支），但加上 -NoProfile
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://chatgpt.com/codex/install.ps1 | iex"
+# 用官方安裝腳本（與 `codex update` 同一支），但先把 5.1 系統模組目錄補進 PSModulePath
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$env:PSModulePath += ';' + \"$env:WINDIR\System32\WindowsPowerShell\v1.0\Modules\"; irm https://chatgpt.com/codex/install.ps1 | iex"
 
-# 2) 驗證
+# 驗證
 & "$env:LOCALAPPDATA\Programs\OpenAI\Codex\bin\codex.exe" --version
 ```
 
-安裝位置：`C:\Users\<user>\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe`
-（亦即 `$env:LOCALAPPDATA\Programs\OpenAI\Codex\bin`，安裝時已加入 PATH。）
+安裝位置：`$env:LOCALAPPDATA\Programs\OpenAI\Codex\bin\codex.exe`
+（即 `C:\Users\<user>\AppData\Local\Programs\OpenAI\Codex\bin`，安裝時已加入 PATH。）
 
-## 為什麼不用內建 `codex update`
+## 為什麼內建 `codex update` 會失敗
 
-`codex update` 內部會呼叫：
+`codex update` 內部會呼叫 **Windows PowerShell 5.1** 跑安裝腳本：
 
 ```
 powershell -ExecutionPolicy Bypass -c '$env:CODEX_NON_INTERACTIVE=1; irm https://chatgpt.com/codex/install.ps1 | iex'
 ```
 
-注意它呼叫的是 **Windows PowerShell 5.1**，而且 **沒有 `-NoProfile`**。
-在本機受控環境下，使用者的 PowerShell 設定檔（profile）載入後會干擾模組
-自動載入，導致安裝腳本在驗證雜湊那步報錯：
+安裝腳本在驗證下載檔雜湊時用到 `Get-FileHash`，於是失敗：
 
 ```
 The term 'Get-FileHash' is not recognized as the name of a cmdlet ...
 Error: ... install.ps1 | iex` failed with status exit code: 1
 ```
 
-→ 這不是網路、權限或 TLS 問題。`Get-FileHash` 本身存在
-（`Microsoft.PowerShell.Utility`，5.1 即內建，LanguageMode=FullLanguage），
-只是 profile 阻擋了模組自動載入。加上 `-NoProfile` 即可繞過。
+## 真正的根因：PSModulePath（不是 profile、不是 -NoProfile）
 
-## 診斷指令（確認是 profile 問題而非環境壞掉）
+`Get-FileHash` 屬於 `Microsoft.PowerShell.Utility` 模組，需要「自動載入」，
+而自動載入只會去 `$env:PSModulePath` 列出的目錄找模組。5.1 的這份模組住在：
 
-```powershell
-# 5.1 下、不載 profile，確認 Get-FileHash 與 LanguageMode 正常
-powershell -NoProfile -Command '$PSVersionTable.PSVersion.ToString(); ' +
-  'Get-Command Get-FileHash | Select Name,Source; ' +
-  '"LanguageMode=" + $ExecutionContext.SessionState.LanguageMode'
+```
+C:\WINDOWS\system32\WindowsPowerShell\v1.0\Modules
 ```
 
-若 `-NoProfile` 下正常、不加時失敗，就確定是 profile 干擾，直接用 TL;DR 的指令更新即可。
+當 5.1 被啟動時繼承到的 `PSModulePath` **缺少這條路徑**，就無法載入
+`Microsoft.PowerShell.Utility`，`Get-FileHash` 即「not recognized」；
+再加上安裝腳本開頭設了 `$ErrorActionPreference = "Stop"`，這個錯就終止整個安裝。
+
+關鍵在「誰啟動這個 5.1」：
+
+- `codex update` 由 `codex.exe` 去叫 5.1，傳下去的 `PSModulePath` 缺了 v1.0 那條 → 失敗。
+- 從 PowerShell 7（pwsh）去叫安裝腳本時，pwsh 7 的 `PSModulePath` 本來就含 v1.0
+  那條，子 5.1 繼承到 → 自動載入成功。
+
+→ 所以修法是「確保 `PSModulePath` 含 v1.0\Modules」，TL;DR 的指令就是直接把它補上，
+與父行程無關、最穩。`-NoProfile` 與 profile 都不是原因（5.1 的 profile 只設編碼/PATH，
+不碰模組載入）。
+
+## 診斷指令
+
+```powershell
+# 重現：用「只有 7.x 路徑」的 PSModulePath 啟動 5.1，會看到 Get-FileHash 壞掉
+$bad = "C:\Program Files\PowerShell\7\Modules;C:\Program Files\PowerShell\Modules"
+powershell -NoProfile -Command "`$env:PSModulePath='$bad'; try { Get-FileHash `$PROFILE | Out-Null; 'OK' } catch { 'FAIL: ' + `$_.Exception.Message }"
+
+# 確認本機 5.1 模組目錄存在
+Test-Path "$env:WINDIR\System32\WindowsPowerShell\v1.0\Modules\Microsoft.PowerShell.Utility"
+```
 
 ## 注意事項（受控環境）
 
-- 這是會對外下載並安裝執行檔的動作；務必經使用者明確同意後再執行。
-- 不要為了「修好」而關閉 TLS 驗證（如 `strict-ssl false`）或改動全域設定。
+- 這是會對外下載並安裝執行檔的動作，務必經使用者明確同意後再執行。
+- 不要為了「修好」而關閉 TLS 驗證（如 `strict-ssl false`）或改動全域環境變數；
+  TL;DR 只在那一次子行程的暫時環境補路徑，跑完即消失。
+- 不要移除或停用 Windows PowerShell 5.1：它是 OS 內建元件、`codex update` 寫死要用它，
+  移除會讓更新與其他系統工具一起壞掉。
 - 安裝腳本來源固定為官方 `https://chatgpt.com/codex/install.ps1`。
-- `irm | iex` 前那段若看到 `$env:CODEX_NON_INTERACTIVE=1` 被外層 shell
-  先展開而報的紅字，屬無害雜訊，只要最後出現
-  `Codex CLI <version> installed successfully.` 即成功。
+- 看到 `$env:CODEX_NON_INTERACTIVE=1` 被外層 shell 先展開而報的紅字屬無害雜訊，
+  只要最後出現 `Codex CLI <version> installed successfully.` 即成功。
 
 ## 更新後驗證
 
