@@ -10,7 +10,7 @@ complete.
 - Reference template mode is resolved as none, partial reference, or full
   alignment.
 - Delivery policy and reporting level are recorded in the index and every adapter.
-- The platform adapter choices and the techniques opt-in are recorded.
+- The platform adapter choices are recorded.
 - Partial reference output records the selected reference scope; full alignment
   output records that reference functionality is in scope.
 - User-facing confirmation used plain-language questions instead of exposing
@@ -25,8 +25,6 @@ complete.
   `references/atlas-contract.md`: index, module docs, and adapter(s) only.
 - No separate workflow docs exist (`*_investigate_workflow.md` /
   `*_change_workflow.md`).
-- Technique docs under `<project>_techniques/` exist only if the user opted in;
-  otherwise they are absent.
 - The index has no "Decisions" metadata block and no links to workflow docs.
 - The index includes concrete project operating constraints, links to all module
   docs, and an Architecture Decisions section (empty at initialization).

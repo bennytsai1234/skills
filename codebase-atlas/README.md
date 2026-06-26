@@ -32,12 +32,6 @@ docs/
   <project>/
     <module_slug>.md
   <project>_adapter.md
-  <project>_techniques/        # optional, only if you opt in
-    debugging.md
-    tdd.md
-    verification.md
-    code-review.md
-    design-grilling.md
 ```
 
 The adapter is the single, self-contained entrypoint. It embeds the entry
@@ -45,9 +39,7 @@ router — read the index, confirm the project in one sentence, route
 know→investigate / change→change — **and** carries the change/investigate
 discipline (tiers, Before/After gate, Decision Gate, plan lifecycle,
 verification) inline. There are no separate workflow docs, so a routine task
-loads only the entrypoint skill plus the index and one or two module docs. The
-full technique docs are copied in only when you opt in; otherwise the adapter's
-one-line discipline pointers cover them.
+loads only the entrypoint skill plus the index and one or two module docs.
 
 ## How It Works
 
@@ -60,7 +52,7 @@ one-line discipline pointers cover them.
    existing docs.
 5. Split the project into stable modules.
 6. Write the index (navigation map + inherited operating constraints), the module
-   docs, and the self-contained adapter. Copy the technique docs only on opt-in.
+   docs, and the self-contained adapter.
 7. Run the quality checklist.
 
 ## Modes
@@ -108,9 +100,6 @@ Before / After explanation.
 - `references/quality-checklist.md`: final review checklist.
 - `assets/templates/`: Markdown templates for generated atlas files (index,
   module, and the self-contained adapters).
-- `assets/techniques/`: distilled, self-contained discipline docs (debugging,
-  TDD, verification, code review, design grilling), copied into a generated atlas
-  only when the user opts in.
 
 ## License
 

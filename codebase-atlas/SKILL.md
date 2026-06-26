@@ -200,21 +200,7 @@ before asking for configuration decisions:
 
    Recommended: A, so you can review the generated atlas before it enters
    history. This same policy also governs how later change work is delivered.
-9. Present the technique-docs decision in this plain-language shape, translated
-   into the working language:
-
-   ```markdown
-   The entrypoint already carries short reminders for the common disciplines
-   (debugging, testing, verification, code review, design questions). Do you also
-   want full standalone technique docs copied into your repo?
-
-   A. No — rely on the built-in reminders (recommended; keeps the atlas light).
-   B. Yes — copy the five full technique docs into the atlas.
-   ```
-
-   Recommended: A. The verbatim docs add ~2500 words to every repo for content
-   the assistant already knows; choose B only if you want the curated long form.
-10. Present the platform adapter decision in this plain-language shape,
+9. Present the platform adapter decision in this plain-language shape,
    translated into the working language. Show detected platforms pre-selected.
 
    If both `.claude/` and `.agents/` were detected:
@@ -266,7 +252,7 @@ before asking for configuration decisions:
    D. None — skip adapter generation
    ```
 
-11. Use this confirmation shape for preserved rules:
+10. Use this confirmation shape for preserved rules:
 
     ```text
     [Category]
@@ -276,7 +262,7 @@ before asking for configuration decisions:
 
     The user must be able to judge whether the agent correctly understood the
     existing project guidance.
-12. Wait for user confirmation before starting the full scan.
+11. Wait for user confirmation before starting the full scan.
 
 ## Initialization Workflow
 
@@ -293,13 +279,7 @@ before asking for configuration decisions:
    `assets/templates/`: the index (`index.md`) and one module doc per stable
    module (`module.md`). The index holds the navigation map only — no process and
    no internal decision metadata.
-7. Only if the user opted in to full technique docs (Step 3), copy the five docs
-   from `assets/techniques/` verbatim into `docs/<project>_techniques/`
-   (debugging.md, tdd.md, verification.md, code-review.md, design-grilling.md).
-   They are constant content and need no placeholder replacement. By default
-   (opt-out) do not create this folder — the adapter's inline discipline pointers
-   cover the same ground.
-8. Generate the self-contained adapter(s) for all platforms selected in Step 3.
+7. Generate the self-contained adapter(s) for all platforms selected in Step 3.
    Each adapter is the single entrypoint: it embeds the entry router (read the
    index, confirm the project in one sentence, route know→investigate /
    change→change) and carries the change/investigate discipline inline — there
@@ -329,7 +309,7 @@ before asking for configuration decisions:
      at `docs/<project>_index.md`. Render it in the Step 0 working language.
    - If a rebuild detects existing adapter files, include them in the
      delete-and-rebuild confirmation (Step 1) before overwriting.
-9. Run `references/quality-checklist.md` before reporting completion.
+8. Run `references/quality-checklist.md` before reporting completion.
 
 ## Core Rules
 

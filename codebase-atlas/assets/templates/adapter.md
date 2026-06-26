@@ -23,7 +23,9 @@ assumptions and unknowns. Never edit — if a fix is needed, hand off to Change
 after the user agrees. Apply discipline as the question calls for it: debugging =
 reproduce → rank hypotheses → bisect; review = read the diff against the owning
 and boundary modules; open design questions = interview one question at a time,
-each with a recommended answer.
+each with a recommended answer, checked against the index and the Architecture
+Decisions table — flag any proposal that contradicts a recorded responsibility or
+boundary, or re-opens a recorded decision.
 
 ## Change (any edit)
 
@@ -48,9 +50,11 @@ confirmation before editing any file:
 - **After**: what becomes true, and how it will be verified.
 
 **Decision Gate** — when a change alters module boundaries, an external API, is
-irreversible or a migration, or has two or more viable approaches: present
-Context / Options (A/B with trade-offs) / Recommendation and wait for a choice
-before the Before/After. Record cross-module decisions in the index's
+irreversible or a migration, or has two or more viable approaches: first check whether the proposal
+contradicts or re-opens anything recorded in the index or Architecture Decisions
+table — if so, name it and confirm the prior decision is being reopened. Then
+present Context / Options (A/B with trade-offs) / Recommendation and wait for a
+choice before the Before/After. Record cross-module decisions in the index's
 Architecture Decisions table; module-level ones in that module's Known Risks.
 
 After edits, verify scaled to the tier; the verification result is always in the

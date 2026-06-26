@@ -29,16 +29,12 @@ Resolve these before the full scan:
   the Step 3 confirmation. The generic `docs/` adapter is always generated.
   Platform-native adapters are generated only for platforms confirmed by the
   user.
-- `include_techniques`: `no` by default. The self-contained adapter already
-  carries one-line discipline pointers, so the verbatim technique docs are not
-  copied unless the user explicitly opts in.
 
 Internal decision keys are for atlas generation only. User-facing confirmation
 must present these decisions as plain-language questions in the working language,
 with the recommended value and reason. Do not expose internal setting names such
 as `mode`, `reference_template_mode`, `delivery_policy`, `reporting_level`,
-`platform_targets`, `include_techniques`, or `feature_parity` directly to the
-user.
+`platform_targets`, or `feature_parity` directly to the user.
 
 The reference-template decision must be presented as three plain-language
 choices:
@@ -109,10 +105,7 @@ docs/
 ```
 
 There are no separate workflow docs — change/investigate discipline lives inside
-the adapter. The verbatim technique docs are generated only when the user opts in
-(`include_techniques = yes`); when generated they go under
-`docs/<project>_techniques/` (`debugging.md`, `tdd.md`, `verification.md`,
-`code-review.md`, `design-grilling.md`).
+the adapter.
 
 Use lowercase snake_case slugs for generated files and folders. Use relative
 links for generated Markdown.
@@ -132,11 +125,6 @@ init-time tokens such as `{{ATLAS_TITLE}}` or `{{DELIVERY_POLICY}}` in generated
 docs. The only exceptions are the two runtime tokens `{{DATE}}` and `{{SLUG}}` in
 the adapter — leave them intact; the adapter fills them per change. See the
 placeholder map below.
-
-The discipline docs under `assets/techniques/` are copied verbatim into
-`docs/<project>_techniques/` **only when the user opts in**. They are constant
-content with no placeholders. By default they are not copied; the adapter's
-inline pointers cover the same disciplines.
 
 ## Placeholder Map
 
