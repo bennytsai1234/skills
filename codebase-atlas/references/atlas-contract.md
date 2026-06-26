@@ -152,7 +152,7 @@ Runtime tokens (leave intact — the adapter fills them per change):
 
 | Token | Value |
 |---|---|
-| `{{DATE}}` | The change date (`YYYY-MM-DD`) when a plan is written |
+| `{{DATE}}` | The change date in ISO 8601 `YYYY-MM-DD` (zero-padded, local date); the same string also names the day's completed folder and `summary.md` |
 | `{{SLUG}}` | The per-change plan slug |
 
 ## Index Requirements
@@ -222,8 +222,11 @@ adapter + two workflow docs. Each adapter must:
   least T2. A plain "be quick / be thorough" override is honoured but never drops
   below the floor.
 - **Before / After gate** as the only confirmation interface: Before states the
-  current state and diagnosed root cause; After states what becomes true and how
-  it will be verified. Wait for explicit confirmation before editing any file.
+  current state and why the change is needed (the diagnosed root cause for a
+  bug); After states what becomes true and how it will be verified. At T1/T2,
+  wait for explicit confirmation before editing any file. At T0 (trivial,
+  reversible, single file), state the one-line Before/After and proceed without
+  waiting, then report after.
 - **Decision Gate** when a change alters module boundaries, an external API
   contract, is irreversible or a migration, or has two or more viable approaches:
   present Context / Options (with trade-offs) / Recommendation and wait for a
@@ -233,7 +236,8 @@ adapter + two workflow docs. Each adapter must:
 - **Verification** scaled to the tier after edits; the verification result is in
   the user-facing report regardless of reporting level; never claim completion on
   a failed check. On completion move the plan to
-  `docs/changes/completed/{{DATE}}-{{SLUG}}.md`.
+  `docs/changes/completed/{{DATE}}/{{SLUG}}.md` and append its entry to that day's
+  `docs/changes/completed/{{DATE}}/summary.md` (see Plan File Lifecycle).
 - **Reporting & delivery**: honour the reporting level (plain: no module names,
   paths, or code; technical: include them) and record the delivery policy.
 - Do not rerun Codebase Atlas initialization unless the user explicitly asks for a
@@ -246,6 +250,48 @@ adapter + two workflow docs. Each adapter must:
 - Module-level decisions: add a note to the affected module's Known Risks or Do
   Not Do section, referencing the index entry if cross-module.
 - Do not create separate decision log files.
+
+## Plan File Lifecycle
+
+Change-tier work records plans and a daily summary under `docs/changes/`. T0
+trivial changes skip all of this; T1 and T2 follow it.
+
+**Date format.** Every `{{DATE}}` is ISO 8601 `YYYY-MM-DD` — zero-padded, local
+date (for example `2026-06-09`, never `2026-6-9` or `06/09/2026`). The same date
+string names the plan file, the day's completed folder, and that day's summary
+file, so they always match.
+
+**Layout.**
+
+```text
+docs/changes/
+  planning/
+    {{DATE}}-{{SLUG}}.md       # transient scratch plan, written before editing
+  completed/
+    {{DATE}}/                  # one folder per calendar day
+      {{SLUG}}.md              # the finished plan, moved here on completion
+      summary.md               # that day's work summary, appended per change
+```
+
+**Lifecycle.**
+
+1. Before editing at T1/T2, write the plan to `planning/{{DATE}}-{{SLUG}}.md`.
+2. On completion, move it to `completed/{{DATE}}/{{SLUG}}.md` (create the date
+   folder if missing). No copy is left behind in `planning/`.
+3. In the same step, append one line for the change to
+   `completed/{{DATE}}/summary.md` (create it if missing), newest last:
+
+   ```text
+   - {{SLUG}} — <one-line what changed> · T<tier> · <verification result> · <delivery>
+   ```
+
+   This file is the daily work summary; it accumulates every completed change for
+   that date.
+
+The plan files and summary are developer artifacts and may name modules and files
+regardless of reporting level — the reporting level governs only user-facing chat
+reports. Their delivery (commit/push) follows the same delivery policy as the rest
+of the change.
 
 ## Incremental Atlas Updates
 

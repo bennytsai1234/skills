@@ -58,14 +58,18 @@ complete.
 - Change opens by judging a discipline tier (T0/T1/T2), with the hard floor at T2
   for irreversible, cross-module, external-API, or migration work, and scales
   test/plan/verification effort to the tier.
-- Change requires a Before / After gate before edits (Before = diagnosed root
-  cause, After = how it will be verified) as the only confirmation interface.
+- Change states a Before / After before edits (Before = current state and why
+  the change is needed, After = how it will be verified) as the only confirmation
+  interface; T1/T2 wait for explicit confirmation, T0 announces the one-line
+  Before/After and proceeds without waiting.
 - Change includes a Decision Gate for module-boundary changes, external API
   changes, irreversible operations/migrations, or multi-option trade-offs.
 - Change writes a scratch plan to `docs/changes/planning/{{DATE}}-{{SLUG}}.md`
-  before editing at T1/T2 (T0 skips), runs tier-appropriate verification, reports
-  the verification result, and moves the plan to `docs/changes/completed/` on
-  completion.
+  (`{{DATE}}` = ISO `YYYY-MM-DD`) before editing at T1/T2 (T0 skips), runs
+  tier-appropriate verification, reports the verification result, moves the plan
+  to `docs/changes/completed/{{DATE}}/{{SLUG}}.md` on completion, and appends its
+  entry to that day's `docs/changes/completed/{{DATE}}/summary.md` (the daily work
+  summary).
 - The adapter reports per the selected reporting level (plain: no module names,
   paths, or code; technical: include them) and records the delivery policy.
 - Atlas update instructions are incremental: update only affected module docs and

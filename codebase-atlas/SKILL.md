@@ -317,9 +317,10 @@ before asking for configuration decisions:
   notes and remove stale boundaries during rebuilds.
 - Generated docs must describe repository-persistent facts, not facts about the
   current agent, model, editor, shell, chat session, or temporary workspace.
-- Code-changing work must require a plain Before / After gate before edits. This
-  gate is the user-facing checkpoint; do not replace it with secondary
-  engineering reports:
+- Code-changing work must state a plain Before / After before edits. This is the
+  user-facing checkpoint; do not replace it with secondary engineering reports.
+  At T1/T2, wait for confirmation before editing; at T0 (trivial, reversible,
+  single file), announce the one-line Before / After and proceed, then report:
   - **Before**: current state and what is wrong, missing, confusing, or risky.
   - **After**: what the change will make true.
 - Before proposing a change, calibrate scope: owning module, boundary modules,

@@ -35,7 +35,8 @@ Judge a discipline tier, then scale effort:
   Before/After; skip the plan file; run the single most relevant check.
 - **T1 normal** (contained, reversible, clear diagnosis): add one focused test
   when a cheap seam exists; write a scratch plan
-  `docs/changes/planning/{{DATE}}-{{SLUG}}.md` before editing source.
+  `docs/changes/planning/{{DATE}}-{{SLUG}}.md` before editing source
+  (`{{DATE}}` = today's local date, ISO `YYYY-MM-DD`).
 - **T2 hard/risky** (async/stateful bug, multi-module, external API,
   irreversible, perf regression, uncertain diagnosis): full discipline; same plan
   file; usually a Decision Gate.
@@ -44,10 +45,14 @@ Judge a discipline tier, then scale effort:
 least T2. Honour a plain "be quick / be thorough" override, but never below the
 floor.
 
-**Before / After gate** (the only confirmation interface) — wait for explicit
-confirmation before editing any file:
-- **Before**: current state and the diagnosed root cause, in plain language.
+**Before / After gate** (the only confirmation interface):
+- **Before**: current state and why the change is needed — for a bug, the
+  diagnosed root cause — in plain language.
 - **After**: what becomes true, and how it will be verified.
+
+At T1/T2, wait for explicit confirmation before editing any file. At T0
+(trivial, reversible, single file), state the one-line Before/After and proceed
+without waiting, then report after — it is reversible if the Before was wrong.
 
 **Decision Gate** — when a change alters module boundaries, an external API, is
 irreversible or a migration, or has two or more viable approaches: first check whether the proposal
@@ -59,8 +64,10 @@ Architecture Decisions table; module-level ones in that module's Known Risks.
 
 After edits, verify scaled to the tier; the verification result is always in the
 report — never claim completion on a failed check. Once complete, move the plan
-to `docs/changes/completed/{{DATE}}-{{SLUG}}.md`. Update atlas docs only when
-module boundaries, ownership, or external APIs change — incrementally, no rescan.
+to `docs/changes/completed/{{DATE}}/{{SLUG}}.md` and append a one-line entry for
+it to that day's `docs/changes/completed/{{DATE}}/summary.md` (the daily work
+summary). Update atlas docs only when module boundaries, ownership, or external
+APIs change — incrementally, no rescan.
 
 ## Reporting & delivery
 
