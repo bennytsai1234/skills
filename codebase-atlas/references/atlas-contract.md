@@ -126,6 +126,23 @@ docs. The only exceptions are the two runtime tokens `{{DATE}}` and `{{SLUG}}` i
 the adapter — leave them intact; the adapter fills them per change. See the
 placeholder map below.
 
+## Optional Templates
+
+These are not part of the required output shape and are generated only when the
+project warrants them and the user opts in. They never expand the required
+`index + module docs + adapter` shape.
+
+- `design.md` — a generic, **format-only** scaffold for mapping a project's design
+  system in the google-labs-code/design.md two-layer format (YAML token
+  front-matter + prose rationale, canonical section order). Format-only: it never
+  requires installing or running `@google/design.md` (its CLI / lint / export), so
+  it suits no-build, supply-chain-restricted environments. Normativity follows the
+  project's declared source of truth (mirror when code/CSS/tokens are canonical;
+  normative only when the file is declared canonical). Record the mapped design
+  system as a normal module doc and/or an index link; do not hardcode
+  project-specific layering (e.g. a per-page override system) into the skill. See
+  `references/modes.md` → "Optional: Design System Mapping".
+
 ## Placeholder Map
 
 Replace every token below at initialization **except** the two runtime tokens,
