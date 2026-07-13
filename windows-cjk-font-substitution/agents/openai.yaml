@@ -1,0 +1,4 @@
+interface:
+  display_name: "Windows CJK Font Substitution"
+  short_description: "Fix Windows CJK font fallback and Noto substitution"
+  default_prompt: "Use $windows-cjk-font-substitution to diagnose and configure Windows Chinese font fallback."

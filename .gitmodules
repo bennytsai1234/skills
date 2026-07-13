@@ -10,6 +10,3 @@
 [submodule "mattpocock-skills"]
 	path = mattpocock-skills
 	url = https://github.com/mattpocock/skills.git
-[submodule "codegraph"]
-	path = codegraph
-	url = https://github.com/colbymchenry/codegraph.git
