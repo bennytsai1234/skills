@@ -1,30 +1,34 @@
 ---
 name: codex-update
-description: "Update the OpenAI Codex CLI on this controlled Windows environment using the official installer (the built-in `codex update` is unreliable here)."
+description: "Update or diagnose the OpenAI Codex CLI on this controlled Windows environment. Use for version checks, CLI updates, and update failures. Never bypass TLS or change global certificate settings."
 ---
 
-# Codex CLI Update (Windows)
+# Codex CLI Update
 
-在這台 Windows 更新 Codex CLI 的正確步驟。不要用內建 `codex update`，直接跑官方安裝腳本。
+在公司管控 Windows 上，只更新 Codex CLI；不要修改系統、npm 或 git 的全域設定。
 
-## 更新
+## Update
 
-```powershell
-$env:PSModulePath += ";$env:WINDIR\System32\WindowsPowerShell\v1.0\Modules"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://chatgpt.com/codex/install.ps1 | iex"
-```
+1. Check the installed CLI:
 
-跑完出現 `Codex CLI <version> installed successfully.` 即成功。
+   ```powershell
+   codex --version
+   codex doctor
+   ```
 
-## 驗證
+2. Run the built-in updater:
 
-```powershell
-& "$env:LOCALAPPDATA\Programs\OpenAI\Codex\bin\codex.exe" --version
-```
+   ```powershell
+   codex update
+   ```
 
-安裝位置：`$env:LOCALAPPDATA\Programs\OpenAI\Codex\bin\codex.exe`（安裝時已加入 PATH）。
+3. Verify the result:
 
-## 注意
+   ```powershell
+   codex --version
+   codex doctor
+   ```
 
-- 不要關閉 TLS 驗證（如 `strict-ssl false`），不要改全域設定。
-- 安裝來源固定為官方 `https://chatgpt.com/codex/install.ps1`。
+## Failure handling
+
+If the update fails, collect the exact error and run `codex doctor`. Do not disable TLS validation, use `strict-ssl false`, or change npm, git, or system certificate settings. Escalate certificate, proxy, permission, or managed-device failures to IT with the command output.
