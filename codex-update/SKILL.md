@@ -31,4 +31,12 @@ description: "Update or diagnose the OpenAI Codex CLI on this controlled Windows
 
 ## Failure handling
 
-If the update fails, collect the exact error and run `codex doctor`. Do not disable TLS validation, use `strict-ssl false`, or change npm, git, or system certificate settings. Escalate certificate, proxy, permission, or managed-device failures to IT with the command output.
+If the update fails, collect the exact error and run `codex doctor`.
+
+If the error is `Get-FileHash is not recognized` (or an equivalent missing-command error) during the official installer’s checksum verification, retry the same official installer in a one-off Windows PowerShell process without the user profile:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command '$env:CODEX_NON_INTERACTIVE="1"; Invoke-RestMethod https://chatgpt.com/codex/install.ps1 | Invoke-Expression'
+```
+
+This preserves the installer’s normal HTTPS and checksum verification and does not change PowerShell, system, npm, or git settings. Then run the verification commands again. If the retry fails, retain the exact error, run `codex doctor`, and escalate certificate, proxy, permission, or managed-device failures to IT with the command output. Do not disable TLS validation or use `strict-ssl false`.
