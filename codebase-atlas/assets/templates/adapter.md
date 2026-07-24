@@ -63,11 +63,13 @@ choice before the Before/After. Record cross-module decisions in the index's
 Architecture Decisions table; module-level ones in that module's Known Risks.
 
 After edits, verify scaled to the tier; the verification result is always in the
-report — never claim completion on a failed check. Once complete, move the plan
-to `docs/changes/completed/{{DATE}}/{{SLUG}}.md` and append a one-line entry for
-it to that day's `docs/changes/completed/{{DATE}}/summary.md` (the daily work
-summary). Update atlas docs only when module boundaries, ownership, or external
-APIs change — incrementally, no rescan.
+report — never claim completion on a failed check. Before marking the change
+complete, explicitly answer: did this change alter a module's boundary,
+ownership, or an external API/contract? If yes, update the affected atlas
+doc(s) now, as part of this same completion step — not a follow-up. Then move
+the plan to `docs/changes/completed/{{DATE}}/{{SLUG}}.md` and append one line
+to that day's `docs/changes/completed/{{DATE}}/summary.md`, noting whether
+atlas docs were updated or that none needed updating.
 
 ## Reporting & delivery
 

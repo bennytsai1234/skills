@@ -238,6 +238,10 @@ adapter + two workflow docs. Each adapter must:
   Hard floor: irreversible, cross-module, external-API, and migration work is at
   least T2. A plain "be quick / be thorough" override is honoured but never drops
   below the floor.
+- **Atlas update check** before completion: explicitly answer whether the change
+  altered a module's boundary, ownership, or an external API/contract. If yes,
+  update the affected atlas doc(s) now, as part of this same completion step —
+  not a follow-up.
 - **Before / After gate** as the only confirmation interface: Before states the
   current state and why the change is needed (the diagnosed root cause for a
   bug); After states what becomes true and how it will be verified. At T1/T2,
@@ -254,7 +258,8 @@ adapter + two workflow docs. Each adapter must:
   the user-facing report regardless of reporting level; never claim completion on
   a failed check. On completion move the plan to
   `docs/changes/completed/{{DATE}}/{{SLUG}}.md` and append its entry to that day's
-  `docs/changes/completed/{{DATE}}/summary.md` (see Plan File Lifecycle).
+  `docs/changes/completed/{{DATE}}/summary.md`, noting the atlas update check's
+  outcome (see Plan File Lifecycle).
 - **Reporting & delivery**: honour the reporting level (plain: no module names,
   paths, or code; technical: include them) and record the delivery policy.
 - Do not rerun Codebase Atlas initialization unless the user explicitly asks for a
@@ -299,7 +304,7 @@ docs/changes/
    `completed/{{DATE}}/summary.md` (create it if missing), newest last:
 
    ```text
-   - {{SLUG}} — <one-line what changed> · T<tier> · <verification result> · <delivery>
+   - {{SLUG}} — <one-line what changed> · T<tier> · <verification result> · <delivery> · atlas: <updated <module(s)> / no change needed>
    ```
 
    This file is the daily work summary; it accumulates every completed change for
@@ -342,7 +347,8 @@ Requirements above and reads the index before acting.
   - `name: <project-slug>-atlas`
   - `description` (render in the working language selected in Step 0; English
     shown here): `Codebase Atlas for <PROJECT_NAME> — navigation map and change
-    discipline. Use before investigating or editing this project's code.`
+    discipline. Load once at the start of work on this project; do not
+    re-invoke later in the same conversation.`
 - Set `{{INDEX_FILE}}` to the relative path from
   `.claude/skills/<project-slug>-atlas/` to the index
   (e.g., `../../../docs/<project>_index.md`). Also set `{{PROJECT_NAME}}`,
@@ -357,8 +363,9 @@ Requirements above and reads the index before acting.
 - **Frontmatter required:**
   - `name: <project-slug>-atlas`
   - `description` (render in the working language; English shown here): `Codebase
-    Atlas for <PROJECT_NAME> — navigation map and change discipline. Use before
-    investigating or editing this project's code.`
+    Atlas for <PROJECT_NAME> — navigation map and change discipline. Load once at
+    the start of work on this project; do not re-invoke later in the same
+    conversation.`
 - Set `{{INDEX_FILE}}` to the relative path from
   `.agents/skills/<project-slug>-atlas/` to the index.
 - Create `.agents/skills/<project-slug>-atlas/` if it does not exist.
