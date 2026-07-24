@@ -30,6 +30,9 @@ complete.
   docs, and an Architecture Decisions section (empty at initialization).
 - The adapter(s) exist and are self-contained (entry router + investigate/change
   discipline inline).
+- No stale `docs/<project>_adapter.md` remains when a platform adapter (Claude
+  Code and/or Codex) exists — the generic adapter is generated, or kept from a
+  prior run, only when no platform adapter exists.
 - No "run the atlas skill before every operation" mandate was written into
   `CLAUDE.md`; at most a single pointer line to the index exists.
 - Old generated entrypoints, workflow docs, and technique folders were removed or
@@ -85,7 +88,11 @@ complete.
 
 ## Self-Verification Actions
 
-Before the final report:
+Per the Initialization Workflow, items 1-5 below are first checked by a
+dedicated subagent per file (index / each module doc / each adapter), which
+fixes what it can directly. After all of them return, run this same list
+yourself once more as a centralized pass, focused on cross-file consistency
+that no single-file subagent can see:
 
 1. Reread the index and confirm every module summary says when future work should
    start there, and that no Decisions block or workflow links remain.
@@ -101,7 +108,12 @@ Before the final report:
 
 ## Final Report
 
-- Report created, updated, and removed files.
+- Report created, updated, and removed files (including any stale generic
+  adapter deleted as redundant).
 - Report remaining TODOs and why they represent real uncertainty.
 - Report validation status.
-- Apply the selected delivery policy only after validation.
+- Apply the selected delivery policy only after validation, per
+  `references/atlas-contract.md` → Delivery: stage only this run's files,
+  commit when the policy calls for it, push only when the policy is
+  `commit and push`, and never force-push — stop and ask if a push is
+  rejected as non-fast-forward.

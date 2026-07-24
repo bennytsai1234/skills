@@ -31,7 +31,9 @@ docs/
   <project>_index.md
   <project>/
     <module_slug>.md
-  <project>_adapter.md
+  <project>_adapter.md      # only generated when no Claude Code / Codex
+                             # adapter exists — otherwise that platform adapter
+                             # is the entrypoint and this file is skipped
 ```
 
 The adapter is the single, self-contained entrypoint. It embeds the entry
@@ -40,6 +42,9 @@ know→investigate / change→change — **and** carries the change/investigate
 discipline (tiers, Before/After gate, Decision Gate, plan lifecycle,
 verification) inline. There are no separate workflow docs, so a routine task
 loads only the entrypoint skill plus the index and one or two module docs.
+Because a platform adapter (`.claude/skills/...` or `.agents/skills/...`) is
+loaded automatically by its platform, the generic `docs/` adapter is only
+generated when no platform adapter exists — otherwise it would sit unused.
 
 ## How It Works
 
@@ -48,12 +53,17 @@ loads only the entrypoint skill plus the index and one or two module docs.
 2. Explain what the skill creates, then handle old atlas artifacts if needed.
 3. Pre-scan existing repository rules and confirm the initial decisions in
    plain language, including each inherited rule and how it will be handled.
-4. Inspect repository structure, entrypoints, source roots, tests, configs, and
-   existing docs.
-5. Split the project into stable modules.
-6. Write the index (navigation map + inherited operating constraints), the module
-   docs, and the self-contained adapter.
-7. Run the quality checklist.
+4. Inspect repository structure shallowly to propose a module split, then
+   dispatch one subagent per candidate module, in parallel, to deep-scan that
+   module and write its module doc directly.
+5. Reconcile the module list from the subagents' findings and write the index
+   and adapter(s) centrally (generating the generic `docs/` adapter only when
+   no platform adapter exists, and deleting a stale one otherwise).
+6. Dispatch one verification subagent per generated file, in parallel, to
+   re-check and fix that file directly, then run a final centralized
+   cross-file check plus the quality checklist.
+7. Apply the delivery policy (no commit / commit only / commit and push),
+   never force-pushing.
 
 ## Modes
 

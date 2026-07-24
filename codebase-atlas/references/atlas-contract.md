@@ -26,9 +26,10 @@ Resolve these before the full scan:
   for developer-oriented workflows.
 - `platform_targets`: platform detection runs silently in Step 1 (`.claude/`
   → Claude Code, `.agents/` → Codex). Detected platforms are pre-selected in
-  the Step 3 confirmation. The generic `docs/` adapter is always generated.
-  Platform-native adapters are generated only for platforms confirmed by the
-  user.
+  the Step 3 confirmation. Platform-native adapters are generated only for
+  platforms confirmed by the user. The generic `docs/` adapter is generated
+  only when no platform-native adapter exists — see Entrypoint Adapters →
+  Generic Adapter.
 
 Internal decision keys are for atlas generation only. User-facing confirmation
 must present these decisions as plain-language questions in the working language,
@@ -91,7 +92,8 @@ docs/
   <project>_index.md
   <project>/
     <module_slug>.md
-  <project>_adapter.md
+  <project>_adapter.md      # only when no platform adapter exists — see
+                             # Entrypoint Adapters → Generic Adapter
 ```
 
 Reference-assisted output:
@@ -101,7 +103,7 @@ docs/
   <project>_<reference>_index.md
   <project>_<reference>/
     <module_slug>.md
-  <project>_<reference>_adapter.md
+  <project>_<reference>_adapter.md   # only when no platform adapter exists
 ```
 
 There are no separate workflow docs — change/investigate discipline lives inside
@@ -116,7 +118,8 @@ Use the templates under `assets/templates/`:
 
 - `index.md`
 - `module.md`
-- `adapter.md` (generic `docs/` adapter, no frontmatter)
+- `adapter.md` (generic `docs/` adapter, no frontmatter — generated only when
+  no platform adapter exists; see Entrypoint Adapters → Generic Adapter)
 - `claude_code_adapter.md` (Claude Code only)
 - `codex_adapter.md` (Codex only)
 
@@ -333,11 +336,25 @@ Generate adapters for every initialization or rebuild based on platform detectio
 and user confirmation. Every adapter is self-contained per the Adapter
 Requirements above and reads the index before acting.
 
-### Generic Adapter (always generated)
+### Generic Adapter (only when no platform adapter exists)
 
 - **Path:** `docs/<project>_adapter.md`
 - **Template:** `assets/templates/adapter.md`
 - No frontmatter. Works as a plain reference doc.
+- Generate this only when Step 3's platform confirmation produced no
+  platform-specific adapter — the user chose "None — skip adapter generation,"
+  or platform detection was inconclusive and the user picked no platform.
+  When at least one platform adapter exists (Claude Code and/or Codex), that
+  platform loads its own adapter automatically; the generic `docs/` adapter
+  would then be a duplicate that nothing loads and no workflow keeps in sync,
+  so skip it. Generate both only if the user explicitly says they also need a
+  plain-markdown entrypoint alongside a platform adapter (e.g., for a tool or
+  reviewer without skill support).
+- **Cleanup:** on any initialization or rebuild, if a generic adapter file
+  exists from a prior run and at least one platform adapter exists or is being
+  generated this run, delete the generic adapter — it is a stale, unused
+  duplicate once a platform adapter covers the same entrypoint. Do this as
+  part of adapter generation, not as a separate follow-up task.
 
 ### Claude Code Adapter (when selected)
 
@@ -385,3 +402,20 @@ plain-language pointer line to `CLAUDE.md` noting that the navigation map lives 
 - Read the atlas index before any operation.
 - Include the delivery policy and reporting level.
 - Be included in delete-and-rebuild detection during Step 1 of a rebuild.
+
+## Delivery
+
+Apply the resolved `delivery_policy` once the atlas has been generated,
+adapter cleanup (above) is done, and verification (`references/quality-checklist.md`)
+has passed:
+
+- `no commit`: stop. Leave the working tree for the user to review and commit
+  themselves.
+- `commit only`: stage exactly the files this run created, modified, or
+  deleted (index, module docs, adapters, any generic-adapter deletion, and a
+  `CLAUDE.md` pointer line if added) and commit with a message describing the
+  atlas change. Do not stage unrelated pending changes and do not push.
+- `commit and push`: do the same commit, then push. If the push is rejected
+  because the remote has commits this run does not have, stop and ask the
+  user how to reconcile (merge or rebase) rather than force-pushing. Never
+  force-push atlas commits.

@@ -15,6 +15,10 @@ Keep this skill simple:
 - References define the rules; templates define the output shape.
 - Do not add runtime assumptions, helper scripts, or product-specific behavior
   to this skill.
+- Delegate the per-module scan/draft pass and the per-file verify/fix pass to
+  subagents run in parallel (Agent tool). Keep module-boundary judgment, the
+  index, and adapter generation centralized — those need a single holistic
+  view across files that independent subagents do not share.
 - Determine the working language before any user-facing output. Prefer an
   explicit repository language rule, then the user's initialization request
   language, then English. Use the selected language for user-facing output and
@@ -269,23 +273,59 @@ before asking for configuration decisions:
 1. Read `references/atlas-contract.md`.
 2. Run the language detection, old-atlas detection, introduction, and pre-scan
    above, then resolve the initial decisions with the user.
-3. Inspect the target repository: manifests, entrypoints, source roots, tests,
-   build/config files, existing docs, and major package or domain boundaries.
+3. Inspect the target repository yourself, but only shallowly: manifests,
+   top-level directories, README/config, and existing docs. This pass exists
+   only to propose candidate module boundaries — do not deep-read individual
+   source files here; that happens per module in Step 6.
 4. Read `references/modes.md` and follow either standalone or
    reference-assisted guidance.
-5. Split the project into stable modules using change-boundary quality, not a
-   hard module count.
-6. Create the canonical atlas under `docs/` using templates from
-   `assets/templates/`: the index (`index.md`) and one module doc per stable
-   module (`module.md`). The index holds the navigation map only — no process and
-   no internal decision metadata.
-7. Generate the self-contained adapter(s) for all platforms selected in Step 3.
+5. Propose the module split from the shallow pass, using change-boundary
+   quality, not a hard module count. Treat this split as provisional: a
+   scanning subagent in Step 6 may report that its module should merge with
+   another or split further. When that happens, adjust the split and
+   reconcile — do not force the subagent's file to fit a wrong boundary.
+6. Scan and draft in parallel. Dispatch one subagent per candidate module
+   (Agent tool, `general-purpose`, all dispatches in one message so they run
+   concurrently) to deep-scan that module's scope and write its module doc
+   directly. Each subagent starts with no memory of this conversation, so its
+   prompt must include, inline:
+   - The module's name/slug and its provisional scope (folders/files) from
+     Step 5.
+   - The "Module Requirements" section from `references/atlas-contract.md` and
+     the `assets/templates/module.md` template content, so the subagent knows
+     the exact required sections and placeholder tokens to replace.
+   - The "Scan Boundaries" exclusions from `references/atlas-contract.md`
+     (ignore `node_modules/`, build output, vendored code, etc.).
+   - The resolved working language and reporting-level decisions from Step 2.
+   - An instruction to ground every claim in committed files and write real
+     uncertainty as `TODO` rather than inventing content, and to avoid file
+     inventories in favor of routing-oriented notes.
+   - The exact output path to write: `docs/<module_slug>.md` (or the
+     reference-assisted path). One subagent writes exactly one file — never
+     let two subagents target the same path.
+   After all module subagents return, read their brief findings (not the full
+   file contents) to reconcile the module list per Step 5's provisional-split
+   note. Then draft `index.md` yourself from the reconciled module list and
+   findings — the index needs a single view across every module, so keep this
+   step centralized rather than delegated.
+7. Generate the self-contained adapter(s) yourself (centralized — adapter
+   content follows fixed decisions and templates rather than per-module
+   discovery, so delegating it adds coordination cost without benefit) for all
+   platforms selected in Step 3.
    Each adapter is the single entrypoint: it embeds the entry router (read the
    index, confirm the project in one sentence, route know→investigate /
    change→change) and carries the change/investigate discipline inline — there
    are no separate workflow docs.
-   - Always generate `docs/<project>_adapter.md` using
-     `assets/templates/adapter.md` (generic, no frontmatter).
+   - Generate `docs/<project>_adapter.md` (`assets/templates/adapter.md`,
+     generic, no frontmatter) only when no platform adapter exists this run —
+     the user chose "None" in Step 3, or detection was inconclusive and no
+     platform was picked. If a Claude Code and/or Codex adapter exists, skip
+     the generic adapter: nothing loads it automatically once a platform
+     adapter does, so it would sit unused (see `references/atlas-contract.md`
+     → Entrypoint Adapters → Generic Adapter). If a generic adapter file
+     already exists from a prior run and a platform adapter now exists too,
+     delete the generic one now as part of this step — do not leave it for a
+     later cleanup pass.
    - If Claude Code was selected: create `.claude/skills/<project-slug>-atlas/`
      (and `.claude/skills/`) if needed, then generate
      `.claude/skills/<project-slug>-atlas/SKILL.md` using
@@ -309,7 +349,38 @@ before asking for configuration decisions:
      at `docs/<project>_index.md`. Render it in the Step 0 working language.
    - If a rebuild detects existing adapter files, include them in the
      delete-and-rebuild confirmation (Step 1) before overwriting.
-8. Run `references/quality-checklist.md` before reporting completion.
+8. Verify and fix in parallel. Dispatch one subagent per generated file — the
+   index, every module doc, and every adapter, one file per subagent, all
+   dispatches in one message so they run concurrently — to independently
+   re-check that single file and fix problems directly rather than only
+   reporting them (each subagent has Edit access to its own file). Each
+   verification subagent's prompt must include, inline:
+   - The single file's path, with an explicit instruction to read and edit
+     only that path, never any other generated file.
+   - The checklist items from `references/quality-checklist.md` relevant to
+     that file's type (index / module / adapter) and the matching
+     requirements from `references/atlas-contract.md` (Index Requirements,
+     Module Requirements, or Adapter Requirements as applicable).
+   - An instruction to fix directly whatever it finds wrong — remaining
+     init-time placeholders, missing required sections, invented facts not
+     grounded in the repository, file inventories instead of routing
+     summaries, broken relative links, or leftover Decisions-block/workflow-doc
+     references — and to report back concisely what it changed and anything it
+     was not confident enough to fix itself.
+   After every verification subagent returns, read their change reports,
+   resolve anything flagged as not-confident yourself, then run one final
+   centralized pass over `references/quality-checklist.md` for the cross-file
+   concerns no single-file subagent can see alone: do local Markdown links
+   resolve across files, does the index's module list match the module docs
+   actually on disk, and are the Claude Code/Codex adapter frontmatter names
+   consistent with each other. Report completion only after this pass.
+9. Apply the delivery policy resolved in Step 2, per
+   `references/atlas-contract.md` → Delivery: `no commit` stops here; `commit
+   only` stages exactly this run's created/modified/deleted atlas files
+   (including any generic-adapter deletion from Step 7) and commits;
+   `commit and push` also pushes, and if the push is rejected because the
+   remote has commits this run does not have, stop and ask the user how to
+   reconcile instead of force-pushing.
 
 ## Core Rules
 
