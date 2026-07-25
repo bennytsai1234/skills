@@ -1,13 +1,18 @@
 ---
 name: codebase-atlas
-description: "Initialize or rebuild a repository atlas under docs/ for AI-assisted code navigation."
+description: "Initialize or rebuild a repository atlas under docs/ for AI-assisted code navigation. Only for an explicit atlas build, rebuild, refresh, or rescan requested by a human — never for ordinary development, and never inside a delegated subagent task."
 ---
 
 # Codebase Atlas
 
-Codebase Atlas turns a repository into a compact engineering map. Use it for
-atlas initialization or a deliberate full rebuild, not for ordinary follow-up
-development.
+Codebase Atlas turns a repository into a compact engineering map, then generates
+the role-split entrypoints that let a lead agent and cheap worker subagents work
+on it without tripping over each other. Use it for atlas initialization or a
+deliberate full rebuild, not for ordinary follow-up development.
+
+**Do not run this skill inside a delegated subagent task.** If your instructions
+arrived as a task contract from another agent (a prompt whose header says
+`ROLE: worker`), an atlas rebuild is out of scope — report that instead.
 
 Keep this skill simple:
 
@@ -19,6 +24,10 @@ Keep this skill simple:
   subagents run in parallel (Agent tool). Keep module-boundary judgment, the
   index, and adapter generation centralized — those need a single holistic
   view across files that independent subagents do not share.
+- The atlas this skill generates is built for a lead-plus-workers setup. It
+  produces **two** entrypoints per platform — a lead adapter and a worker
+  adapter — split by role rather than by activity. Read
+  `references/delegation.md` before generating either.
 - Determine the working language before any user-facing output. Prefer an
   explicit repository language rule, then the user's initialization request
   language, then English. Use the selected language for user-facing output and
@@ -61,9 +70,14 @@ Before outputting anything, scan only for old Codebase Atlas artifacts:
    - Old atlas docs (index and module docs).
    - Legacy structures from earlier atlas versions: `*_investigate_workflow.md`,
      `*_change_workflow.md`, and `*_techniques/` folders.
-   - Generated Codebase Atlas entrypoints (adapters) that point to those old docs.
+   - Generated Codebase Atlas entrypoints (adapters) that point to those old
+     docs, including the pre-split single adapter — `docs/<project>_adapter.md`
+     and any `<project-slug>-atlas` skill whose body carries worker-side
+     execution rules rather than the lead role check. A single self-contained
+     adapter is the design this version replaces; it must not survive a rebuild.
    - Any "run the atlas skill before every operation" mandate that a previous
-     atlas wrote into `CLAUDE.md` (remove only that block, not the whole file).
+     atlas wrote into `CLAUDE.md` or `AGENTS.md` (remove only that block, not
+     the whole file).
 7. Do not delete unrelated `.agents/` content or any file whose Codebase Atlas
    origin cannot be confirmed.
 8. If the user wants to preserve any part, read only the parts the user asked
@@ -302,65 +316,82 @@ before asking for configuration decisions:
      inventories in favor of routing-oriented notes.
    - The exact output path to write: `docs/<module_slug>.md` (or the
      reference-assisted path). One subagent writes exactly one file — never
-     let two subagents target the same path.
+     let two subagents target the same path. This is the disjoint-paths
+     scheduling rule from `references/delegation.md` §4 applied to the build
+     itself: these dispatches are safe to run concurrently precisely because no
+     two of them can touch the same file.
+
+   These prompts are task contracts. Keep them to what the subagent cannot
+   derive, and do not paste this conversation into them.
    After all module subagents return, read their brief findings (not the full
    file contents) to reconcile the module list per Step 5's provisional-split
    note. Then draft `index.md` yourself from the reconciled module list and
    findings — the index needs a single view across every module, so keep this
    step centralized rather than delegated.
-7. Generate the self-contained adapter(s) yourself (centralized — adapter
-   content follows fixed decisions and templates rather than per-module
-   discovery, so delegating it adds coordination cost without benefit) for all
-   platforms selected in Step 3.
-   Each adapter is the single entrypoint: it embeds the entry router (read the
-   index, confirm the project in one sentence, route know→investigate /
-   change→change) and carries the change/investigate discipline inline — there
-   are no separate workflow docs.
-   - Generate `docs/<project>_adapter.md` (`assets/templates/adapter.md`,
-     generic, no frontmatter) only when no platform adapter exists this run —
-     the user chose "None" in Step 3, or detection was inconclusive and no
-     platform was picked. If a Claude Code and/or Codex adapter exists, skip
-     the generic adapter: nothing loads it automatically once a platform
-     adapter does, so it would sit unused (see `references/atlas-contract.md`
-     → Entrypoint Adapters → Generic Adapter). If a generic adapter file
-     already exists from a prior run and a platform adapter now exists too,
-     delete the generic one now as part of this step — do not leave it for a
-     later cleanup pass.
+7. Read `references/delegation.md`, then generate the adapters yourself
+   (centralized — adapter content follows fixed decisions and templates rather
+   than per-module discovery, so delegating it adds coordination cost without
+   benefit) for all platforms selected in Step 3.
+
+   Each platform gets a **pair**, split by role: a lead adapter for the agent
+   talking to the human (entry router, investigate/change discipline,
+   Before/After gate, delegation, acceptance, governance writes) and a worker
+   adapter for delegated subagents (contract execution only). Never generate one
+   without the other — a lone lead adapter is the single-agent design this
+   version replaces, and subagents will load it and start managing the project.
    - If Claude Code was selected: create `.claude/skills/<project-slug>-atlas/`
-     (and `.claude/skills/`) if needed, then generate
-     `.claude/skills/<project-slug>-atlas/SKILL.md` using
-     `assets/templates/claude_code_adapter.md`.
-   - If Codex was selected: create `.agents/skills/<project-slug>-atlas/` if
-     needed, then generate `.agents/skills/<project-slug>-atlas/SKILL.md` using
-     `assets/templates/codex_adapter.md`. The frontmatter `name` must be
-     `<project-slug>-atlas`, matching the Claude Code adapter naming pattern.
-   - In every adapter, set `{{PROJECT_NAME}}`, `{{DELIVERY_POLICY}}`, and
-     `{{REPORTING_LEVEL}}`; in the Claude Code and Codex adapters also set
-     `{{PROJECT_SLUG}}`. Set `{{INDEX_FILE}}` to the relative path from the
-     adapter's location to the index (e.g., from
+     and `.claude/skills/<project-slug>-worker/` if needed, then generate
+     `SKILL.md` in each from `assets/templates/lead_adapter.md` and
+     `assets/templates/worker_adapter.md`.
+   - If Codex was selected: do the same under
+     `.agents/skills/<project-slug>-atlas/` and
+     `.agents/skills/<project-slug>-worker/`. Both platforms use identical
+     adapter bodies; only the destination directory differs.
+   - Generate the generic pair `docs/<project>_lead_adapter.md` and
+     `docs/<project>_worker_adapter.md` (same templates with the frontmatter
+     block dropped) only when no platform adapter exists this run — the user
+     chose "None" in Step 3, or detection was inconclusive and no platform was
+     picked. If a platform pair exists, skip the generic pair: nothing loads it
+     automatically once a platform adapter does (see
+     `references/atlas-contract.md` → Entrypoint Adapters → Generic Adapters).
+     If generic adapter files already exist from a prior run — including the
+     pre-split single `docs/<project>_adapter.md` — and a platform adapter now
+     exists too, delete them now as part of this step, not in a later pass.
+   - In every adapter set `{{PROJECT_NAME}}`, `{{DELIVERY_POLICY}}`, and
+     `{{REPORTING_LEVEL}}`; in platform adapters also set `{{PROJECT_SLUG}}`
+     (lead skill `<slug>-atlas`, worker skill `<slug>-worker`). Set
+     `{{INDEX_FILE}}` in the **lead adapter only**, to the relative path from
+     the adapter's location to the index (e.g. from
      `.claude/skills/<project-slug>-atlas/` use
-     `../../../docs/<project>_index.md`). Leave the runtime tokens `{{DATE}}` and
-     `{{SLUG}}` intact (see the placeholder map in
-     `references/atlas-contract.md`).
+     `../../../docs/<project>_index.md`) — the worker adapter must not reference
+     the index at all. Leave the runtime tokens `{{DATE}}` and `{{SLUG}}` intact
+     (see the placeholder map in `references/atlas-contract.md`).
+   - Render each adapter's `description` in the Step 0 working language, and
+     keep the cross-reference in it: the lead description points a subagent at
+     `<project-slug>-worker`, and the worker description points a
+     human-facing agent at `<project-slug>-atlas`. That description is the only
+     part an agent reads before deciding to load a skill, so it carries the role
+     boundary.
    - Do **not** write a forced "run the atlas skill before every operation"
-     mandate into `CLAUDE.md`. The skill's `description` makes it discoverable
-     when a task needs repo navigation. At most, if `CLAUDE.md` has no pointer to
+     mandate into `CLAUDE.md` or `AGENTS.md`. Each skill's `description` makes
+     it discoverable when a task needs it. At most, if the file has no pointer to
      the atlas, add a single plain-language line noting the navigation map lives
      at `docs/<project>_index.md`. Render it in the Step 0 working language.
    - If a rebuild detects existing adapter files, include them in the
      delete-and-rebuild confirmation (Step 1) before overwriting.
 8. Verify and fix in parallel. Dispatch one subagent per generated file — the
-   index, every module doc, and every adapter, one file per subagent, all
-   dispatches in one message so they run concurrently — to independently
-   re-check that single file and fix problems directly rather than only
-   reporting them (each subagent has Edit access to its own file). Each
+   index, every module doc, and every adapter (lead and worker), one file per
+   subagent, all dispatches in one message so they run concurrently — to
+   independently re-check that single file and fix problems directly rather than
+   only reporting them (each subagent has Edit access to its own file). Each
    verification subagent's prompt must include, inline:
    - The single file's path, with an explicit instruction to read and edit
      only that path, never any other generated file.
    - The checklist items from `references/quality-checklist.md` relevant to
-     that file's type (index / module / adapter) and the matching
-     requirements from `references/atlas-contract.md` (Index Requirements,
-     Module Requirements, or Adapter Requirements as applicable).
+     that file's type (index / module / lead adapter / worker adapter) and the
+     matching requirements from `references/atlas-contract.md` (Index
+     Requirements, Module Requirements, Lead Adapter Requirements, or Worker
+     Adapter Requirements as applicable).
    - An instruction to fix directly whatever it finds wrong — remaining
      init-time placeholders, missing required sections, invented facts not
      grounded in the repository, file inventories instead of routing
@@ -372,8 +403,10 @@ before asking for configuration decisions:
    centralized pass over `references/quality-checklist.md` for the cross-file
    concerns no single-file subagent can see alone: do local Markdown links
    resolve across files, does the index's module list match the module docs
-   actually on disk, and are the Claude Code/Codex adapter frontmatter names
-   consistent with each other. Report completion only after this pass.
+   actually on disk, does every platform have both a lead and a worker adapter,
+   and do the frontmatter names follow `<project-slug>-atlas` /
+   `<project-slug>-worker` consistently across Claude Code and Codex. Report
+   completion only after this pass.
 9. Apply the delivery policy resolved in Step 2, per
    `references/atlas-contract.md` → Delivery: `no commit` stops here; `commit
    only` stages exactly this run's created/modified/deleted atlas files
@@ -390,10 +423,18 @@ before asking for configuration decisions:
   current agent, model, editor, shell, chat session, or temporary workspace.
 - Code-changing work must state a plain Before / After before edits. This is the
   user-facing checkpoint; do not replace it with secondary engineering reports.
-  At T1/T2, wait for confirmation before editing; at T0 (trivial, reversible,
-  single file), announce the one-line Before / After and proceed, then report:
+  It belongs to the agent talking to the human — a delegated subagent never runs
+  it, because nobody is reading. At T1/T2, wait for confirmation before editing
+  or dispatching; at T0 (trivial, reversible, single file), announce the
+  one-line Before / After and proceed, then report:
   - **Before**: current state and what is wrong, missing, confusing, or risky.
   - **After**: what the change will make true.
+- Split generated entrypoints by role, not by activity. Planning, alignment,
+  review, and knowledge maintenance all belong to the same agent on the same
+  timeline, so they ship in one lead adapter; execution ships separately.
+- Exactly one agent writes any governance file. Whole-project builds, test
+  suites, and process restarts belong to that same agent, and run only with no
+  worker in flight.
 - Before proposing a change, calibrate scope: owning module, boundary modules,
   contracts, shared state, generated artifacts, tests, downstream users, and
   uncertain surfaces. Use this to reason, not as a substitute for the
@@ -408,11 +449,15 @@ before asking for configuration decisions:
 ## When Not To Use This Skill
 
 Do not run Codebase Atlas for ordinary daily work after an atlas exists. The
-generated adapter is self-contained and already handles daily work: read-only
-tasks (explanations, investigations, reviews, reproductions, profiling, CI
-failures, risk assessment) follow its investigate path, and every code edit
-follows its change path, which scales discipline to the task. Use the generated
-atlas for all of these instead of rerunning Codebase Atlas.
+generated lead adapter is self-contained and already handles daily work:
+read-only tasks (explanations, investigations, reviews, reproductions, profiling,
+CI failures, risk assessment) follow its investigate path, and every code edit
+follows its change path, which scales discipline to the task and delegates when
+the task is bounded enough to be worth a contract. Use the generated atlas for
+all of these instead of rerunning Codebase Atlas.
 
-Rerun Codebase Atlas only when the user explicitly asks for a rebuild,
+Do not run it inside a delegated subagent task at all. A worker that decides the
+map is stale reports that; it does not rebuild it.
+
+Rerun Codebase Atlas only when a human explicitly asks for a rebuild,
 refresh, regenerate, or rescan of the atlas itself.

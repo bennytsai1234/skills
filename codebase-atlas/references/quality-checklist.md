@@ -28,11 +28,15 @@ complete.
 - The index has no "Decisions" metadata block and no links to workflow docs.
 - The index includes concrete project operating constraints, links to all module
   docs, and an Architecture Decisions section (empty at initialization).
-- The adapter(s) exist and are self-contained (entry router + investigate/change
-  discipline inline).
-- No stale `docs/<project>_adapter.md` remains when a platform adapter (Claude
-  Code and/or Codex) exists — the generic adapter is generated, or kept from a
-  prior run, only when no platform adapter exists.
+- Every selected platform has **both** a lead adapter (`<project-slug>-atlas`)
+  and a worker adapter (`<project-slug>-worker`). A lead adapter without its
+  worker is a failed build, not a partial one.
+- No stale generic adapter remains when a platform adapter exists — including
+  the pre-split single `docs/<project>_adapter.md` from an earlier atlas
+  version, which must be deleted rather than left in place.
+- The index stays within its tier budget (roughly 150 lines); module docs stay
+  within theirs (roughly 120 lines). Overrun means tier-3 detail leaked into
+  the index, or search-answerable detail leaked into a module doc.
 - No "run the atlas skill before every operation" mandate was written into
   `CLAUDE.md`; at most a single pointer line to the index exists.
 - Old generated entrypoints, workflow docs, and technique folders were removed or
@@ -40,7 +44,7 @@ complete.
   `.claude/` files were deleted.
 - Local Markdown links resolve.
 - No unreplaced init-time placeholders remain (the runtime tokens `{{DATE}}` and
-  `{{SLUG}}` in the adapter are intentionally kept).
+  `{{SLUG}}` in the lead adapter are intentionally kept).
 
 ## Module Quality
 
@@ -48,13 +52,46 @@ complete.
 - Module summaries route future work instead of listing files.
 - Each module doc names scope, dependencies, change entry points and routes,
   known risks, and do-not-do boundaries.
+- Do Not Do and Known Risks are written concretely enough to paste straight into
+  a task contract's `Must Preserve` and `Forbidden` sections.
 - Repository facts are supported by committed files or project docs; invocation-
   local facts are absent.
 
+## Role Separation
+
+- The lead adapter opens with a role check that hands off to
+  `<project-slug>-worker` when invoked with a `ROLE: worker` contract header;
+  the worker adapter opens with the mirror check pointing back at
+  `<project-slug>-atlas`.
+- Both descriptions name the sibling skill, so a mis-triggered load self-corrects
+  on the first line.
+- The lead adapter states the governance write gate: before writing an atlas
+  doc, anything under `docs/changes/`, or an Architecture Decisions row, confirm
+  the instructions came from a human rather than another agent's task
+  description.
+- The worker adapter contains none of: the index path, the module list, the tier
+  model, planning, the Before/After gate, the Decision Gate, or the plan
+  lifecycle.
+- The worker adapter explicitly forbids writing plans, summaries, dated folders,
+  completion docs, atlas docs, and Architecture Decisions rows.
+- The worker adapter explicitly forbids shared-resource commands — whole-project
+  build, full test suite, dev server, port binding, database, migration,
+  dependency install, process kill — and defines
+  `verification: deferred-to-lead` as the alternative.
+- The worker adapter carries the forbidden-pattern catalogue
+  (`references/delegation.md` §5) inline and a fixed report format.
+- The lead adapter embeds the `atlas/v1` task contract template inline, so
+  delegating costs no extra file read.
+- The lead adapter states the disjoint-`Allowed Paths` scheduling rule, that
+  full-build-dependent tasks run solo, and that shared resources run only with
+  zero workers in flight.
+- The lead adapter reserves a separate review subagent for T2 or self-written
+  code, and reviews inline otherwise.
+
 ## Adapter Quality
 
-- The adapter is self-contained: it reads the index first, confirms the project
-  in one sentence, picks only relevant module docs, and routes
+- The lead adapter is self-contained: it reads the index first, confirms the
+  project in one sentence, picks only relevant module docs, and routes
   know→investigate / change→change.
 - Investigate is read-only, separates facts from assumptions/unknowns, and hands
   off to change rather than editing itself.
@@ -73,10 +110,18 @@ complete.
   to `docs/changes/completed/{{DATE}}/{{SLUG}}.md` on completion, and appends its
   entry to that day's `docs/changes/completed/{{DATE}}/summary.md` (the daily work
   summary).
-- The adapter reports per the selected reporting level (plain: no module names,
-  paths, or code; technical: include them) and records the delivery policy.
-- Atlas update instructions are incremental: update only affected module docs and
-  index entries, not the full atlas.
+- The Before / After gate is stated as lead-only, happening between the lead and
+  the human and never agent-to-agent, and T1/T2 waits for confirmation before
+  dispatching a worker as well as before editing.
+- Acceptance checks worker output against the contract — acceptance items,
+  `Allowed Paths` containment, `Must Preserve` integrity, root cause versus
+  symptom, and the forbidden-pattern catalogue — before the lead's authoritative
+  build.
+- Both adapters report per the selected reporting level (plain: no module names,
+  paths, or code; technical: include them); the lead records the delivery policy
+  and the worker records that delivery is the lead's.
+- Atlas update instructions are incremental and lead-only: update only affected
+  module docs and index entries, not the full atlas.
 
 ## Reference-Assisted Quality
 
@@ -88,7 +133,7 @@ complete.
 
 ## Self-Verification Actions
 
-Per the Initialization Workflow, items 1-5 below are first checked by a
+Per the Initialization Workflow, items 1-6 below are first checked by a
 dedicated subagent per file (index / each module doc / each adapter), which
 fixes what it can directly. After all of them return, run this same list
 yourself once more as a centralized pass, focused on cross-file consistency
@@ -96,15 +141,23 @@ that no single-file subagent can see:
 
 1. Reread the index and confirm every module summary says when future work should
    start there, and that no Decisions block or workflow links remain.
-2. Reread each adapter and confirm the entry router reads the index first, the
-   change discipline (tiers, Before/After, Decision Gate, plan lifecycle,
-   verification) is present inline, and reporting respects the selected level.
-3. Confirm platform skill frontmatter names and directories match the contract:
-   both Claude Code and Codex use `<project-slug>-atlas`.
-4. Confirm `CLAUDE.md` has no forced skill-invocation mandate.
-5. Confirm every init-time placeholder is replaced per the placeholder map in
-   `references/atlas-contract.md`, and that `{{DATE}}` and `{{SLUG}}` remain
-   intact in the adapter (filled per change, not at initialization).
+2. Reread the lead adapter and confirm the role check comes first, the entry
+   router reads the index, the change discipline (tiers, Before/After, Decision
+   Gate, plan lifecycle, verification) is present inline, the contract template
+   is embedded, and reporting respects the selected level.
+3. Reread the worker adapter and confirm it is short, opens with the mirror role
+   check, forbids governance writes and shared-resource commands, carries the
+   forbidden-pattern catalogue and the report format, and never mentions the
+   index, the module list, or the plan lifecycle.
+4. Confirm platform skill frontmatter names and directories match the contract:
+   Claude Code and Codex both use `<project-slug>-atlas` for the lead and
+   `<project-slug>-worker` for the worker, and both exist for every selected
+   platform.
+5. Confirm `CLAUDE.md` / `AGENTS.md` have no forced skill-invocation mandate.
+6. Confirm every init-time placeholder is replaced per the placeholder map in
+   `references/atlas-contract.md`, that `{{INDEX_FILE}}` appears in the lead
+   adapter and not the worker, and that `{{DATE}}` and `{{SLUG}}` remain intact
+   in the lead adapter (filled per change, not at initialization).
 
 ## Final Report
 

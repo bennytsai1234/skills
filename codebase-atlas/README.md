@@ -2,7 +2,7 @@
 
 Codebase Atlas is a small Markdown protocol for creating a durable navigation
 layer for a repository. It scans a project once, writes a compact atlas under
-`docs/`, and gives future agents an entry router that routes ordinary work
+`docs/`, and gives future agents role-split entrypoints that route ordinary work
 before editing code.
 
 ## Design Manifesto
@@ -11,14 +11,18 @@ AI agents should not treat a repository as a disposable search space on every
 task. They should inherit a durable map, use it to reason about ownership and
 impact, and only then propose a change.
 
-Codebase Atlas is built around five principles:
+Codebase Atlas is built around six principles:
 
 - **Map before edit**: future work starts from the atlas, not from a blind file
   search.
 - **Initialize once, reuse often**: a strong initialization pass creates context
   that ordinary follow-up work can reuse.
 - **Human confirmation matters**: code-changing workflows must explain the
-  plain Before / After state before editing.
+  plain Before / After state before editing — and that gate belongs to the agent
+  a human is actually reading.
+- **Split by role, not by activity**: a lead agent aligns, decides, delegates,
+  accepts, and writes; a worker agent executes one bounded contract. Anything
+  else turns every subagent into a project manager.
 - **Complete, bounded plans**: agents should avoid shortcut-oriented local
   patches and instead propose a coherent scope that actually solves the problem.
 - **Markdown over infrastructure**: the atlas stays readable, reviewable,
@@ -28,23 +32,56 @@ Codebase Atlas is built around five principles:
 
 ```text
 docs/
-  <project>_index.md
+  <project>_index.md          # map tiers 1-2: overview + module routing
   <project>/
-    <module_slug>.md
-  <project>_adapter.md      # only generated when no Claude Code / Codex
-                             # adapter exists — otherwise that platform adapter
-                             # is the entrypoint and this file is skipped
+    <module_slug>.md          # map tier 3: loaded only when a task needs it
+
+.claude/skills/               # or .agents/skills/ for Codex
+  <project-slug>-atlas/       # lead entrypoint  — human-facing agent
+  <project-slug>-worker/      # worker entrypoint — delegated subagents
 ```
 
-The adapter is the single, self-contained entrypoint. It embeds the entry
-router — read the index, confirm the project in one sentence, route
-know→investigate / change→change — **and** carries the change/investigate
-discipline (tiers, Before/After gate, Decision Gate, plan lifecycle,
-verification) inline. There are no separate workflow docs, so a routine task
-loads only the entrypoint skill plus the index and one or two module docs.
-Because a platform adapter (`.claude/skills/...` or `.agents/skills/...`) is
-loaded automatically by its platform, the generic `docs/` adapter is only
-generated when no platform adapter exists — otherwise it would sit unused.
+Two entrypoints, split by role:
+
+- **Lead adapter** — for the agent talking to a human. Entry router (read the
+  index, confirm the project in one sentence, route know→investigate /
+  change→change), change discipline (tiers, Before/After gate, Decision Gate,
+  plan lifecycle, verification), delegation, acceptance, and every governance
+  write.
+- **Worker adapter** — for a delegated subagent. Short by design: read the task
+  contract, read only the module docs it names, grep for the exact code, edit
+  inside the allowed paths, run permitted checks, return one structured report.
+  It never runs the Before/After gate, never writes plans or atlas docs, and
+  never runs a whole-project build.
+
+Generic `docs/*_adapter.md` copies are generated only when no platform adapter
+exists — a platform adapter is loaded automatically by its platform, so the
+generic pair would otherwise sit unused.
+
+## The Multi-Agent Contract
+
+The lead sends a worker a **task contract**, not chat history: goal, three to
+five lines of context, the module docs to read, allowed paths, what must be
+preserved, what is forbidden, acceptance criteria, which checks may be run, and
+when to stop and report instead of deciding. `Must Preserve` and `Forbidden` are
+normally copied straight out of the owning module doc's **Do Not Do** and
+**Known Risks** — which is why those sections are written the way they are.
+
+Two rules keep a shared working tree sane:
+
+- **Single writer.** Only the lead writes atlas docs, plans, completed folders,
+  and summaries. A worker that finds the map wrong reports it upward.
+- **Single builder.** Only the lead runs whole-project builds, the full test
+  suite, dev servers, migrations, or dependency installs — and only with no
+  worker in flight. Workers run scoped checks or report
+  `verification: deferred-to-lead`. With several workers editing one tree, a
+  worker's full build observes other workers' half-finished files; one
+  authoritative build over the merged state is both more reliable and cheaper
+  than N unreliable ones.
+
+Role is resolved from the instructions, not from the environment: an explicit
+`ROLE: worker` header wins, no header means lead, and a governance write gate
+blocks the damaging case either way.
 
 ## How It Works
 
@@ -57,8 +94,9 @@ generated when no platform adapter exists — otherwise it would sit unused.
    dispatch one subagent per candidate module, in parallel, to deep-scan that
    module and write its module doc directly.
 5. Reconcile the module list from the subagents' findings and write the index
-   and adapter(s) centrally (generating the generic `docs/` adapter only when
-   no platform adapter exists, and deleting a stale one otherwise).
+   and the lead/worker adapter pair centrally (generating the generic `docs/`
+   pair only when no platform adapter exists, and deleting stale ones —
+   including the pre-split single adapter — otherwise).
 6. Dispatch one verification subagent per generated file, in parallel, to
    re-check and fix that file directly, then run a final centralized
    cross-file check plus the quality checklist.
@@ -87,29 +125,45 @@ the concrete handling that will be written into the atlas.
 ## Daily Use After Initialization
 
 Do not rerun Codebase Atlas for ordinary work. Daily work enters through the
-self-contained adapter, which reads the index and handles the task itself:
+lead adapter, which reads the index and handles the task itself:
 
 - Read-only work — explanations, investigations, reviews, reproductions,
   profiling, CI failures, risk assessments — follows its investigate path.
 - Every code edit follows its change path, with discipline scaled to the task
-  (trivial → fast; hard or risky → full).
+  (trivial → fast; hard or risky → full), delegating to workers when the task is
+  bounded enough to be worth a contract.
 
-The adapter is not force-loaded on every conversation. Its skill `description`
-makes it discoverable when a task needs repo navigation, so unrelated
-conversations pay no context cost.
+Neither adapter is force-loaded on every conversation. Their skill
+`description`s make them discoverable when a task needs them, so unrelated
+conversations pay no context cost — and each description names the sibling
+skill, so a mis-triggered load self-corrects on the first line.
 
 Code-changing work uses a plain Before / After gate as the user-facing
 checkpoint. Supporting analysis may guide the agent, but it must not replace the
 Before / After explanation.
 
+## Cost
+
+The expensive parts of a multi-agent workflow, in order: a cold subagent
+exploring its way around, spawn count, spawns wasted on a vague contract,
+redundant builds, and review. The contract's `Read First` and `Allowed Paths`
+remove the first; splitting by change boundary rather than by file controls the
+second; acceptance criteria are the cheapest insurance against the third; the
+single-builder rule handles the fourth. Review defaults to inline lead review,
+which costs nothing extra — a separate review subagent is spent only on T2 work,
+or when the lead wrote the code itself.
+
 ## Skill Files
 
 - `SKILL.md`: trigger rules and the initialization workflow.
 - `references/atlas-contract.md`: output contract and generation rules.
+- `references/delegation.md`: the multi-agent doctrine — roles, role resolution,
+  the task contract, concurrency and shared resources, forbidden implementation
+  patterns, the report format, acceptance, and cost control.
 - `references/modes.md`: standalone and reference-assisted guidance.
 - `references/quality-checklist.md`: final review checklist.
 - `assets/templates/`: Markdown templates for generated atlas files (index,
-  module, and the self-contained adapters).
+  module, and the lead/worker adapters).
 
 ## License
 
