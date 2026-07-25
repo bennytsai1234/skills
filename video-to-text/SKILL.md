@@ -101,7 +101,21 @@ MOSS-Transcribe-Diarize 是**自迴歸的 audio-LLM**，KV cache 隨長度膨脹
 
 ## 環境
 
-依賴裝在 skill 目錄下的 `.venv`，**建在系統 Python 3.14 上**（Ubuntu 26.04 LTS 預設）。
+這個 skill **自給自足**：venv 和模型都在自己的目錄下，刪掉資料夾就全部帶走，
+不會在系統各處留下殘留。
+
+```
+/home/benny/skills/video-to-text/
+├── SKILL.md
+├── transcribe.py
+├── .venv/          7.1G   torch + CUDA + transformers（.venv/.gitignore 自動排除）
+└── models/         1.8G   MOSS 模型（HF_HOME 指向這裡，.gitignore 排除）
+```
+
+模型**不放共用的 `~/.cache/huggingface`**。腳本在 import transformers 之前
+就把 `HF_HOME` 指到 `models/`，所以下載與載入都走這裡。
+
+依賴裝在 `.venv`，**建在系統 Python 3.14 上**（Ubuntu 26.04 LTS 預設）。
 腳本開頭的 `ensure_venv()` 會在被系統 python 呼叫時自動 `os.execv` 轉進去。
 
 | 依賴 | 用途 | 位置 |

@@ -41,6 +41,11 @@ MAX_NEW_TOKENS = 4096            # 單一 chunk 的輸出上限，60s 語音綽�
 # 這台 WSL 的 /tmp 是 3.9G tmpfs，大型模型的暫存會塞爆它 → 一律改指到家目錄
 os.environ.setdefault("TMPDIR", str(Path.home() / ".cache" / "pip-tmp"))
 
+# 模型放在本 skill 專屬的 models/，不進共用的 ~/.cache/huggingface。
+# 這樣整個 skill 自給自足（venv + 模型都在自己目錄下），刪資料夾就全部帶走。
+# 必須在 import transformers / huggingface_hub 之前設定才會生效。
+os.environ.setdefault("HF_HOME", str(Path(__file__).resolve().parent / "models"))
+
 
 # ------------------------------------------------------------
 #  0. 確保跑在自己的 venv 裡
