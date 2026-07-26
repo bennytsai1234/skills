@@ -95,6 +95,7 @@ Send a contract, not chat history:
 ROLE: worker
 CONTRACT: atlas/v1
 TASK_TYPE: implement        # implement | investigate | review
+MODEL_TIER: standard        # standard | strong
 ---
 
 ## Goal
@@ -134,6 +135,14 @@ report `verification: deferred-to-lead`>
 `Must Preserve` and `Forbidden` are usually free: copy them from the owning
 module doc's **Do Not Do** and **Known Risks**.
 
+**Model tier.** `implement` and `investigate` run on {{MODEL_TIER_STANDARD}}
+(`MODEL_TIER: standard`). A bounded contract with concrete `Acceptance` items
+gains almost nothing from a higher reasoning tier and pays for it every token.
+Raise to {{MODEL_TIER_STRONG}} (`MODEL_TIER: strong`) in exactly two cases:
+`TASK_TYPE: review`, and a contract whose `Stop And Report If` carries two or more
+open-ended judgement calls. Never economise on a reviewer — a weak one confirms
+whatever it is shown.
+
 **Shared resources are yours alone.** Whole-project builds, the full test suite,
 dev servers and anything binding a port, databases and migrations, dependency
 installs — only you run these, and only with zero workers in flight. Stopping a
@@ -143,9 +152,33 @@ running app and rebuilding is fine, under the same condition.
 disjoint. On overlap, serialize or re-cut the task. When in doubt, serial. A task
 that needs full-build feedback to iterate runs solo, or stays with you.
 
-**Cost.** One worker with slightly wider paths beats three inside one module.
-`Read First` and `Allowed Paths` are what stop a cold subagent from burning its
-budget exploring. Never paste the index or chat history into a contract.
+## Cost discipline
+
+Every dispatch carries a fixed cold-start price: a fresh worker pays to find its
+way around before it changes a line. Four rules keep that price down. They cost
+no output quality — none of them removes a check, a test, or a review.
+
+**Do it yourself unless the contract is cheaper than the work.** Before
+dispatching, ask whether writing the contract costs more than making the change.
+Keep it in-house when the change is one file, when you already know the exact
+lines, or when you are applying a review's findings — those are located already,
+and a cold worker would pay to re-find them.
+
+**One worker, wider paths.** If one contract's `Allowed Paths` are a subset of
+another's, they are one contract: merge them instead of paying two cold starts and
+two acceptance rounds. Split by change boundary, never by file.
+
+**While a worker is in flight, do nothing.** No `git status`, no diff inspection,
+no progress narration, no speculative reading. A worker that has not reported is
+not finished — that is the whole of what checking can tell you, and you know it
+already. Polling shows you a half-written tree and re-sends your entire growing
+context to buy that non-answer. Wait for the report, or for an explicit request
+for a decision. This costs most when work is serialised: your context grows across
+the whole run, so every idle turn is dearer than the one before it.
+
+**Keep the contract thin.** Never paste the index, a spec, or chat history into
+one; `Context` is three to five lines. `Read First` and `Allowed Paths` are what
+stop a cold worker from burning its budget exploring.
 
 ## Accept (verify worker output)
 
@@ -157,11 +190,16 @@ weakened test was introduced; new code is not more complex than the problem; new
 tests assert real behaviour rather than encoding a mistake.
 
 Then run the authoritative build and test suite, plus anything the report marked
-`deferred-to-lead`. Accept, return with a corrected contract, or re-cut the task.
+`deferred-to-lead`. Run the auto-fixable checks first and on their own —
+formatter, linter, anything with a `--fix` — apply what they report, and only then
+spend one combined build-and-test pass. Chaining everything behind `&&` means a
+single formatting nit aborts the chain and you pay for the whole suite twice.
+Accept, return with a corrected contract, or re-cut the task.
 
 Spend a separate review subagent only at T2, or when you wrote the code yourself
 and want an independent read — dispatch the same contract with
-`TASK_TYPE: review`, on the stronger model.
+`TASK_TYPE: review` and `MODEL_TIER: strong`. Then apply its findings yourself:
+they arrive already located, so a fresh worker would only pay to find them again.
 
 ## Complete (lead-only writes)
 
@@ -186,8 +224,9 @@ You are the single writer for all of these files. Never let a worker write them.
 - Delivery policy: {{DELIVERY_POLICY}}
 - Verification results are always in the user-facing report regardless of
   reporting level; never claim completion on a failed check.
-- When workers are running, show the user the task list and status, not their
-  intermediate output. On a worker failure, report in one or two plain sentences
-  what failed and what you will do about it.
+- When workers are running, show the user the task list and status you already
+  hold — do not go looking for either, and do not relay intermediate output. On a
+  worker failure, report in one or two plain sentences what failed and what you
+  will do about it.
 - Do not rerun Codebase Atlas initialization unless the user explicitly asks for a
   full rebuild.

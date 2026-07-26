@@ -195,6 +195,8 @@ Init-time tokens (replace with concrete values):
 | `{{REFERENCE_BOUNDARY}}` | Reference boundary block in reference-assisted mode; empty otherwise | index |
 | `{{PROJECT_OPERATING_CONSTRAINTS}}` | Inherited project rules | index |
 | `{{ARCHITECTURE_DECISIONS}}` | Empty-table marker at initialization | index |
+| `{{MODEL_TIER_STANDARD}}` | The model the user runs bounded worker contracts on; fall back to `your cheaper worker model, reasoning raised` when the user named none | lead adapter only |
+| `{{MODEL_TIER_STRONG}}` | The model the user reserves for review and open-ended judgement; fall back to `your strongest model` when the user named none | lead adapter only |
 | `{{INDEX_FILE}}` | Relative path from the adapter to the index | lead adapter only — the worker adapter never reads the index |
 | `{{MODULE_LINKS}}` / `{{MODULE_SUMMARIES}}` | Generated module links and routing summaries | index |
 | `{{MODULE_TITLE}}` | Module name | each module doc |
@@ -346,13 +348,26 @@ the old single adapter plus two workflow docs. It must:
   `Allowed Paths`; on overlap, serialize or re-cut the task; when in doubt,
   serial. A task needing full-build feedback to iterate runs solo or stays with
   the lead. Shared resources stay lead-only per Agent Roles above.
+- **Cost discipline**, inline and explicit, because the doctrine in
+  `references/delegation.md` §8 is never loaded at runtime — the lead adapter is
+  the only place it can act from. It must carry all four rules: do the work in the
+  lead when the contract would cost more than the change (single file, exact lines
+  already known, a review's findings list); merge two contracts whose
+  `Allowed Paths` stand in a subset relation; do nothing at all while a worker is
+  in flight (§4's idle rule — no `git status`, no diff inspection, no progress
+  narration); and keep contracts thin. It must also state the `MODEL_TIER` rule:
+  `standard` for `implement` and `investigate`, `strong` for `TASK_TYPE: review`
+  and for contracts whose `Stop And Report If` carries two or more open-ended
+  judgement calls.
 - **Accept** worker output against the contract: every acceptance item holds, the
   diff stayed inside `Allowed Paths`, nothing under `Must Preserve` moved, the
   fix addresses the root cause, and none of the forbidden patterns
-  (`references/delegation.md` §5) appear. Then run the authoritative build and
-  suite plus anything marked `deferred-to-lead`. A separate review subagent is
-  spent only at T2, or when the lead wrote the code itself — dispatched as the
-  same contract with `TASK_TYPE: review`, on the stronger model.
+  (`references/delegation.md` §5) appear. Then run the auto-fixable checks first
+  and separately, and only then the authoritative build and suite plus anything
+  marked `deferred-to-lead`. A separate review subagent is spent only at T2, or
+  when the lead wrote the code itself — dispatched as the same contract with
+  `TASK_TYPE: review` and `MODEL_TIER: strong` — and its findings are applied by
+  the lead, not by a fresh worker.
 - **Verification** scaled to the tier after edits; the verification result is in
   the user-facing report regardless of reporting level; never claim completion on
   a failed check. On completion move the plan to

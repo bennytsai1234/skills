@@ -270,7 +270,27 @@ before asking for configuration decisions:
    D. None — skip adapter generation
    ```
 
-10. Use this confirmation shape for preserved rules:
+10. Present the worker model decision in this plain-language shape, translated
+    into the working language. Ask it only when at least one platform adapter
+    will be generated:
+
+    ```markdown
+    When I hand a bounded task to a sub-agent, which model should it use?
+
+    A. A cheaper model for ordinary implementation work, and your strongest
+       model only for independent review (recommended — bounded tasks with
+       explicit acceptance criteria gain little from a stronger model, but a
+       weak reviewer just agrees with whatever it is shown).
+    B. Your strongest model for everything.
+
+    If you choose A, name the two models; if you would rather not, I will write
+    the rule in generic terms and you can fill the names in later.
+    ```
+
+    Record the answer as the two model tiers. Under B, or when the user names no
+    models, use the placeholder-map fallbacks in
+    `references/atlas-contract.md` rather than inventing model names.
+11. Use this confirmation shape for preserved rules:
 
     ```text
     [Category]
@@ -280,7 +300,7 @@ before asking for configuration decisions:
 
     The user must be able to judge whether the agent correctly understood the
     existing project guidance.
-11. Wait for user confirmation before starting the full scan.
+12. Wait for user confirmation before starting the full scan.
 
 ## Initialization Workflow
 
@@ -360,6 +380,8 @@ before asking for configuration decisions:
    - In every adapter set `{{PROJECT_NAME}}`, `{{DELIVERY_POLICY}}`, and
      `{{REPORTING_LEVEL}}`; in platform adapters also set `{{PROJECT_SLUG}}`
      (lead skill `<slug>-atlas`, worker skill `<slug>-worker`). Set
+     `{{MODEL_TIER_STANDARD}}` and `{{MODEL_TIER_STRONG}}` in the **lead adapter
+     only**, from the Step 3 worker model decision. Set
      `{{INDEX_FILE}}` in the **lead adapter only**, to the relative path from
      the adapter's location to the index (e.g. from
      `.claude/skills/<project-slug>-atlas/` use

@@ -70,6 +70,7 @@ a contract. Everything the worker needs, and nothing else.
 ROLE: worker
 CONTRACT: atlas/v1
 TASK_TYPE: implement        # implement | investigate | review
+MODEL_TIER: standard        # standard | strong — see §8
 ---
 
 ## Goal
@@ -149,6 +150,15 @@ different seam. When in doubt, serial.
 A task that needs full-build feedback to make progress ("fix these type errors",
 "get the suite green") runs solo — no other worker in flight — and is usually
 better kept in the lead.
+
+**Idle rule.** While a worker is in flight, the lead does nothing at all — no
+`git status`, no diff inspection, no progress narration, no speculative reading.
+A worker that has not reported is not finished, and that is the entire content of
+what any check could return. Polling shows the lead a half-written tree, and
+re-sends its whole growing context to buy that non-answer. The lead acts on the
+report, or on an explicit request for a decision, and not before. This is the
+dominant avoidable cost under serial scheduling, where the lead's context grows
+across the full run and every idle turn is dearer than the last.
 
 **Process rule.** Stopping a running dev server or app and rebuilding is
 allowed, for the lead, with zero workers in flight. Workers never kill
@@ -233,31 +243,54 @@ Check, against the contract:
 - Are there side effects the report did not mention?
 
 Then run the authoritative build and test suite, and anything the report marked
-`deferred-to-lead`.
+`deferred-to-lead`. Run auto-fixable checks first and separately — formatter,
+linter, anything with a `--fix` — apply their output, then spend one combined
+build-and-test pass. A single `&&` chain aborts on the first formatting nit and
+bills the whole suite twice.
 
 **Spend a separate review subagent only when** the change is T2 (irreversible,
 cross-module, external API, migration), or the lead wrote the code itself and
 wants an independent read. Dispatch it with the same contract plus
-`TASK_TYPE: review` — a reviewer is a worker with a read-only goal, so it obeys
-the same scope, the same forbidden list, and the same report format. Give it the
-stronger model; a weak reviewer confirms whatever it is shown.
+`TASK_TYPE: review` and `MODEL_TIER: strong` — a reviewer is a worker with a
+read-only goal, so it obeys the same scope, the same forbidden list, and the same
+report format. Never economise here; a weak reviewer confirms whatever it is
+shown. Applying the findings, though, stays with the lead: they arrive already
+located, so a fresh worker would only pay to find them again.
 
 ## 8. Cost Control
 
 Where the money actually goes, in order:
 
-1. **Cold-start exploration.** A fresh subagent that has to find its way around
+1. **Lead idle turns.** Under serial scheduling the lead is alive for the sum of
+   every phase, and each turn re-sends a context that only grows. Polling a
+   working tree is the purest form of this waste — see §4's idle rule. It buys
+   nothing and is the first thing to cut.
+2. **Cold-start exploration.** A fresh subagent that has to find its way around
    burns more than the edit does. The contract's `Read First` and `Allowed
    Paths` exist to make exploration unnecessary.
-2. **Spawn count.** One worker with slightly wider `Allowed Paths` beats three
+3. **Spawn count.** One worker with slightly wider `Allowed Paths` beats three
    workers inside the same module. Split by change boundary, not by file.
-3. **Wasted spawns.** A vague contract produces work that has to be redone.
+4. **Wasted spawns.** A vague contract produces work that has to be redone.
    `Acceptance` is the cheapest insurance in this workflow.
-4. **Redundant builds.** §4 replaces N unreliable builds with one reliable one.
-5. **Review.** Inline lead review is free; a review subagent is not. Tier it.
+5. **Redundant builds.** §4 replaces N unreliable builds with one reliable one,
+   and §7 keeps auto-fixable checks off the expensive pass.
+6. **Review.** Inline lead review is free; a review subagent is not. Tier it.
+
+**Do-not-delegate thresholds.** Delegation is not free, so it is not the default.
+Keep the work in the lead when the contract would cost more to write than the
+change costs to make: a single-file edit, a change whose exact lines are already
+known, or a findings list handed back by a review. Two contracts whose
+`Allowed Paths` stand in a subset relation are one contract — merge them rather
+than pay two cold starts and two acceptance rounds.
 
 Never paste the index, a spec, or chat history into a contract. `Context` is
 three to five lines.
 
-Model tiering: cheap model with raised reasoning for workers on bounded tasks;
-the strong model for the lead, and for T2 review.
+**Model tiering.** Put the tier in the contract header rather than leaving it to
+whoever dispatches: `implement` and `investigate` are `MODEL_TIER: standard` —
+the cheaper model, reasoning raised if the platform allows it. `MODEL_TIER:
+strong` is for `TASK_TYPE: review`, and for a contract whose `Stop And Report If`
+carries two or more open-ended judgement calls. A bounded contract with concrete
+`Acceptance` items gains almost nothing from a higher reasoning tier and pays for
+it on every token; a reviewer is the one place where the cheap choice is a false
+economy. The lead itself runs on the strong tier.

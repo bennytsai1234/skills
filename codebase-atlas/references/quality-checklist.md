@@ -11,6 +11,9 @@ complete.
   alignment.
 - Delivery policy and reporting level are recorded in the index and every adapter.
 - The platform adapter choices are recorded.
+- The worker model decision is resolved into two tiers and written into the lead
+  adapter; where the user named no models, the placeholder-map fallbacks are used
+  rather than invented model names.
 - Partial reference output records the selected reference scope; full alignment
   output records that reference functionality is in scope.
 - User-facing confirmation used plain-language questions instead of exposing
@@ -87,6 +90,16 @@ complete.
   zero workers in flight.
 - The lead adapter reserves a separate review subagent for T2 or self-written
   code, and reviews inline otherwise.
+- The lead adapter carries cost discipline inline — §8 of
+  `references/delegation.md` is never loaded at runtime, so an adapter without it
+  leaves the lead with no cost rule at all. All four must be present: keep the
+  work in the lead when the contract would cost more than the change; merge
+  contracts whose `Allowed Paths` stand in a subset relation; do nothing while a
+  worker is in flight (no `git status`, no diff inspection, no progress
+  narration); keep contracts thin.
+- The lead adapter states the `MODEL_TIER` rule and the contract header carries
+  the field: `standard` for `implement` / `investigate`, `strong` for
+  `TASK_TYPE: review` and for two or more open-ended `Stop And Report If` calls.
 
 ## Adapter Quality
 
@@ -116,7 +129,7 @@ complete.
 - Acceptance checks worker output against the contract — acceptance items,
   `Allowed Paths` containment, `Must Preserve` integrity, root cause versus
   symptom, and the forbidden-pattern catalogue — before the lead's authoritative
-  build.
+  build, and runs auto-fixable checks separately from that build.
 - Both adapters report per the selected reporting level (plain: no module names,
   paths, or code; technical: include them); the lead records the delivery policy
   and the worker records that delivery is the lead's.
@@ -144,7 +157,8 @@ that no single-file subagent can see:
 2. Reread the lead adapter and confirm the role check comes first, the entry
    router reads the index, the change discipline (tiers, Before/After, Decision
    Gate, plan lifecycle, verification) is present inline, the contract template
-   is embedded, and reporting respects the selected level.
+   is embedded, the cost-discipline rules and `MODEL_TIER` rule are present
+   inline, and reporting respects the selected level.
 3. Reread the worker adapter and confirm it is short, opens with the mirror role
    check, forbids governance writes and shared-resource commands, carries the
    forbidden-pattern catalogue and the report format, and never mentions the
