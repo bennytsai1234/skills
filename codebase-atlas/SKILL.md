@@ -296,12 +296,12 @@ before asking for configuration decisions:
     ```markdown
     How work will run after this is set up:
 
-    I understand the request, decide the approach with you, and write a complete
-    task package to a file — goal, boundaries, acceptance criteria, what evidence
-    to bring back. You hand that file to your implementation agent yourself; I do
-    not launch anything. It explores the code, makes the change, writes and runs
-    the tests, and reports back. Then I review it against the package and either
-    accept or send back a short list of precise gaps.
+    I understand the request, clarify the desired result and acceptance evidence
+    with you, and write a concise task package to a file. You hand that file to
+    your implementation agent yourself; I do not launch anything. It explores the
+    code, chooses and makes the change, runs the checks needed to prove it, and
+    reports back. Then I review it against the package and either accept or send
+    back a short list of precise gaps.
 
     I never edit the code myself, including for changes that look trivial.
     ```

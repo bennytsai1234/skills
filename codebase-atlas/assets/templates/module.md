@@ -25,14 +25,14 @@
 ## Known Risks
 
 - TODO: Fragile assumptions, missing tests, stale docs, contract drift, migration
-  risk, or complex state. Write these concretely enough to paste into a task
-  package's `Forbidden` section.
+  risk, or complex state. Record repository-specific facts and hidden constraints,
+  not generic engineering advice.
 
 ## Do Not Do
 
-- TODO: Scope boundaries for future edits. Write these concretely enough to paste
-  into a task package's `Must Preserve` section.
+- TODO: Explicit requirements future work cannot infer from the repository, such as
+  compatibility, schema, dependency, ownership, or deterministic-verdict rules.
+  Copy only the items relevant to a task into its `Constraints` section.
 
 <!-- Reference-assisted mode only: add a "Reference Notes" section here with useful
 reference counterparts and patterns. Omit it in standalone mode. -->
-

@@ -68,23 +68,24 @@ fix.
 ```text
 You       → state the need
 Lead      1. understand the project and the need
-          2. decide the solution boundary
-          3. write the acceptance-testable task package
+          2. clarify the goal and acceptance evidence
+          3. write the concise task package
 Worker    4. explore the relevant code
-          5. design and make the change, across files as needed
-          6. add tests, run them, fix failures until green
+          5. decide and make the change, across files as needed
+          6. run the checks needed to prove acceptance
           7. report with evidence and risks
-Lead      8. review: requirement conformance, architecture, diff, tests
+Lead      8. review: acceptance, diff, evidence, risks
           9. accept — or return precise gaps, nothing else
 Worker   10. fix exactly the named gaps
 Lead     11. final acceptance, then deliver
 ```
 
-The **task package** (`atlas/v2`) carries goal, why, the solution boundary,
-starting points, scope, what must be preserved, what is forbidden, acceptance
-criteria, required tests, and the evidence to bring back. `Must Preserve` and
-`Forbidden` are copied straight out of the owning module doc's **Do Not Do** and
-**Known Risks**. It is the same file as the plan.
+The **task package** (`atlas/v2`) carries the desired result and objective
+acceptance checks. It may include optional starting points and `Constraints`, but
+only when they record requirements the worker cannot infer from the repository or
+ordinary engineering judgement — for example API compatibility, schema ownership,
+dependency policy, component ownership, or deterministic verdict authority. It
+does not prescribe the implementation. It is the same file as the plan.
 
 Three rules hold the loop together:
 
@@ -97,7 +98,7 @@ Three rules hold the loop together:
   and summaries. A worker that finds the map wrong reports it upward.
 
 Only one agent is active on the tree at a time, and whoever holds it owns it: the
-worker runs its own build, suite, and migrations while implementing.
+worker runs the checks needed to establish acceptance while implementing.
 
 Role is resolved from the instructions, not from the environment: an explicit
 `ROLE: worker` header wins, no header means lead, and a governance write gate
@@ -201,8 +202,8 @@ gaps.
 - `SKILL.md`: trigger rules and the initialization workflow.
 - `references/atlas-contract.md`: output contract and generation rules.
 - `references/delegation.md`: the two-agent doctrine — the loop, roles, role
-  resolution, the `atlas/v2` task package, forbidden implementation patterns, the
-  report format, review and return, and cost control.
+  resolution, the concise `atlas/v2` task package, the report format, review and
+  return, and cost control.
 - `references/modes.md`: standalone and reference-assisted guidance.
 - `references/quality-checklist.md`: final review checklist.
 - `assets/templates/`: Markdown templates for generated atlas files (index,

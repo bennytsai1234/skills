@@ -65,8 +65,9 @@ complete.
 - Module summaries route future work instead of listing files.
 - Each module doc names scope, dependencies, change entry points and routes,
   known risks, and do-not-do boundaries.
-- Do Not Do and Known Risks are written concretely enough to paste straight into
-  a task package's `Must Preserve` and `Forbidden` sections.
+- Do Not Do and Known Risks contain repository-specific facts and hidden
+  constraints, not generic engineering advice. A task package copies only the
+  items relevant to its Goal into `Constraints`.
 - Repository facts are supported by committed files or project docs; invocation-
   local facts are absent.
 
@@ -96,19 +97,22 @@ complete.
   completion docs, atlas docs, and Architecture Decisions rows — and committing
   or pushing.
 - The worker adapter grants exploration explicitly: `Starting Points` orient it
-  and do not cap what it may read, and it designs across whatever files the
-  change requires inside `Scope`.
-- The worker adapter states that the worker owns its own verification — build,
-  suite, linter, type check — and fixes failures rather than handing them back.
-  Neither adapter mentions `deferred-to-lead` or a shared-resource ban.
+  but do not cap what it may read, and it chooses the implementation across
+  whatever files the change requires.
+- The worker adapter states that the worker owns the checks needed to establish
+  acceptance and reports their actual output. Neither adapter mentions
+  `deferred-to-lead` or a shared-resource ban.
 - The worker adapter requires a direct check against `Goal` and `Acceptance`
-  rather than treating a green suite as sufficient.
-- The worker adapter carries the forbidden-pattern catalogue
-  (`references/delegation.md` §5) inline and a fixed report format whose
-  `Verification` section demands pasted output rather than a claim.
+  rather than treating a green suite as sufficient, and has no generic
+  implementation-pattern catalogue.
+- The worker adapter carries a concise report format whose `Verification` section
+  demands pasted output rather than a claim.
 - The worker adapter says a returned `## Gaps` list is fixed exactly and nothing
   else is touched.
-- The lead adapter embeds the `atlas/v2` task package template inline.
+- The lead adapter embeds the concise `atlas/v2` task package template inline:
+  Goal, objective Acceptance checks, optional explicit Constraints, optional
+  Starting Points, and Evidence. It does not require Why, Solution Boundary,
+  Scope, Must Preserve, Forbidden, or generic stop conditions.
 - The lead adapter states the acceptance rule: every acceptance item is checkable
   by someone who was not in the conversation.
 - The lead adapter carries the idle rule inline — while the package is out, do
@@ -131,10 +135,9 @@ complete.
   state and why the change is needed, After = what becomes true and how it will
   be verified) as the only confirmation interface; T1/T2 wait for explicit
   confirmation, T0 announces the one-line Before/After and proceeds.
-- Change includes a Decision Gate for module-boundary changes, external API
-  changes, irreversible operations/migrations, or multi-option trade-offs, and
-  states that a confirmed decision goes into the package's `Solution Boundary`
-  where the worker may not re-open it.
+- Change uses a Decision Gate only for choices the repository cannot settle, and
+  records a confirmed choice as an explicit package `Constraints` item rather
+  than prescribing an implementation.
 - The package is written to `docs/changes/planning/{{DATE}}-{{SLUG}}.md`
   (`{{DATE}}` = ISO `YYYY-MM-DD`) — the same file serves as plan and handoff
   artifact — and the lead then tells the user it is ready and where it is. On
@@ -143,10 +146,9 @@ complete.
 - The Before / After gate is stated as lead-only, happening between the lead and
   the human and never agent-to-agent.
 - Review is specified in order — requirement conformance against pasted evidence
-  (re-running anything whose result decides acceptance), architecture against the
-  atlas boundaries and `Must Preserve`, the diff for `Scope` containment and the
-  forbidden-pattern catalogue, then the tests for whether they assert real
-  behaviour.
+  (re-running anything whose result decides acceptance), the diff against the Goal
+  and explicit `Constraints`, then whether the reported checks establish the
+  Acceptance items and state remaining risks honestly.
 - Returning is specified as gaps only, with the explicit "everything else is
   accepted, change nothing outside these points" line, capped at two returns
   before the package itself is withdrawn and reissued.
@@ -212,15 +214,16 @@ centralized pass still runs in full.
 2. Reread the lead adapter and confirm it states the non-implementing,
    non-dispatching role; the role check comes first; the entry router reads the
    index; the change discipline (tiers, Decision Gate, Before/After, package
-   lifecycle) is present inline; the `atlas/v2` package template is embedded; the
-   idle rule, the acceptance-is-the-whole-contract rule, the review order, and
-   the gaps-only return are present inline; and reporting respects the selected
-   level.
+   lifecycle) is present inline; the concise `atlas/v2` package template is
+   embedded; the idle rule, the acceptance-is-the-whole-contract rule, the review
+   order, and the gaps-only return are present inline; and reporting respects the
+   selected level.
 3. Reread the worker adapter and confirm it opens with the mirror role check,
-   grants exploration and cross-file design, makes the worker own its tests and
-   build, forbids governance writes and commits, carries the forbidden-pattern
-   catalogue and the evidence-based report format, handles a returned gaps list,
-   and never mentions the index, the module list, or the plan lifecycle.
+   grants exploration and implementation choice, makes the worker own the checks
+   needed for acceptance, forbids governance writes and commits, carries the
+   concise evidence-based report format, handles a returned gaps list, and never
+   mentions the index, the module list, the plan lifecycle, or a generic
+   implementation-pattern catalogue.
 4. Confirm platform skill frontmatter names and directories match the contract:
    Claude Code and Codex both use `<project-slug>-atlas` for the lead and
    `<project-slug>-worker` for the worker, and both exist for every selected

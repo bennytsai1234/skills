@@ -7,7 +7,7 @@ description: "Codebase Atlas for {{PROJECT_NAME}} — navigation map, change dis
 
 Entrypoint for the agent in direct contact with the user.
 
-You understand the project and the need, decide the solution boundary, agree it
+You understand the project and the need, clarify the desired result and evidence
 with the user, write a task package, and review what comes back. The user hands
 the package to an implementation agent themselves.
 
@@ -58,31 +58,29 @@ boundary, or re-opens a recorded decision.
 Judge a discipline tier. It scales how much specification the change needs:
 
 - **T0 trivial** (no logic change, reversible, single file): one-line
-  Before/After; a minimal package — goal, the exact edit, one acceptance check.
+  Before/After; a minimal package — goal and one acceptance check.
   No Decision Gate.
 - **T1 normal** (contained, reversible, clear diagnosis): full package; name the
-  test that must exist afterwards.
+  objective acceptance checks and any explicit constraints.
 - **T2 hard/risky** (async/stateful bug, multi-module, external API,
   irreversible, perf regression, uncertain diagnosis): full package, a Decision
-  Gate first, and explicit evidence requirements covering the risky behaviour —
-  not just a green suite.
+  Gate only for choices the repository cannot settle, and acceptance evidence
+  covering the risky behaviour.
 
 **Hard floor:** irreversible, cross-module, external-API, or migration work is at
 least T2. Honour a plain "be quick / be thorough" override, but never below the
 floor.
 
-**Decision Gate** — when a change alters module boundaries, an external API, is
-irreversible or a migration, or has two or more viable approaches: first check
-whether the proposal contradicts or re-opens anything recorded in the index or
-Architecture Decisions table — if so, name it and confirm the prior decision is
-being reopened. Then present Context / Options (A/B with trade-offs) /
-Recommendation and wait for a choice.
+**Decision Gate** — use it only when the human must decide something the code
+cannot settle, such as an external compatibility promise, schema ownership, or
+which product area owns a change. Do not use it to choose the implementation for
+the worker. Present Context / Options / Recommendation and wait for a choice.
 
 For a deep or unclear decision tree, interview one question at a time, each with
 a recommended answer, before presenting options.
 
-Once the user has confirmed, the decision is settled. It goes into the package's
-`Solution Boundary`; the worker does not re-litigate it.
+Once the user has confirmed, record the decision in the package's `Constraints`.
+The worker follows that explicit requirement while choosing the implementation.
 
 **Before / After gate** — the only confirmation interface, and yours alone. It
 happens between you and the user, never between an agent and an agent.
@@ -101,7 +99,8 @@ hands over — one artifact, not two. Then tell the user it is ready and where i
 is.
 
 Complete means a competent agent that has never seen this conversation can read
-it, find the code, make the change, and prove it worked.
+it, understand the desired result, find the code, choose an implementation, and
+prove the result with evidence.
 
 ```markdown
 ---
@@ -113,48 +112,30 @@ TASK_TYPE: implement        # implement | investigate | review
 ## Goal
 <one sentence: what must be true when this is done>
 
-## Why
-<the need behind it; for a bug, the diagnosed root cause>
-
-## Solution Boundary
-<the approach decided, and the approaches ruled out>
-
-## Starting Points
-- docs/<project>/<module>.md
-- <the symbol, route, or entrypoint the change most likely begins at>
-<orientation, not a reading limit>
-
-## Scope
-- Expected to change: <areas>
-- Out of bounds: <areas that must not change>
-
-## Must Preserve
-- <boundary / public API / contract that must not change>
-
-## Forbidden
-- <task-specific bans, on top of the worker skill's baseline>
-
 ## Acceptance
-- <exact command with expected result, or an observable behaviour>
-- Old behaviour that must not change: <...>
+- <exact command with its expected result, or an observable behaviour>
+- <another objectively checkable result>
+- <relevant tests or checks pass>
 
-## Tests
-- <what must be covered and where those tests live — or what existing coverage
-  stands in for it>
+## Constraints (only when needed)
+- <a requirement that cannot be inferred from the code or ordinary engineering
+  judgement>
+<omit this section when no explicit constraint exists>
 
-## Evidence Required
-- Pasted command output for each Acceptance check.
-- The full test-suite result.
+## Starting Points (optional)
+- docs/<project>/<module>.md
+- <the symbol, route, or entrypoint that may help orient exploration>
+<omit this section when no useful pointer is available>
 
-## Stop And Report If
-- The root cause is outside Scope.
-- The fix requires changing something under Must Preserve.
-- Two or more viable approaches differ materially.
-- The package rests on a premise the code contradicts.
+## Evidence
+- The actual output for each Acceptance check, pasted rather than summarized.
+- The tests and other checks run, plus any remaining risks.
 ```
 
-Copy `Must Preserve` and `Forbidden` from the owning module doc's **Do Not Do**
-and **Known Risks**.
+Do not add generic rules such as "preserve existing functionality", "use a
+reasonable architecture", or "maintain code quality". Add a constraint only when
+it records a real requirement the worker cannot infer from the repository or
+ordinary engineering judgement.
 
 **Acceptance rules.** Every item must be checkable by someone who was not in this
 conversation — an exact command with an expected result, or a behaviour described
@@ -167,7 +148,9 @@ criterion.
 (`npm test`, `pytest tests/auth -q`, `dotnet build`). Paths stay relative with
 forward slashes.
 
-**Never** paste chat history, the index, or a full spec into a package.
+**Never** paste chat history, the index, or a full spec into a package. Do not
+prescribe the implementation when the worker can determine it from the goal and
+the code.
 
 ## While the package is out
 
@@ -183,15 +166,10 @@ order:
    every `Acceptance` item hold? Verify against the pasted evidence, and re-run
    anything whose result decides acceptance. A claim of a passing check is not a
    passing check.
-2. **Architecture.** Does the change fit the module boundaries in the atlas? Is
-   the logic where that module's doc says it belongs? Is anything under
-   `Must Preserve` altered?
-3. **Diff.** Did it stay inside `Scope`? Any special case, hardcoded value,
-   swallowed exception, test-only production branch, duplicated logic, or
-   weakened test? Is the new code more complex than the problem it solves? Side
-   effects the report did not mention?
-4. **Tests.** Do the new tests assert real behaviour, or encode the
-   implementation's mistake? Would they fail if the bug came back?
+2. **Diff.** Do the changed files support the Goal, and do they respect the
+   package's explicit `Constraints`? Note anything the report did not explain.
+3. **Verification.** Do the reported checks establish the Acceptance items, and
+   are the remaining risks stated honestly?
 
 Everything you find at this step is a gap, including a check that fails when you
 re-run it. Do not fix it yourself.

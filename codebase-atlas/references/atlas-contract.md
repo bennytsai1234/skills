@@ -285,8 +285,10 @@ Avoid file inventories. A module doc is successful when it helps a future agent
 decide whether to start there, and work confidently once it has. There is no line
 budget — do not trim a finished doc to a target length.
 
-Write **Do Not Do** and **Known Risks** so they can be pasted verbatim into a
-task package's `Must Preserve` and `Forbidden` sections.
+Write **Do Not Do** and **Known Risks** as repository-specific facts, invariants,
+and hidden constraints. A lead may copy only the items relevant to a task into
+its `Constraints` section; do not treat these sections as a catalogue of generic
+engineering rules.
 
 ## Agent Roles And Write Ownership
 
@@ -294,14 +296,14 @@ Full doctrine in `references/delegation.md`. The parts every generated adapter
 must enforce:
 
 - **Lead** — the only agent in direct contact with a human. Owns understanding
-  the need, the solution boundary, the Decision Gate, the Before/After gate, the
-  task package, review of what comes back, final acceptance, delivery, and every
-  write to a governance file. It does not implement, and it does not spawn the
-  worker — it writes the package to a file and the human carries it across.
+  the need, choices the repository cannot settle, the Decision Gate, the
+  Before/After gate, the task package, review of what comes back, final
+  acceptance, delivery, and every write to a governance file. It does not
+  implement, and it does not spawn the worker — it writes the package to a file
+  and the human carries it across.
 - **Worker** — a strong implementation agent, run by the human against one task
-  package. Owns exploration, design inside the package's boundary, the change
-  across whatever files it needs, its own tests and build, and one evidenced
-  report.
+  package. Owns exploration, implementation decisions, the change across whatever
+  files it needs, the checks needed to prove acceptance, and one evidenced report.
 
 **Role resolution.** Do not sniff the environment. An explicit `ROLE: worker`
 header in the invoking prompt wins; with no header, assume lead. Backstop that
@@ -347,14 +349,14 @@ and reviews; it does not implement and it does not dispatch. It must:
 - **Change (any edit)**: judge a discipline tier. The tier scales how much
   specification the change needs:
   - **T0 trivial** (no logic change, reversible, single file): one-line
-    Before/After; a minimal package — goal, the exact edit, one acceptance check;
-    no Decision Gate.
-  - **T1 normal** (contained, reversible, clear diagnosis): full package, naming
-    the test that must exist afterwards.
+    Before/After; a minimal package — goal and one acceptance check; no Decision
+    Gate.
+  - **T1 normal** (contained, reversible, clear diagnosis): full package with
+    objective acceptance checks and any explicit constraints.
   - **T2 hard/risky** (async/stateful, multi-module, external API, irreversible,
-    perf regression, uncertain diagnosis): full package, a Decision Gate first,
-    and explicit evidence requirements covering the risky behaviour rather than a
-    green suite alone.
+    perf regression, uncertain diagnosis): full package, a Decision Gate only for
+    choices the repository cannot settle, and acceptance evidence covering the
+    risky behaviour.
 
   Hard floor: irreversible, cross-module, external-API, and migration work is at
   least T2. A plain "be quick / be thorough" override is honoured but never drops
@@ -370,22 +372,23 @@ and reviews; it does not implement and it does not dispatch. It must:
   wait for explicit confirmation before writing the package. At T0, state the
   one-line Before/After and proceed.
 - **Decision Gate** when a change alters module boundaries, an external API
-  contract, is irreversible or a migration, or has two or more viable approaches:
-  present Context / Options (with trade-offs) / Recommendation and wait for a
-  choice before the Before/After. For deep or unclear decision trees, interview
-  one question at a time, each with a recommended answer, before presenting
-  options.
+  contract, is irreversible or a migration, or has a product choice the code
+  cannot settle: present Context / Options / Recommendation and wait for a choice
+  before the Before/After. Do not use the gate to prescribe implementation. For
+  deep or unclear decision trees, interview one question at a time, each with a
+  recommended answer, before presenting options.
 
-  Once confirmed, a decision is settled: it goes into the package's
-  `Solution Boundary`, and the worker may not re-open it.
+  Once confirmed, record the decision as an explicit `Constraints` item. The
+  worker follows it while choosing the implementation.
 - **Write the task package** after the Before/After is confirmed, to
   `docs/changes/planning/{{DATE}}-{{SLUG}}.md` — the plan file and the handoff
   artifact are the same file. Use the `atlas/v2` shape in
   `references/delegation.md` §4, embedded inline in the lead adapter so the lead
-  needs no extra file read. Never chat history, never the index, never a spec
-  dump. `Must Preserve` and `Forbidden` are normally copied from the owning
-  module doc's **Do Not Do** and **Known Risks**. Then tell the user the package
-  is ready and where it is; do not spawn anything.
+  needs no extra file read. It carries the Goal, objective Acceptance checks,
+  explicit Constraints only when needed, optional Starting Points, and Evidence.
+  Never chat history, never the index, never a spec dump, and never a prescribed
+  implementation. Then tell the user the package is ready and where it is; do not
+  spawn anything.
 - **State the acceptance rule**: every acceptance item must be checkable by
   someone who was not in the conversation — an exact command with an expected
   result, or an observable behaviour. "Works correctly" is not an acceptance
@@ -396,16 +399,15 @@ and reviews; it does not implement and it does not dispatch. It must:
   assumed on `PATH`. Prefer the project's own runner.
 - **Idle rule**, inline and explicit: while the package is out, do nothing at all
   — no `git status`, no diff inspection, no progress narration, no speculative
-  reading. `references/delegation.md` §8 is never loaded at runtime, so the
+  reading. `references/delegation.md` §7 is never loaded at runtime, so the
   adapter must carry this itself.
 - **Review** what the human brings back, in order: requirement conformance
   (against pasted evidence, re-running anything whose result decides acceptance —
-  a claim of a passing check is not a passing check); architecture against the
-  atlas's module boundaries and `Must Preserve`; the diff for `Scope` containment
-  and the forbidden-pattern catalogue (`references/delegation.md` §5); and the
-  tests, for whether they assert real behaviour and would fail if the bug
-  returned. State that everything found at this step is a gap, including a check
-  that fails on re-run, and that the lead does not fix it.
+  a claim of a passing check is not a passing check); the diff against the Goal
+  and explicit `Constraints`; and whether the reported checks establish the
+  Acceptance items and state remaining risks honestly. State that everything
+  found at this step is a gap, including a check that fails on re-run, and that
+  the lead does not fix it.
 - **Return gaps, and only gaps**: a numbered list of what is wrong and what fixed
   looks like, ending with the required line "everything else is accepted, change
   nothing outside these points". Cap it at two returns; on a third, withdraw the
@@ -441,37 +443,31 @@ a task package to. It must:
 
 - **Scope itself** to prompts carrying a `ROLE: worker` package header, and point
   anything else at the lead adapter.
-- **Order the work**: read the package; treat `Goal` / `Why` / `Solution
-  Boundary` as settled; explore whatever the change requires, with
-  `Starting Points` as orientation rather than a reading cap; run the root-cause
-  preflight; design and implement across the files the change needs, inside
-  `Scope`; add and run the tests; run the build and suite; fix failures until
-  they pass; check the result against `Goal` and `Acceptance` directly; report;
-  stop.
-- **State that the worker owns verification**: it runs its own build, suite,
-  linter, and type check, and fixes what fails rather than handing it back. State
-  also that a green suite does not substitute for checking the change against
-  `Goal` and `Acceptance` directly.
+- **Order the work**: read the package; use `Starting Points` when present;
+  explore whatever the change requires; decide and implement the solution across
+  the files it needs; run the checks needed to establish `Acceptance`; fix
+  relevant failures until acceptance passes or a concrete blocker remains; check
+  the result against `Goal` and `Acceptance` directly; report; stop.
+- **State that the worker owns verification**: it chooses and runs the relevant
+  build, test, lint, or type checks, and reports their actual output. A green
+  suite does not substitute for checking the change against `Goal` and
+  `Acceptance` directly.
 - **State the prohibitions explicitly**: no plan/summary/dated folder/completion
   doc or anything else under `docs/changes/`, no atlas or Architecture Decisions
-  edit, no Before/After to a human, no re-opening a settled decision, no
-  self-widened scope, and no commit or push.
-- **Carry the forbidden-pattern catalogue** from `references/delegation.md` §5
-  inline, plus the package's own `Forbidden` additions.
-- **Prefer stopping over guessing**: define the stop-and-report conditions —
-  root cause outside `Scope`, a fix requiring a `Must Preserve` change, two
-  materially different approaches, or a package premise the code contradicts —
-  and state that an early return with a clear blocker is a success.
+  edit, no Before/After to a human, and no commit or push. If an explicit
+  `Constraint` conflicts with the code or cannot be met, report it instead of
+  silently changing the requirement.
 - **Handle a returned `## Gaps` list**: fix exactly the named points and nothing
   else.
-- **Fix the report format** (`references/delegation.md` §6): changed files,
-  approach, root cause, verification with **pasted output rather than a claim**,
-  risks, needs-a-decision. No exploration narrative, no restating the diff.
+- **Fix the report format** (`references/delegation.md` §5): changed files,
+  verification with **pasted output rather than a claim**, risks, and any needed
+  decision. No exploration narrative or restatement of the task.
 - Record the reporting level, and that delivery is the lead's.
 
 The worker adapter must not contain: the index path, the module list, the tier
-model, planning, the Before/After gate, the Decision Gate, or the plan
-lifecycle. If a worker needs any of that, the package was written wrong.
+model, planning, the Before/After gate, the Decision Gate, the plan lifecycle, or
+a generic implementation-style prohibition catalogue. If a worker needs any of
+that, the package was written wrong.
 
 ## Plan File Lifecycle
 
