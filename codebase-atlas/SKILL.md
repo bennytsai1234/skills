@@ -1,19 +1,19 @@
 ---
 name: codebase-atlas
-description: "Initialize, refresh, or rebuild a repository atlas under docs/ for AI-assisted code navigation. Only for an explicit atlas build, refresh, rebuild, or rescan requested by a human — never for ordinary development, and never inside a delegated subagent task."
+description: "Initialize, refresh, or rebuild a repository atlas under docs/ for AI-assisted code navigation. Only for an explicit atlas build, refresh, rebuild, or rescan requested by a human — never for ordinary development, and never while executing a task package."
 ---
 
 # Codebase Atlas
 
-Codebase Atlas turns a repository into a compact engineering map, then generates
-the role-split entrypoints that let a lead agent and cheap worker subagents work
-on it without tripping over each other. Use it for atlas initialization, a
-deliberate full rebuild, or an incremental refresh of an existing atlas — not for
-ordinary follow-up development.
+Codebase Atlas turns a repository into an engineering map, then generates the
+role-split entrypoints for a human-mediated two-agent workflow: a lead that
+specifies and reviews, and an implementation agent the human hands a task package
+to. Use it for atlas initialization, a deliberate full rebuild, or an incremental
+refresh of an existing atlas — not for ordinary follow-up development.
 
-**Do not run this skill inside a delegated subagent task.** If your instructions
-arrived as a task contract from another agent (a prompt whose header says
-`ROLE: worker`), an atlas rebuild is out of scope — report that instead.
+**Do not run this skill while executing a task package.** If your instructions
+arrived as a package (a prompt whose header says `ROLE: worker`), an atlas
+rebuild is out of scope — report that instead.
 
 Keep this skill simple:
 
@@ -25,10 +25,17 @@ Keep this skill simple:
   subagents run in parallel (Agent tool). Keep module-boundary judgment, the
   index, and adapter generation centralized — those need a single holistic
   view across files that independent subagents do not share.
-- The atlas this skill generates is built for a lead-plus-workers setup. It
-  produces **two** entrypoints per platform — a lead adapter and a worker
-  adapter — split by role rather than by activity. Read
-  `references/delegation.md` before generating either.
+
+  This is **build-time** parallelism, and it is the one place this skill spawns
+  anything. It is safe here because each subagent writes one documentation file
+  at a disjoint path, with no code change, no test run, and no shared state. It
+  says nothing about how the generated atlas works day to day — the workflow the
+  adapters describe has no automated dispatch at all.
+- The atlas this skill generates is built for a **human-mediated two-agent**
+  workflow. It produces **two** entrypoints per platform — a lead adapter for the
+  agent talking to the human, and a worker adapter for the implementation agent
+  the human hands a task package to. Read `references/delegation.md` before
+  generating either.
 - Determine the working language before any user-facing output. Prefer an
   explicit repository language rule, then the user's initialization request
   language, then English. Use the selected language for user-facing output and
@@ -302,26 +309,23 @@ before asking for configuration decisions:
    D. None — skip adapter generation
    ```
 
-10. Present the worker model decision in this plain-language shape, translated
-    into the working language. Ask it only when at least one platform adapter
-    will be generated:
+10. When at least one platform adapter will be generated, state plainly how the
+    generated workflow runs, so the user is not surprised by it later. Render the
+    meaning in the working language:
 
     ```markdown
-    When I hand a bounded task to a sub-agent, which model should it use?
+    How work will run after this is set up:
 
-    A. A cheaper model for ordinary implementation work, and your strongest
-       model only for independent review (recommended — bounded tasks with
-       explicit acceptance criteria gain little from a stronger model, but a
-       weak reviewer just agrees with whatever it is shown).
-    B. Your strongest model for everything.
-
-    If you choose A, name the two models; if you would rather not, I will write
-    the rule in generic terms and you can fill the names in later.
+    I understand the request, decide the approach with you, and write a complete
+    task package to a file — goal, boundaries, acceptance criteria, what evidence
+    to bring back. You hand that file to your implementation agent yourself; I do
+    not launch anything. It explores the code, makes the change, writes and runs
+    the tests, and reports back. Then I review it against the package and either
+    accept or send back a short list of precise gaps.
     ```
 
-    Record the answer as the two model tiers. Under B, or when the user names no
-    models, use the placeholder-map fallbacks in
-    `references/atlas-contract.md` rather than inventing model names.
+    There is no model decision to make: the implementation agent is whichever one
+    you run, and the package is written to be model-agnostic.
 11. Use this confirmation shape for preserved rules:
 
     ```text
@@ -388,13 +392,12 @@ silently spending one.
    - The exact output path to write: `docs/<project>/<module_slug>.md` (or the
      reference-assisted `docs/<project>_<reference>/<module_slug>.md`). Forward
      slashes, even on Windows. One subagent writes exactly one file — never
-     let two subagents target the same path. This is the disjoint-paths
-     scheduling rule from `references/delegation.md` §4 applied to the build
-     itself: these dispatches are safe to run concurrently precisely because no
-     two of them can touch the same file.
+     let two subagents target the same path. These dispatches are safe to run
+     concurrently precisely because no two of them can touch the same file.
 
-   These prompts are task contracts. Keep them to what the subagent cannot
-   derive, and do not paste this conversation into them.
+   These prompts are build-time instructions, not the `atlas/v2` task packages
+   the generated workflow uses. Keep them to what the subagent cannot derive, and
+   do not paste this conversation into them.
    After all module subagents return, read their brief findings (not the full
    file contents) to reconcile the module list per Step 5's provisional-split
    note. Then draft `index.md` yourself from the reconciled module list and
@@ -410,11 +413,13 @@ silently spending one.
    benefit) for all platforms selected in Step 3.
 
    Each platform gets a **pair**, split by role: a lead adapter for the agent
-   talking to the human (entry router, investigate/change discipline,
-   Before/After gate, delegation, acceptance, governance writes) and a worker
-   adapter for delegated subagents (contract execution only). Never generate one
-   without the other — a lone lead adapter is the single-agent design this
-   version replaces, and subagents will load it and start managing the project.
+   talking to the human (entry router, investigate/change discipline, Decision
+   Gate, Before/After gate, task-package authoring, review, governance writes)
+   and a worker adapter for the implementation agent the human hands a package to
+   (execution only). Never generate one without the other — a lone lead adapter
+   is the single-agent design this version replaces, and an implementation agent
+   handed a package will load it and start managing the project instead of doing
+   the work.
    - If Claude Code was selected: create `.claude/skills/<project-slug>-atlas/`
      and `.claude/skills/<project-slug>-worker/` if needed, then generate
      `SKILL.md` in each from `assets/templates/lead_adapter.md` and
@@ -436,8 +441,6 @@ silently spending one.
    - In every adapter set `{{PROJECT_NAME}}`, `{{DELIVERY_POLICY}}`, and
      `{{REPORTING_LEVEL}}`; in platform adapters also set `{{PROJECT_SLUG}}`
      (lead skill `<slug>-atlas`, worker skill `<slug>-worker`). Set
-     `{{MODEL_TIER_STANDARD}}` and `{{MODEL_TIER_STRONG}}` in the **lead adapter
-     only**, from the Step 3 worker model decision. Set
      `{{INDEX_FILE}}` in the **lead adapter only**, to the relative path from
      the adapter's location to the index (e.g. from
      `.claude/skills/<project-slug>-atlas/` use
@@ -445,11 +448,11 @@ silently spending one.
      the index at all. Leave the runtime tokens `{{DATE}}` and `{{SLUG}}` intact
      (see the placeholder map in `references/atlas-contract.md`).
    - Render each adapter's `description` in the Step 0 working language, and
-     keep the cross-reference in it: the lead description points a subagent at
-     `<project-slug>-worker`, and the worker description points a
-     human-facing agent at `<project-slug>-atlas`. That description is the only
-     part an agent reads before deciding to load a skill, so it carries the role
-     boundary.
+     keep the cross-reference in it: the lead description points an agent
+     executing a task package at `<project-slug>-worker`, and the worker
+     description points a human-facing agent at `<project-slug>-atlas`. That
+     description is the only part an agent reads before deciding to load a skill,
+     so it carries the role boundary.
    - Do **not** write a forced "run the atlas skill before every operation"
      mandate into `CLAUDE.md` or `AGENTS.md`. Each skill's `description` makes
      it discoverable when a task needs it. At most, if the file has no pointer to
@@ -565,20 +568,23 @@ drift classification this workflow executes.
   notes and remove stale boundaries during rebuilds.
 - Generated docs must describe repository-persistent facts, not facts about the
   current agent, model, editor, shell, chat session, or temporary workspace.
-- Code-changing work must state a plain Before / After before edits. This is the
-  user-facing checkpoint; do not replace it with secondary engineering reports.
-  It belongs to the agent talking to the human — a delegated subagent never runs
-  it, because nobody is reading. At T1/T2, wait for confirmation before editing
-  or dispatching; at T0 (trivial, reversible, single file), announce the
-  one-line Before / After and proceed, then report:
+- Code-changing work must state a plain Before / After before the task package is
+  written. This is the user-facing checkpoint; do not replace it with secondary
+  engineering reports. It belongs to the agent talking to the human — an
+  implementation agent never runs it, because nobody is reading. At T1/T2, wait
+  for confirmation before writing the package; at T0, announce the one-line
+  Before / After and proceed, then report:
   - **Before**: current state and what is wrong, missing, confusing, or risky.
   - **After**: what the change will make true.
-- Split generated entrypoints by role, not by activity. Planning, alignment,
-  review, and knowledge maintenance all belong to the same agent on the same
-  timeline, so they ship in one lead adapter; execution ships separately.
-- Exactly one agent writes any governance file. Whole-project builds, test
-  suites, and process restarts belong to that same agent, and run only with no
-  worker in flight.
+- Split generated entrypoints by role, not by activity. Understanding, deciding,
+  specifying, reviewing, and knowledge maintenance all belong to the same agent
+  on the same timeline, so they ship in one lead adapter; implementation ships
+  separately.
+- The generated workflow has no automated dispatch. The lead writes a task
+  package to a file and stops; a human carries it to the implementation agent and
+  brings the result back. Only one agent is active on the working tree at a time,
+  and whoever holds it runs whatever build or test it needs.
+- Exactly one agent writes any governance file: the lead.
 - Before proposing a change, calibrate scope: owning module, boundary modules,
   contracts, shared state, generated artifacts, tests, downstream users, and
   uncertain surfaces. Use this to reason, not as a substitute for the
@@ -596,11 +602,11 @@ Do not run Codebase Atlas for ordinary daily work after an atlas exists. The
 generated lead adapter is self-contained and already handles daily work:
 read-only tasks (explanations, investigations, reviews, reproductions, profiling,
 CI failures, risk assessment) follow its investigate path, and every code edit
-follows its change path, which scales discipline to the task and delegates when
-the task is bounded enough to be worth a contract. Use the generated atlas for
-all of these instead of rerunning Codebase Atlas.
+follows its change path, which scales specification to the task and ends in a
+task package the user hands over. Use the generated atlas for all of these
+instead of rerunning Codebase Atlas.
 
-Do not run it inside a delegated subagent task at all. A worker that decides the
+Do not run it while executing a task package at all. A worker that decides the
 map is stale reports that; it does not rebuild it.
 
 Rerun Codebase Atlas only when a human explicitly asks for a rebuild, refresh,

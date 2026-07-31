@@ -8,8 +8,8 @@ process.
 - Use it to locate the relevant module before inspecting code; keep details in the
   module docs. This index answers *what owns this, where do I start, what must I
   not break*; grep answers *where exactly is it*.
-- Delegated subagents do not read this file. They receive the module doc paths
-  they need in their task contract.
+- The implementation agent does not read this file. It receives the module doc
+  paths it needs as starting points in its task package.
 - Codebase Atlas runs once to build this map, and is rerun only when a human
   asks. A **refresh** re-scans just the modules the repository changed under
   since the build below; a **rebuild** discards the map and scans everything.

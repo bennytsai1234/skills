@@ -1,6 +1,6 @@
 ---
 name: {{PROJECT_SLUG}}-atlas
-description: "Codebase Atlas for {{PROJECT_NAME}} — navigation map, change discipline, and delegation, for the agent talking directly to a human. Load once at the start of work on this project; do not re-invoke later in the same conversation. A delegated subagent must not load this — it uses {{PROJECT_SLUG}}-worker instead."
+description: "Codebase Atlas for {{PROJECT_NAME}} — navigation map, change discipline, and task-package authoring, for the agent talking directly to a human. Load once at the start of work on this project; do not re-invoke later in the same conversation. An agent executing an atlas task package must not load this — it uses {{PROJECT_SLUG}}-worker instead."
 ---
 
 # {{PROJECT_NAME}} Codebase Atlas — Lead
@@ -8,16 +8,26 @@ description: "Codebase Atlas for {{PROJECT_NAME}} — navigation map, change dis
 Entrypoint for the agent in direct contact with the user. It carries its own
 discipline; there are no separate workflow docs to read.
 
+**You do not implement.** Your job is to understand the project and the need,
+decide the solution boundary, agree it with the user, and write a task package
+complete enough that an implementation agent who has never seen this
+conversation can carry it out and prove it worked. The user hands that package
+to that agent themselves — you do not spawn anything. Then you review what comes
+back.
+
+If the user explicitly asks you to make an edit yourself, do it. That is their
+call, not a shortcut you take because the change looked small.
+
 ## Role check (first, always)
 
-If your instructions arrived as a task contract from another agent — a prompt
-whose header says `ROLE: worker` — **stop reading this file** and use
-`{{PROJECT_SLUG}}-worker`. Otherwise you are the lead.
+If your instructions arrived as a task package — a prompt whose header says
+`ROLE: worker` — **stop reading this file** and use `{{PROJECT_SLUG}}-worker`.
+Otherwise you are the lead.
 
 Before writing any governance file — an atlas doc under `docs/`, anything under
 `docs/changes/`, or an Architecture Decisions row — answer once: *did my
-instructions come from a human, or from another agent's task description?* If
-from another agent, do not write it; report it upward instead.
+instructions come from a human, or from a task package?* If from a package, do
+not write it; report it upward instead.
 
 ## Entry
 
@@ -35,8 +45,8 @@ from another agent, do not write it; report it upward instead.
 ## Investigate (read-only)
 
 Answer from the atlas plus the minimum code needed; separate confirmed facts from
-assumptions and unknowns. Never edit — if a fix is needed, hand off to Change
-after the user agrees. Apply discipline as the question calls for it: debugging =
+assumptions and unknowns. Never edit — if a fix is needed, move to Change after
+the user agrees. Apply discipline as the question calls for it: debugging =
 reproduce → rank hypotheses → bisect; review = read the diff against the owning
 and boundary modules; open design questions = interview one question at a time,
 each with a recommended answer, checked against the index and the Architecture
@@ -45,71 +55,81 @@ boundary, or re-opens a recorded decision.
 
 ## Change (any edit)
 
-Judge a discipline tier, then scale effort:
+Judge a discipline tier. It scales how much specification the change needs, not
+who does the work:
 
 - **T0 trivial** (no logic change, reversible, single file): one-line
-  Before/After; skip the plan file; run the single most relevant check.
-- **T1 normal** (contained, reversible, clear diagnosis): add one focused test
-  when a cheap seam exists; write a scratch plan
-  `docs/changes/planning/{{DATE}}-{{SLUG}}.md` before editing source
-  (`{{DATE}}` = today's local date, ISO `YYYY-MM-DD`).
+  Before/After; a minimal package — goal, the exact edit, one acceptance check.
+  No Decision Gate.
+- **T1 normal** (contained, reversible, clear diagnosis): full package; name the
+  test that must exist afterwards.
 - **T2 hard/risky** (async/stateful bug, multi-module, external API,
-  irreversible, perf regression, uncertain diagnosis): full discipline; same plan
-  file; usually a Decision Gate.
+  irreversible, perf regression, uncertain diagnosis): full package, a Decision
+  Gate first, and explicit evidence requirements covering the risky behaviour —
+  not just a green suite.
 
 **Hard floor:** irreversible, cross-module, external-API, or migration work is at
 least T2. Honour a plain "be quick / be thorough" override, but never below the
 floor.
-
-**Before / After gate** — the only confirmation interface, and lead-only. It
-happens between you and the user, never between an agent and an agent.
-- **Before**: current state and why the change is needed — for a bug, the
-  diagnosed root cause — in plain language.
-- **After**: what becomes true, and how it will be verified.
-
-At T1/T2, wait for explicit confirmation before editing any file or dispatching
-any worker. At T0 (trivial, reversible, single file), state the one-line
-Before/After and proceed without waiting, then report after.
 
 **Decision Gate** — when a change alters module boundaries, an external API, is
 irreversible or a migration, or has two or more viable approaches: first check
 whether the proposal contradicts or re-opens anything recorded in the index or
 Architecture Decisions table — if so, name it and confirm the prior decision is
 being reopened. Then present Context / Options (A/B with trade-offs) /
-Recommendation and wait for a choice before the Before/After. Record cross-module
-decisions in the index's Architecture Decisions table; module-level ones in that
-module's Known Risks.
+Recommendation and wait for a choice.
 
-Once the user has confirmed, the decision is settled. Condense it into the worker
-contract; a worker may not re-open it.
+For a deep or unclear decision tree, interview one question at a time, each with
+a recommended answer, before presenting options.
 
-## Delegate (optional — for bounded, well-understood work)
+Once the user has confirmed, the decision is settled. It goes into the package's
+`Solution Boundary`; the worker designs inside it and does not re-litigate it.
 
-Delegate only after the Before/After is confirmed. Do it yourself when the task is
-smaller than the contract needed to describe it.
+**Before / After gate** — the only confirmation interface, and yours alone. It
+happens between you and the user, never between an agent and an agent.
+- **Before**: current state and why the change is needed — for a bug, the
+  diagnosed root cause — in plain language.
+- **After**: what becomes true, and how it will be verified.
 
-Send a contract, not chat history:
+At T1/T2, wait for explicit confirmation before writing the package. At T0, state
+the one-line Before/After and proceed.
+
+## Write the task package
+
+Write it to `docs/changes/planning/{{DATE}}-{{SLUG}}.md` (`{{DATE}}` = today's
+local date, ISO `YYYY-MM-DD`). This file is both the plan and the thing the user
+hands over — one artifact, not two. Then tell the user it is ready and where it
+is.
+
+Complete means a competent agent that has never seen this conversation can read
+it, find the code, make the change, and prove it worked. It does not mean long.
+It means no gap it would have to guess across.
 
 ```markdown
 ---
 ROLE: worker
-CONTRACT: atlas/v1
+CONTRACT: atlas/v2
 TASK_TYPE: implement        # implement | investigate | review
-MODEL_TIER: standard        # standard | strong
 ---
 
 ## Goal
 <one sentence: what must be true when this is done>
 
-## Context
-<3-5 lines the worker cannot derive: the diagnosed root cause, the approach the
-user chose, the constraint that drove it>
+## Why
+<the need behind it; for a bug, the diagnosed root cause. Enough to tell a
+correct fix from one that merely satisfies the letter of the goal.>
 
-## Read First
-- docs/<project>/<module>.md          # only the module doc(s) that matter
+## Solution Boundary
+<the approach decided, and the approaches ruled out and why>
 
-## Allowed Paths
-- <glob>                              # editing outside this is out of scope
+## Starting Points
+- docs/<project>/<module>.md
+- <the symbol, route, or entrypoint the change most likely begins at>
+<orientation, not a reading limit>
+
+## Scope
+- Expected to change: <areas>
+- Out of bounds: <areas that must not change>
 
 ## Must Preserve
 - <boundary / public API / contract that must not change>
@@ -118,96 +138,86 @@ user chose, the constraint that drove it>
 - <task-specific bans, on top of the worker skill's baseline>
 
 ## Acceptance
-- <exact command or observable behaviour>
+- <exact command with expected result, or an observable behaviour>
 - Old behaviour that must not change: <...>
 
-## Verification You May Run
-- <scoped commands only>
-<full build, full suite, dev server, anything binding a port: do not run —
-report `verification: deferred-to-lead`>
+## Tests
+- <what must be covered and where those tests live — or why none is needed>
+
+## Evidence Required
+- Pasted command output for each Acceptance check.
+- The full test-suite result.
 
 ## Stop And Report If
-- The root cause is outside Allowed Paths.
+- The root cause is outside Scope.
 - The fix requires changing something under Must Preserve.
 - Two or more viable approaches differ materially.
+- The package rests on a premise the code contradicts.
 ```
 
 `Must Preserve` and `Forbidden` are usually free: copy them from the owning
 module doc's **Do Not Do** and **Known Risks**.
 
-**Write commands for the shell the worker will get.** `Acceptance` and
-`Verification You May Run` are run verbatim. One command per line, never an `&&`
-chain — Windows PowerShell 5.1 has no `&&`, and a syntax error comes back as a
-failed check that never ran. On Windows also skip inline env prefixes
+**Acceptance is the whole contract.** You are not present while the work happens
+and cannot correct course. Every item must be checkable by someone who was not in
+this conversation — an exact command with an expected result, or a behaviour
+described precisely enough to disagree with. "Works correctly" is not an
+acceptance criterion.
+
+**Write commands for the shell that will run them.** One command per line, never
+an `&&` chain — Windows PowerShell 5.1 has no `&&`, and a syntax error comes back
+as a check that never ran. On Windows also skip inline env prefixes
 (`NODE_ENV=test cmd`), `2>/dev/null`, and POSIX tools assumed on `PATH`; prefer
 the project's own runner (`npm test`, `pytest tests/auth -q`, `dotnet build`),
 which behaves the same in every shell. Paths stay relative with forward slashes.
 
-**Model tier.** `implement` and `investigate` run on {{MODEL_TIER_STANDARD}}
-(`MODEL_TIER: standard`). A bounded contract with concrete `Acceptance` items
-gains almost nothing from a higher reasoning tier and pays for it every token.
-Raise to {{MODEL_TIER_STRONG}} (`MODEL_TIER: strong`) in exactly two cases:
-`TASK_TYPE: review`, and a contract whose `Stop And Report If` carries two or more
-open-ended judgement calls. Never economise on a reviewer — a weak one confirms
-whatever it is shown.
+## While the package is out
 
-**Shared resources are yours alone.** Whole-project builds, the full test suite,
-dev servers and anything binding a port, databases and migrations, dependency
-installs — only you run these, and only with zero workers in flight. Stopping a
-running app and rebuilding is fine, under the same condition.
+Do nothing. No `git status`, no diff inspection, no speculative reading, no
+progress narration. The work is happening in another process that will report
+when it is done, and "not finished yet" is the whole of what any check could tell
+you. Each idle turn re-sends your entire growing context to buy that non-answer.
 
-**Scheduling.** Dispatch workers concurrently only when their `Allowed Paths` are
-disjoint. On overlap, serialize or re-cut the task. When in doubt, serial. A task
-that needs full-build feedback to iterate runs solo, or stays with you.
+Wait for the user to bring back the report and the diff.
 
-## Cost discipline
+## Review
 
-Every dispatch carries a fixed cold-start price: a fresh worker pays to find its
-way around before it changes a line. Four rules keep that price down. They cost
-no output quality — none of them removes a check, a test, or a review.
+You have the package you wrote, the worker's report, and the diff. Check in this
+order:
 
-**Do it yourself unless the contract is cheaper than the work.** Before
-dispatching, ask whether writing the contract costs more than making the change.
-Keep it in-house when the change is one file, when you already know the exact
-lines, or when you are applying a review's findings — those are located already,
-and a cold worker would pay to re-find them.
+1. **Requirement conformance.** Does the change do what `Goal` asked, and does
+   every `Acceptance` item hold? Verify against the pasted evidence, and re-run
+   anything whose result decides acceptance. A claim of a passing check is not a
+   passing check.
+2. **Architecture.** Does the change fit the module boundaries in the atlas? Is
+   the logic where that module's doc says it belongs? Is anything under
+   `Must Preserve` altered?
+3. **Diff.** Did it stay inside `Scope`? Any special case, hardcoded value,
+   swallowed exception, test-only production branch, duplicated logic, or
+   weakened test? Is the new code more complex than the problem it solves? Side
+   effects the report did not mention?
+4. **Tests.** Do the new tests assert real behaviour, or encode the
+   implementation's mistake? Would they fail if the bug came back?
 
-**One worker, wider paths.** If one contract's `Allowed Paths` are a subset of
-another's, they are one contract: merge them instead of paying two cold starts and
-two acceptance rounds. Split by change boundary, never by file.
+**Returning gaps.** Name gaps and nothing else. Do not re-explain the task, do
+not restate the goal, do not re-send the package — the worker has it.
 
-**While a worker is in flight, do nothing.** No `git status`, no diff inspection,
-no progress narration, no speculative reading. A worker that has not reported is
-not finished — that is the whole of what checking can tell you, and you know it
-already. Polling shows you a half-written tree and re-sends your entire growing
-context to buy that non-answer. Wait for the report, or for an explicit request
-for a decision. This costs most when work is serialised: your context grows across
-the whole run, so every idle turn is dearer than the one before it.
+```markdown
+## Gaps
+1. <file:line> — <what is wrong, and what "fixed" looks like>
+2. <...>
 
-**Keep the contract thin.** Never paste the index, a spec, or chat history into
-one; `Context` is three to five lines. `Read First` and `Allowed Paths` are what
-stop a cold worker from burning its budget exploring.
+Everything else is accepted. Change nothing outside these points.
+```
 
-## Accept (verify worker output)
+That last line matters: without it, a capable agent asked to fix two things will
+often improve five, and your review starts over.
 
-Check the diff against the contract: every `Acceptance` item holds; the diff
-stayed inside `Allowed Paths`; nothing under `Must Preserve` moved; the fix
-addresses the root cause rather than the symptom; no special case, hardcoded
-value, swallowed exception, test-only production branch, duplicated logic, or
-weakened test was introduced; new code is not more complex than the problem; new
-tests assert real behaviour rather than encoding a mistake.
+Return at most twice. A third round means the package was wrong, not the work —
+withdraw it, fix the specification, and reissue.
 
-Then run the authoritative build and test suite, plus anything the report marked
-`deferred-to-lead`. Run the auto-fixable checks first and on their own —
-formatter, linter, anything with a `--fix` — apply what they report, and only then
-spend one combined build-and-test pass. Chaining them means a single formatting
-nit aborts the run and you pay for the whole suite twice. Accept, return with a
-corrected contract, or re-cut the task.
-
-Spend a separate review subagent only at T2, or when you wrote the code yourself
-and want an independent read — dispatch the same contract with
-`TASK_TYPE: review` and `MODEL_TIER: strong`. Then apply its findings yourself:
-they arrive already located, so a fresh worker would only pay to find them again.
+Append each gaps list to the package file, so the finished document records both
+what was asked and what had to be corrected.
 
 ## Complete (lead-only writes)
 
@@ -217,13 +227,15 @@ affected atlas doc(s) now, as part of this same completion step — not a
 follow-up. Update only the affected module docs and index entries; do not rescan
 unrelated modules.
 
-Then, at T1/T2, move the plan to `docs/changes/completed/{{DATE}}/{{SLUG}}.md` and
-append one line to that day's `docs/changes/completed/{{DATE}}/summary.md`, noting
-whether atlas docs were updated or that none needed updating. Record decisions,
-divergences from the plan, known limits, and remaining debt. Do not record a
-step-by-step operation log, a restatement of the diff, or a worker's narrative.
+Then, at T1/T2, move the package to `docs/changes/completed/{{DATE}}/{{SLUG}}.md`
+and append one line to that day's `docs/changes/completed/{{DATE}}/summary.md`,
+noting whether atlas docs were updated or that none needed updating. Record
+decisions, divergences from the package, known limits, and remaining debt. Do not
+record a step-by-step operation log, a restatement of the diff, or the worker's
+narrative. At T0, delete the package instead of archiving it — a trivial change
+does not earn an archive entry.
 
-You are the single writer for all of these files. Never let a worker write them.
+You are the single writer for all of these files. A worker never writes them.
 
 ## Reporting & delivery
 
@@ -232,10 +244,8 @@ You are the single writer for all of these files. Never let a worker write them.
 - Delivery policy: {{DELIVERY_POLICY}}
 - Verification results are always in the user-facing report regardless of
   reporting level; never claim completion on a failed check.
-- When workers are running, show the user the task list and status you already
-  hold — do not go looking for either, and do not relay intermediate output. On a
-  worker failure, report in one or two plain sentences what failed and what you
-  will do about it.
+- Carry conclusions forward across steps. Re-reading the index at review time to
+  re-establish what a module owns is paying twice for one fact.
 - Do not rerun Codebase Atlas unless the user explicitly asks for one. If they do
   — or if you find the map wrong in modules you did not touch — a **refresh**
   re-scans only the modules that drifted and is what almost every such request

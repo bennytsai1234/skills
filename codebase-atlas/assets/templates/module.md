@@ -26,12 +26,12 @@
 
 - TODO: Fragile assumptions, missing tests, stale docs, contract drift, migration
   risk, or complex state. Write these concretely enough to paste into a task
-  contract's `Forbidden` section.
+  package's `Forbidden` section.
 
 ## Do Not Do
 
 - TODO: Scope boundaries for future edits. Write these concretely enough to paste
-  into a task contract's `Must Preserve` section.
+  into a task package's `Must Preserve` section.
 
 <!-- Reference-assisted mode only: add a "Reference Notes" section here with useful
 reference counterparts and patterns. Omit it in standalone mode. -->

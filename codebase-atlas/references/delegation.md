@@ -3,94 +3,138 @@
 The doctrine the generated lead and worker adapters must carry. Read this when
 generating adapters, and when deciding what belongs in each one.
 
-The premise: a repository worked on by one long-context agent and a repository
-worked on by a lead plus several cheap subagents need different discipline. A
-single self-contained adapter that carries planning, the Before/After gate, and
-governance writes turns every subagent that loads it into a project manager.
-Splitting by role, not by activity, is what fixes that.
+**The handoff is human-mediated. The lead never spawns the worker.** The lead
+understands the project and the need, decides the solution boundary, agrees it
+with the human, and writes a complete, acceptance-testable **task package** to a
+file. The human carries that file to a strong implementation agent. That agent
+explores the code on its own, designs and makes the change across whatever files
+it needs, writes and runs tests until they pass, and reports back with evidence.
+The human brings the result back, and the lead reviews it.
 
-## 1. Roles
+Nothing in this document describes automated dispatch. There is no spawn, no
+concurrency, no scheduling. The unit of delegation is a file a person copies.
 
-**Lead** — the only agent in direct contact with a human. It owns:
+That premise decides everything else. The worker is not a cheap executor being
+kept on a short leash — it is a capable agent given a well-specified problem, and
+the lead's leverage is entirely in how well the package is written. A vague
+package cannot be rescued downstream, because the lead is not there.
+
+## 1. The Loop
+
+```text
+Human      → states the need
+Lead       1. understand the project and the need
+           2. decide the solution boundary
+           3. write the acceptance-testable task package
+Worker     4. explore the relevant code
+           5. design and make the change, across files as needed
+           6. add tests, run them, fix failures until green
+           7. report with evidence and risks
+Lead       8. review: requirement conformance, architecture, diff, tests
+           9. accept — or return precise gaps, nothing else
+Worker    10. fix exactly the named gaps
+Lead      11. final acceptance, then deliver to the human
+```
+
+Steps 3→4 and 7→8 cross a human. The lead writes a file and stops; the human
+runs the worker; the human brings back the report and the diff. The lead's next
+turn begins from what it is given, not from a poll.
+
+## 2. Roles
+
+**Lead** — the only agent in contact with the human. It owns:
 
 - Understanding vague requests and aligning on intent.
-- The Before / After gate.
+- Reading the atlas and deciding what the change touches.
 - Architecture and product decisions, and the Decision Gate.
-- Task decomposition and worker dispatch.
-- Every whole-project build, test suite, and process restart.
-- Acceptance of worker output.
+- The Before / After gate.
+- Writing the task package: scope, boundaries, acceptance criteria, evidence
+  required.
+- Reviewing the returned work and deciding accept-or-return.
 - Every write to a governance file: atlas docs, plan files, completed folders,
   daily summaries, architecture decisions.
+- Final acceptance and delivery.
 
-**Worker** — a delegated subagent. It owns:
+The lead does not write production code as part of this loop. If the human asks
+it to make a small edit directly, that is the human's call to make, not a
+shortcut the lead takes on its own.
 
-- Executing one bounded task contract.
-- Searching for the precise code (grep, symbol search, call hierarchy).
-- Reading only the atlas files the contract names.
-- Making the edit and running only contract-permitted checks.
-- Returning one structured report.
+**Worker** — a strong implementation agent, run by the human against one task
+package. It owns:
 
-A worker never runs the Before / After gate, never writes a plan or summary,
-never updates the atlas, never creates dated folders, never widens its own scope,
-and never re-opens a design question the lead already settled.
+- Exploring the codebase to find what the change actually requires. The package
+  names starting points; it does not cap what may be read.
+- Designing the implementation within the boundary the package sets.
+- Editing across as many files as the change genuinely needs.
+- Adding or extending tests, running them, and fixing failures until they pass.
+- Running builds, suites, linters, and type checks — it owns the working tree for
+  the duration of its task.
+- Reporting with evidence: what was changed, what was run, what came back.
 
-## 2. Role Resolution
+A worker never talks to the human as the project's voice, never writes a plan or
+a summary, never updates the atlas, never re-opens a decision the package
+already settled, and never silently steps outside the package's scope.
 
-Neither Claude Code nor Codex exposes a reliable, stable signal for "am I a
-subagent." Do not build correctness on environment sniffing. Resolve the role
-from the instructions themselves:
+## 3. Role Resolution
+
+Neither platform exposes a reliable signal for "am I the implementation agent."
+Resolve the role from the instructions:
 
 1. **Explicit header wins.** A prompt whose header declares `ROLE: worker` is a
    worker. `ROLE: lead` is a lead.
 2. **No header → lead.** Direct conversation with a human is the default, so the
-   Before / After gate — the whole point of the human-alignment step — is never
-   silently skipped.
+   Before / After gate is never silently skipped.
 3. **Governance write gate (the safety net).** Before writing *any* governance
    file — an atlas doc, `docs/changes/planning/**`, `docs/changes/completed/**`,
-   or an Architecture Decisions row — the agent must first answer one question:
-   *did my instructions come from a human turn, or from another agent's task
-   description?* If from another agent, do not write. Report the needed change
-   in the structured report and let the lead write it.
+   or an Architecture Decisions row — answer one question: *did my instructions
+   come from a human turn, or from a task package?* If from a package, do not
+   write. Report the needed change and let the lead write it.
 
-Rule 3 is what makes rule 2 safe. A worker that was dispatched without a header
-still behaves like a lead for reasoning, but is blocked at the only place where
-a misjudged role does lasting damage — the shared documents.
+Rule 3 is what makes rule 2 safe. A worker handed a package without a header
+still reasons like a lead, but is blocked at the only place a misjudged role does
+lasting damage — the shared documents.
 
-**Single writer.** For any governance file, exactly one agent writes it. That is
-the lead. Two agents appending to the same daily summary is how the summary
-becomes wrong.
+**Single writer.** For any governance file, exactly one agent writes it: the
+lead. Two agents appending to the same daily summary is how the summary becomes
+wrong.
 
-## 3. Task Contract v1
+## 4. Task Package (`atlas/v2`)
 
-The lead does not forward chat history or a full spec to a worker. It forwards
-a contract. Everything the worker needs, and nothing else.
+The lead writes this to `docs/changes/planning/{{DATE}}-{{SLUG}}.md`. It is both
+the plan file and the thing the human hands over — one artifact, not two.
+
+Complete means: a competent agent that has never seen this conversation can read
+this file, find the code, make the change, and prove it worked. It does not mean
+long. It means no gap the worker would have to guess across.
 
 ```markdown
 ---
 ROLE: worker
-CONTRACT: atlas/v1
+CONTRACT: atlas/v2
 TASK_TYPE: implement        # implement | investigate | review
-MODEL_TIER: standard        # standard | strong — see §8
 ---
 
 ## Goal
 <one sentence: what must be true when this is done>
 
-## Context
-<3-5 lines the worker cannot derive on its own: the already-diagnosed root
-cause, the approach the user chose, the constraint that drove it. Not chat
-history, not the index, not a spec dump.>
+## Why
+<the need behind it, and for a bug the diagnosed root cause. Enough that the
+worker can tell a correct fix from one that merely satisfies the letter of the
+goal. Not chat history.>
 
-## Read First
+## Solution Boundary
+<what was decided and what was ruled out — the approach chosen, the approaches
+rejected and why. The worker designs inside this; it does not re-litigate it.>
+
+## Starting Points
 - docs/<project>/<module>.md
-<only the module doc(s) that matter. Never the whole index. Never every module
-doc. If the worker needs a fact from another module, it asks — it does not
-go read the map.>
+- <the symbol, route, or entrypoint the change most likely begins at>
+<orientation, not a reading limit. Explore whatever the change requires.>
 
-## Allowed Paths
-- src/<area>/**
-- tests/<area>/**
-<editing anything outside this list is out of scope: stop and report>
+## Scope
+- Expected to change: <areas>
+- Out of bounds: <areas that must not change>
+<if the real fix turns out to lie outside this, stop and report — do not widen>
 
 ## Must Preserve
 - <architecture boundary, public API, or contract that must not change>
@@ -99,100 +143,48 @@ go read the map.>
 - <task-specific bans, on top of the baseline catalogue in §5>
 
 ## Acceptance
-- <check 1: an exact command, or an observable behaviour>
+- <check 1: an exact command with its expected result, or an observable behaviour>
 - <check 2>
 - Old behaviour that must not change: <...>
 
-## Verification You May Run
-- <scoped commands only, e.g. `pytest tests/auth -q`>
-<whole-project build, full suite, dev server, anything binding a port: do not
-run — report `verification: deferred-to-lead`>
+## Tests
+- <what must be covered, and where those tests live>
+- <or: no new test — and why the existing coverage is sufficient>
+
+## Evidence Required
+- The command output for each Acceptance check, pasted, not summarized.
+- The full test-suite result.
 
 ## Stop And Report If
-- The root cause turns out to be outside Allowed Paths.
+- The root cause turns out to be outside Scope.
 - The fix requires changing something under Must Preserve.
 - Two or more viable approaches differ materially in trade-offs.
+- The package rests on a premise the code contradicts.
 ```
 
 `Must Preserve` and `Forbidden` are usually free to write: copy them from the
 owning module doc's **Do Not Do** and **Known Risks** sections. That is what
 those sections are for.
 
-**Commands must run in the worker's shell.** `Acceptance` and `Verification You
-May Run` are executed verbatim, so write them for the shell the worker will
-actually get rather than the POSIX one it is tempting to assume. One command per
-line, never an `&&` chain — Windows PowerShell 5.1 has no `&&`, and a worker that
-hits a syntax error reports a failed check that never ran. On a Windows host also
-avoid inline environment prefixes (`NODE_ENV=test cmd`), `2>/dev/null`, and
-POSIX utilities assumed on `PATH`. Prefer the project's own runner (`npm test`,
+**Acceptance is the whole contract.** The lead is not present while the work
+happens and cannot correct course. Every acceptance item must be checkable by
+someone who was not in the conversation — an exact command with an expected
+result, or an observable behaviour described precisely enough to disagree with.
+"Works correctly" is not an acceptance criterion.
+
+**Commands must run in the shell that will run them.** Write them for the shell
+the worker will actually get, not the POSIX one it is tempting to assume. One
+command per line, never an `&&` chain — Windows PowerShell 5.1 has no `&&`, and a
+syntax error comes back as a check that never ran. On a Windows host also avoid
+inline environment prefixes (`NODE_ENV=test cmd`), `2>/dev/null`, and POSIX
+utilities assumed on `PATH`. Prefer the project's own runner (`npm test`,
 `pytest tests/auth -q`, `dotnet build`); it behaves the same everywhere. Paths
-inside a contract stay relative with forward slashes, on every host.
-
-## 4. Concurrency And Shared Resources
-
-**Single-builder rule.** These belong to the lead alone:
-
-- Whole-project build (`dist/`, `build/`, `out/`, `target/`, `.next/`, …).
-- The full test suite.
-- Dev servers, watchers, and anything that binds a port.
-- Databases, migrations, seeded fixtures.
-- Dependency installs and lockfile changes; global or cached state.
-
-The lead runs these only when no worker is in flight.
-
-A worker may run only checks confined to its `Allowed Paths` that touch no
-shared resource — one scoped test file, a lint or typecheck over changed files.
-If a worker judges that only a shared-resource check could verify its change, it
-runs nothing and reports `verification: deferred-to-lead`, naming what the lead
-must run.
-
-Why: with several workers editing one tree, any worker's full build observes
-other workers' half-finished files. The result is a report like "tests failed,
-but possibly because another agent was editing" — noise that is worse than no
-result, because it cannot be acted on. One authoritative build over the merged
-state, after every worker returns, is both more reliable and cheaper than N
-unreliable ones.
-
-**Scheduling rule.** The lead dispatches workers concurrently only when their
-`Allowed Paths` are disjoint. On overlap: serialize, or cut the task along a
-different seam. When in doubt, serial.
-
-A task that needs full-build feedback to make progress ("fix these type errors",
-"get the suite green") runs solo — no other worker in flight — and is usually
-better kept in the lead.
-
-**Idle rule.** While a worker is in flight, the lead does nothing at all — no
-`git status`, no diff inspection, no progress narration, no speculative reading.
-A worker that has not reported is not finished, and that is the entire content of
-what any check could return. Polling shows the lead a half-written tree, and
-re-sends its whole growing context to buy that non-answer. The lead acts on the
-report, or on an explicit request for a decision, and not before. This is the
-dominant avoidable cost under serial scheduling, where the lead's context grows
-across the full run and every idle turn is dearer than the last.
-
-**Process rule.** Stopping a running dev server or app and rebuilding is
-allowed, for the lead, with zero workers in flight. Workers never kill
-processes, never restart servers, never install dependencies.
-
-**Escape hatch: worktree.** When paths genuinely must overlap and the work is
-large enough to pay for it, the lead may give a worker its own `git worktree`;
-the worker then owns its tree's build and tests, and the lead owns the merge.
-Do not make this the default — it costs a per-tree dependency install and a
-merge step.
-
-On Windows that price is higher and the failure modes are worse: a per-tree
-`node_modules` or virtualenv install on NTFS is slow enough to dominate the task;
-a process still holding a file — a dev server, a watcher, an editor's language
-server — blocks `git worktree remove` and leaves the tree behind; and deep
-dependency trees can cross the path-length limit that the main checkout stayed
-under. On a Windows host, treat the worktree as a last resort for genuinely large
-overlapping work, and serialize instead whenever serializing is merely slower
-rather than impossible.
+stay relative with forward slashes, on every host.
 
 ## 5. Forbidden Implementation Patterns
 
-Every worker carries this baseline. "Do not patch" is too abstract to enforce;
-these are checkable.
+The worker carries this baseline. "Do not patch" is too abstract to enforce;
+these are checkable, and the lead checks them against the diff at review.
 
 - Do not add a special case, hardcoded value, or skipped assertion to make a
   check pass.
@@ -204,10 +196,10 @@ these are checkable.
 - Do not repair an upstream problem at a downstream layer.
 - Do not introduce new global state, or a wrapper that adds no capability.
 - Do not weaken, delete, or rewrite an existing test to make it pass.
-- Do not change a public API, schema, or wire contract unless the contract
+- Do not change a public API, schema, or wire contract unless the package
   explicitly allows it.
-- Do not add a dependency unless the contract explicitly allows it.
-- Do not touch files outside `Allowed Paths`.
+- Do not add a dependency unless the package explicitly allows it.
+- Do not edit outside `Scope`.
 
 **Root-cause preflight.** Before editing, the worker answers three questions
 internally and puts the answer in one line of its report:
@@ -216,101 +208,108 @@ internally and puts the answer in one line of its report:
 2. Is there an existing abstraction that already handles it?
 3. Will this fix put the same logic in a second place?
 
-If the honest answer to (1) points outside `Allowed Paths`, stop and report —
-that is the case the contract's *Stop And Report If* exists for.
+If the honest answer to (1) points outside `Scope`, stop and report — that is the
+case *Stop And Report If* exists for.
+
+**Green is not done.** A passing suite proves nothing was broken; it does not
+prove the goal was met. Check the change against `Goal` and `Acceptance`
+directly, not through the test result.
 
 ## 6. Worker Report Format
 
-Short and structured. The lead reads this instead of re-deriving the work.
+Short, structured, and evidenced. The lead reads this instead of re-deriving the
+work — but the lead also reads the diff, so the report does not need to restate
+it.
 
 ```markdown
 ## Changed
 - <file>: <what changed and why — one line each>
 
+## Approach
+<two or three lines: the design chosen inside the package's boundary, and any
+place the code required something different from what the package assumed>
+
 ## Root Cause
 <one or two lines: what caused it, and why this layer is the right place to fix it>
 
 ## Verification
-- <command> → <result>
-- deferred-to-lead: <what the lead still needs to run, and why>
+- <command>
+  <the actual output, pasted — not "passed">
+- Full suite: <command> → <result>
 
-## Risks / Blockers
+## Risks
+- <what could still be wrong, what was not covered, what is worth watching>
 - <or: none>
 
 ## Needs A Decision
 - <or: none>
 ```
 
-No narrative of the exploration. No restating the diff. No self-assessment
-paragraphs.
+No exploration narrative. No self-assessment paragraphs. Evidence is pasted
+output, not a claim about output — a claim is exactly what review exists to
+check, so it cannot also be the thing reviewed.
 
-## 7. Acceptance
+## 7. Review And Return
 
-The lead accepts, returns, or re-cuts the task. Default path costs nothing
-extra: the lead already holds the contract and can read the diff itself.
+The lead reviews what came back. It has the package it wrote, the report, and the
+diff — everything needed, without re-deriving the work.
 
-Check, against the contract:
+Check, in this order:
 
-- Does every `Acceptance` item hold?
-- Did the diff stay inside `Allowed Paths`?
-- Is anything under `Must Preserve` altered?
-- Does the diff contain any pattern from §5?
-- Does the change address the root cause, or the symptom?
-- Is the new code more complex than the problem it solves?
-- Do new tests assert real behaviour, or do they encode the implementation's
-  mistake?
-- Are there side effects the report did not mention?
+1. **Requirement conformance.** Does the change do what `Goal` asked, and does
+   every `Acceptance` item actually hold? Verify against the pasted evidence, and
+   re-run anything whose result decides acceptance.
+2. **Architecture.** Does the change fit the module boundaries in the atlas? Did
+   it put logic where that module's doc says logic belongs? Is anything under
+   `Must Preserve` altered?
+3. **Diff.** Did it stay inside `Scope`? Does it contain any pattern from §5? Is
+   the new code more complex than the problem it solves? Are there side effects
+   the report did not mention?
+4. **Tests.** Do the new tests assert real behaviour, or do they encode the
+   implementation's mistake? Would they fail if the bug came back?
 
-Then run the authoritative build and test suite, and anything the report marked
-`deferred-to-lead`. Run auto-fixable checks first and separately — formatter,
-linter, anything with a `--fix` — apply their output, then spend one combined
-build-and-test pass. Chaining the two aborts on the first formatting nit and
-bills the whole suite twice — and on Windows PowerShell 5.1 the chain operator
-does not exist at all, so run them as separate commands either way.
+**Returning.** A return names gaps and nothing else. Do not re-explain the task,
+do not restate the goal, do not re-send the package — the worker has it. Write
+the smallest amendment that closes the gap:
 
-**Spend a separate review subagent only when** the change is T2 (irreversible,
-cross-module, external API, migration), or the lead wrote the code itself and
-wants an independent read. Dispatch it with the same contract plus
-`TASK_TYPE: review` and `MODEL_TIER: strong` — a reviewer is a worker with a
-read-only goal, so it obeys the same scope, the same forbidden list, and the same
-report format. Never economise here; a weak reviewer confirms whatever it is
-shown. Applying the findings, though, stays with the lead: they arrive already
-located, so a fresh worker would only pay to find them again.
+```markdown
+## Gaps
+1. <file:line> — <what is wrong, and what "fixed" looks like>
+2. <...>
 
-## 8. Cost Control
+Everything else is accepted. Change nothing outside these points.
+```
 
-Where the money actually goes, in order:
+The last line matters. Without it, a capable agent asked to fix two things will
+often improve five, and the review starts over.
 
-1. **Lead idle turns.** Under serial scheduling the lead is alive for the sum of
-   every phase, and each turn re-sends a context that only grows. Polling a
-   working tree is the purest form of this waste — see §4's idle rule. It buys
-   nothing and is the first thing to cut.
-2. **Cold-start exploration.** A fresh subagent that has to find its way around
-   burns more than the edit does. The contract's `Read First` and `Allowed
-   Paths` exist to make exploration unnecessary.
-3. **Spawn count.** One worker with slightly wider `Allowed Paths` beats three
-   workers inside the same module. Split by change boundary, not by file.
-4. **Wasted spawns.** A vague contract produces work that has to be redone.
-   `Acceptance` is the cheapest insurance in this workflow.
-5. **Redundant builds.** §4 replaces N unreliable builds with one reliable one,
-   and §7 keeps auto-fixable checks off the expensive pass.
-6. **Review.** Inline lead review is free; a review subagent is not. Tier it.
+Return at most twice. A third round means the package was wrong, not the work —
+withdraw it, fix the specification, and reissue.
 
-**Do-not-delegate thresholds.** Delegation is not free, so it is not the default.
-Keep the work in the lead when the contract would cost more to write than the
-change costs to make: a single-file edit, a change whose exact lines are already
-known, or a findings list handed back by a review. Two contracts whose
-`Allowed Paths` stand in a subset relation are one contract — merge them rather
-than pay two cold starts and two acceptance rounds.
+## 8. Cost And Context Discipline
 
-Never paste the index, a spec, or chat history into a contract. `Context` is
-three to five lines.
+The lead is alive across the whole loop, and its context only grows. That is
+where the money goes.
 
-**Model tiering.** Put the tier in the contract header rather than leaving it to
-whoever dispatches: `implement` and `investigate` are `MODEL_TIER: standard` —
-the cheaper model, reasoning raised if the platform allows it. `MODEL_TIER:
-strong` is for `TASK_TYPE: review`, and for a contract whose `Stop And Report If`
-carries two or more open-ended judgement calls. A bounded contract with concrete
-`Acceptance` items gains almost nothing from a higher reasoning tier and pays for
-it on every token; a reviewer is the one place where the cheap choice is a false
-economy. The lead itself runs on the strong tier.
+**While the package is out, do nothing.** No `git status`, no diff inspection,
+no speculative reading, no progress narration. The work is happening in another
+process that will report when it is done, and "not finished yet" is the entire
+content of anything a check could return. Each idle turn re-sends the lead's
+whole growing context to buy that non-answer.
+
+**Specify once, completely.** The lead's one shot at influencing the outcome is
+the package. Time spent making `Acceptance` checkable is the cheapest spend in
+this loop; every round trip after that costs a human's attention as well as
+tokens.
+
+**Never paste chat history, the index, or a full spec into a package.** `Why` and
+`Solution Boundary` are a handful of lines each. `Starting Points` orient the
+worker; they do not brief it.
+
+**Do not re-read what you already concluded.** Carry conclusions forward across
+steps. Re-reading the index at review time to re-establish what a module owns is
+paying twice for one fact.
+
+**Batch the review.** Review once, against the whole returned change, and issue
+one list of gaps. Reviewing partially and returning twice doubles the human's
+involvement, which is the scarcest resource in this loop.

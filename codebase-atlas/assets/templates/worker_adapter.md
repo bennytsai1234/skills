@@ -1,52 +1,66 @@
 ---
 name: {{PROJECT_SLUG}}-worker
-description: "Execution rules for a delegated subagent on {{PROJECT_NAME}}. Load ONLY when your instructions arrived as an atlas task contract — a prompt whose header says ROLE: worker. Never load it when working directly with a human; that is {{PROJECT_SLUG}}-atlas."
+description: "Execution rules for an agent implementing an atlas task package on {{PROJECT_NAME}}. Load ONLY when your instructions arrived as a task package — a prompt whose header says ROLE: worker. Never load it when working directly with a human; that is {{PROJECT_SLUG}}-atlas."
 ---
 
 # {{PROJECT_NAME}} Codebase Atlas — Worker
 
-You execute one bounded task contract. You are not the project manager.
+You implement one task package, end to end. You explore the code yourself, design
+the change, make it across whatever files it needs, write and run the tests, fix
+what fails, and report with evidence.
 
-If your instructions did **not** arrive as a task contract with a `ROLE: worker`
+If your instructions did **not** arrive as a task package with a `ROLE: worker`
 header, this file does not apply to you — use `{{PROJECT_SLUG}}-atlas` instead.
+
+The lead who wrote your package is not watching. Nobody will correct your course
+halfway. That cuts both ways: you have the latitude to solve the problem
+properly, and you carry the whole burden of getting it right.
 
 ## Do
 
-1. Read the contract. It is your whole scope.
-2. Read only the files under `Read First`. Do not read the atlas index. Do not
-   browse other module docs.
-3. Locate the exact code with grep, symbol search, or call hierarchy. The map
-   tells you where to look; the search tells you where it is.
-4. Run the root-cause preflight before editing — answer these internally, then
+1. **Read the package.** `Goal`, `Why`, and `Solution Boundary` are the decision
+   already made — you design inside them, you do not re-litigate them.
+2. **Explore.** `Starting Points` orient you; they are not a reading limit. Read
+   whatever the change actually requires — call sites, tests, adjacent modules,
+   history. Understand the code before you change it.
+3. **Run the root-cause preflight** before editing. Answer these internally, then
    put the answer in one line of your report:
    - What actually causes this, and at which layer?
    - Is there an existing abstraction that already handles it?
    - Will this fix put the same logic in a second place?
-5. Make the change inside `Allowed Paths`.
-6. Run only the checks listed under `Verification You May Run`.
-7. Return the report below. Then stop.
+4. **Design and implement**, across as many files as the change genuinely needs,
+   inside `Scope`.
+5. **Test.** Add or extend the coverage `Tests` asks for. Run it. Run the full
+   suite, the build, the linter, the type check — you own the working tree for
+   the duration of this task.
+6. **Fix what fails**, and keep going until it passes. A failing check is your
+   problem, not a finding to hand back.
+7. **Check the goal directly.** Green proves nothing was broken; it does not
+   prove the goal was met. Read the change against `Goal` and `Acceptance`
+   yourself.
+8. **Report** in the format below, with pasted evidence. Then stop.
+
+If you are returned a `## Gaps` list, fix exactly those points and nothing else.
+Everything not named has been accepted; improving it restarts the review.
 
 ## Never
 
 - Never write a plan, a summary, a dated folder, a completion doc, or anything
-  under `docs/changes/`.
+  under `docs/changes/`. Your package lives there; you do not add to it.
 - Never edit an atlas doc (`docs/*_index.md`, `docs/<project>/*.md`) or an
   Architecture Decisions row. If the change alters a module boundary, ownership,
   or an external contract, say so in your report and let the lead write it.
 - Never present a Before / After to a human. That gate belongs to the lead and
   already happened.
-- Never re-open a design question the contract already settled.
-- Never widen your own scope. Files outside `Allowed Paths` are out of scope —
-  report instead of editing.
-- Never run a whole-project build, the full test suite, a dev server, or anything
-  binding a port; never touch a database, run a migration, install a dependency,
-  or kill a process. Those belong to the lead, who owns the shared working tree.
-  If only such a check could verify your change, run nothing and report
-  `verification: deferred-to-lead`.
+- Never re-open a decision the package already settled.
+- Never widen your own scope. If the real fix lies outside `Scope`, stop and
+  report — do not follow it there.
+- Never commit or push. Leave the change in the working tree; delivery is the
+  lead's ({{DELIVERY_POLICY}}).
 
 ## Forbidden implementation patterns
 
-On top of anything the contract's `Forbidden` section adds:
+On top of anything the package's `Forbidden` section adds:
 
 - No special case, hardcoded value, or skipped assertion added to make a check
   pass.
@@ -56,17 +70,21 @@ On top of anything the contract's `Forbidden` section adds:
   `NODE_ENV === 'test'`, …).
 - No repairing an upstream problem at a downstream layer.
 - No new global state, and no wrapper that adds no capability.
-- No weakening, deleting, or rewriting an existing test to make it pass.
-- No change to a public API, schema, or wire contract unless the contract
+- No weakening, deleting, or rewriting an existing test to make it pass. If an
+  existing test is genuinely wrong, stop and report it — do not fix it silently.
+- No change to a public API, schema, or wire contract unless the package
   explicitly allows it.
-- No new dependency unless the contract explicitly allows it.
+- No new dependency unless the package explicitly allows it.
 
-## Stop and report instead of deciding
+## Stop and report instead of guessing
 
-Stop when the root cause is outside `Allowed Paths`, when the fix requires
-changing something under `Must Preserve`, when two or more approaches differ
-materially in trade-offs, or when the contract turns out to rest on a wrong
-premise. Returning early with a clear blocker is a success. Guessing is not.
+Stop when the root cause is outside `Scope`, when the fix requires changing
+something under `Must Preserve`, when two or more approaches differ materially in
+trade-offs, or when the package rests on a premise the code contradicts.
+
+Returning early with a clear blocker is a success. It costs one round trip.
+Guessing wrong costs the review, the rework, and the trust in every other claim
+in your report.
 
 ## Report format
 
@@ -74,20 +92,28 @@ premise. Returning early with a clear blocker is a success. Guessing is not.
 ## Changed
 - <file>: <what changed and why — one line each>
 
+## Approach
+<two or three lines: the design chosen inside the package's boundary, and any
+place the code required something different from what the package assumed>
+
 ## Root Cause
 <one or two lines: what caused it, and why this layer is the right place to fix it>
 
 ## Verification
-- <command> → <result>
-- deferred-to-lead: <what the lead still needs to run, and why>
+- <command>
+  <the actual output, pasted — not "passed">
+- Full suite: <command> → <result>
 
-## Risks / Blockers
+## Risks
+- <what could still be wrong, what was not covered, what is worth watching>
 - <or: none>
 
 ## Needs A Decision
 - <or: none>
 ```
 
-No exploration narrative, no restating the diff, no self-assessment paragraphs.
-Reporting level for anything user-facing: {{REPORTING_LEVEL}}. Do not commit or
-push — delivery is the lead's ({{DELIVERY_POLICY}}).
+Evidence is pasted output, not a claim about output — a claim is exactly what the
+review exists to check, so it cannot also be the thing reviewed. No exploration
+narrative, no restating the diff, no self-assessment paragraphs.
+
+Reporting level for anything user-facing: {{REPORTING_LEVEL}}.
