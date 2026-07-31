@@ -118,6 +118,16 @@ run — report `verification: deferred-to-lead`>
 owning module doc's **Do Not Do** and **Known Risks** sections. That is what
 those sections are for.
 
+**Commands must run in the worker's shell.** `Acceptance` and `Verification You
+May Run` are executed verbatim, so write them for the shell the worker will
+actually get rather than the POSIX one it is tempting to assume. One command per
+line, never an `&&` chain — Windows PowerShell 5.1 has no `&&`, and a worker that
+hits a syntax error reports a failed check that never ran. On a Windows host also
+avoid inline environment prefixes (`NODE_ENV=test cmd`), `2>/dev/null`, and
+POSIX utilities assumed on `PATH`. Prefer the project's own runner (`npm test`,
+`pytest tests/auth -q`, `dotnet build`); it behaves the same everywhere. Paths
+inside a contract stay relative with forward slashes, on every host.
+
 ## 4. Concurrency And Shared Resources
 
 **Single-builder rule.** These belong to the lead alone:
@@ -169,6 +179,15 @@ large enough to pay for it, the lead may give a worker its own `git worktree`;
 the worker then owns its tree's build and tests, and the lead owns the merge.
 Do not make this the default — it costs a per-tree dependency install and a
 merge step.
+
+On Windows that price is higher and the failure modes are worse: a per-tree
+`node_modules` or virtualenv install on NTFS is slow enough to dominate the task;
+a process still holding a file — a dev server, a watcher, an editor's language
+server — blocks `git worktree remove` and leaves the tree behind; and deep
+dependency trees can cross the path-length limit that the main checkout stayed
+under. On a Windows host, treat the worktree as a last resort for genuinely large
+overlapping work, and serialize instead whenever serializing is merely slower
+rather than impossible.
 
 ## 5. Forbidden Implementation Patterns
 
@@ -245,8 +264,9 @@ Check, against the contract:
 Then run the authoritative build and test suite, and anything the report marked
 `deferred-to-lead`. Run auto-fixable checks first and separately — formatter,
 linter, anything with a `--fix` — apply their output, then spend one combined
-build-and-test pass. A single `&&` chain aborts on the first formatting nit and
-bills the whole suite twice.
+build-and-test pass. Chaining the two aborts on the first formatting nit and
+bills the whole suite twice — and on Windows PowerShell 5.1 the chain operator
+does not exist at all, so run them as separate commands either way.
 
 **Spend a separate review subagent only when** the change is T2 (irreversible,
 cross-module, external API, migration), or the lead wrote the code itself and

@@ -1,14 +1,15 @@
 ---
 name: codebase-atlas
-description: "Initialize or rebuild a repository atlas under docs/ for AI-assisted code navigation. Only for an explicit atlas build, rebuild, refresh, or rescan requested by a human — never for ordinary development, and never inside a delegated subagent task."
+description: "Initialize, refresh, or rebuild a repository atlas under docs/ for AI-assisted code navigation. Only for an explicit atlas build, refresh, rebuild, or rescan requested by a human — never for ordinary development, and never inside a delegated subagent task."
 ---
 
 # Codebase Atlas
 
 Codebase Atlas turns a repository into a compact engineering map, then generates
 the role-split entrypoints that let a lead agent and cheap worker subagents work
-on it without tripping over each other. Use it for atlas initialization or a
-deliberate full rebuild, not for ordinary follow-up development.
+on it without tripping over each other. Use it for atlas initialization, a
+deliberate full rebuild, or an incremental refresh of an existing atlas — not for
+ordinary follow-up development.
 
 **Do not run this skill inside a delegated subagent task.** If your instructions
 arrived as a task contract from another agent (a prompt whose header says
@@ -32,6 +33,10 @@ Keep this skill simple:
   explicit repository language rule, then the user's initialization request
   language, then English. Use the selected language for user-facing output and
   generated atlas docs.
+- Generated Markdown is host-neutral text. Every path and link uses forward
+  slashes and stays relative, even when generating on Windows, and no file is
+  rewritten merely to normalize its line endings. See
+  `references/atlas-contract.md` → Path And Shell Portability.
 
 ## Before Scanning
 
@@ -62,10 +67,12 @@ Before outputting anything, scan only for old Codebase Atlas artifacts:
 2. Detect whether generated Codebase Atlas entrypoints exist under `.agents/`
    or other configured prompt or skill directories.
 3. Detect existence only. Do not deeply read old atlas content.
-4. If old atlas docs or generated entrypoints exist, record them and tell the
-   user after the skill introduction.
-5. After the introduction, wait for the user to decide whether to delete and
-   rebuild before continuing.
+4. If old atlas docs or generated entrypoints exist, record them. Also read one
+   thing out of the existing index — its build provenance line — because that
+   line alone decides whether a refresh is possible at all. This is the one
+   exception to "existence only" in item 3.
+5. Present the choice in Step 2 and wait for the user to pick refresh, rebuild,
+   or a partial preservation before continuing.
 6. If the user chooses delete and rebuild, delete all of these:
    - Old atlas docs (index and module docs).
    - Legacy structures from earlier atlas versions: `*_investigate_workflow.md`,
@@ -78,8 +85,11 @@ Before outputting anything, scan only for old Codebase Atlas artifacts:
    - Any "run the atlas skill before every operation" mandate that a previous
      atlas wrote into `CLAUDE.md` or `AGENTS.md` (remove only that block, not
      the whole file).
-7. Do not delete unrelated `.agents/` content or any file whose Codebase Atlas
-   origin cannot be confirmed.
+7. Never delete `docs/changes/`. Plans, completed folders, and daily summaries
+   are accumulated work history, not atlas output — a rebuild replaces the map,
+   not the record of what was done to the project. Likewise, do not delete
+   unrelated `.agents/` content or any file whose Codebase Atlas origin cannot
+   be confirmed.
 8. If the user wants to preserve any part, read only the parts the user asked
    to preserve after the user gives preservation instructions.
 9. Detect whether a `.claude/` directory exists at the project root. If found,
@@ -133,18 +143,40 @@ misunderstood, the Before will be wrong and you can catch it immediately.
 This initialization only needs to happen once.
 ```
 
-If Step 1 detected old atlas artifacts, add this message after the introduction
-in the working language:
+**Skip the introduction above entirely when Step 1 found an existing atlas.**
+That user already has one and does not need it explained; go straight to the
+choice below.
+
+If Step 1 found an existing atlas **with** a build provenance line, present this
+in the working language, filling in the recorded date and commit:
 
 ```markdown
-I found existing atlas artifacts for this project, including old atlas docs or
-generated entrypoints. Should I delete them and rebuild the atlas from scratch?
-If you want to preserve any parts, tell me which parts.
+This project already has an atlas, built on <date> from commit <commit>.
+
+A. Refresh it (recommended). I compare the repository against that commit and
+   re-scan only the parts that changed, leaving everything else as it is.
+B. Rebuild it from scratch. I delete the current atlas and scan the whole
+   project again — slower, and any notes added to the docs by hand are lost.
+
+Either way, tell me if there are parts you want kept as they are.
 ```
 
-If old atlas artifacts were detected, wait for user confirmation before
-continuing to Step 3. If no old atlas artifacts were detected, continue
-directly to Step 3.
+If an atlas exists but has **no** provenance line, it predates this mechanism and
+no drift can be computed. Say so and offer the two workable options:
+
+```markdown
+This project already has an atlas, but it does not record which commit it was
+built from, so I cannot work out what has changed since. I can rebuild it from
+scratch, or refresh only the areas you name.
+```
+
+Then route:
+
+- **Refresh** → stop here and go to the Refresh Workflow. Do not continue to
+  Step 3; a refresh inherits its decisions from the index instead of re-asking
+  them.
+- **Rebuild** → carry out the Step 1 deletions, then continue to Step 3.
+- **No existing atlas** → continue directly to Step 3.
 
 ### Step 3: Pre-Scan Existing Rules
 
@@ -168,10 +200,10 @@ before asking for configuration decisions:
    - Recommended values for the initial decisions.
 5. Present the initial decisions as plain-language questions in the working
    language. Do not expose internal setting names such as `mode`,
-   `delivery_policy`, `reporting_level`, `workflow_entrypoints`,
-   `reference_template_mode`, or `feature_parity` to the user. For each decision, include the question the
-   user needs to answer, the recommended value, and why that value is
-   recommended.
+   `delivery_policy`, `reporting_level`, `platform_targets`,
+   `reference_template_mode`, or `feature_parity` to the user. For each
+   decision, include the question the user needs to answer, the recommended
+   value, and why that value is recommended.
 6. Present the reference-template decision in this plain-language shape,
    translated into the working language:
 
@@ -302,6 +334,25 @@ before asking for configuration decisions:
     existing project guidance.
 12. Wait for user confirmation before starting the full scan.
 
+## Rebuild Or Refresh
+
+Both arrive as "run the atlas again," and they cost very differently, so decide
+which one this is before doing anything expensive. Decide after Step 1's
+detection, as part of the Step 2 conversation.
+
+- **No atlas exists** → initialization. Run the Initialization Workflow.
+- **An atlas exists and the user asked to rebuild, rescan, or start over** →
+  full rebuild. Run the Initialization Workflow, including the
+  delete-and-rebuild confirmation.
+- **An atlas exists and the user asked to refresh, update, or sync it — or just
+  said the map is out of date** → run the Refresh Workflow. It re-scans only the
+  modules the repository actually changed under and leaves the rest untouched,
+  so it costs a fraction of a rebuild.
+
+When the request is ambiguous and an atlas exists, propose the refresh and say
+what it will skip. The user can always ask for the rebuild; nobody thanks you for
+silently spending one.
+
 ## Initialization Workflow
 
 1. Read `references/atlas-contract.md`.
@@ -330,12 +381,13 @@ before asking for configuration decisions:
      the exact required sections and placeholder tokens to replace.
    - The "Scan Boundaries" exclusions from `references/atlas-contract.md`
      (ignore `node_modules/`, build output, vendored code, etc.).
-   - The resolved working language and reporting-level decisions from Step 2.
+   - The working language from Step 0 and the reporting level from Step 3.
    - An instruction to ground every claim in committed files and write real
      uncertainty as `TODO` rather than inventing content, and to avoid file
      inventories in favor of routing-oriented notes.
-   - The exact output path to write: `docs/<module_slug>.md` (or the
-     reference-assisted path). One subagent writes exactly one file — never
+   - The exact output path to write: `docs/<project>/<module_slug>.md` (or the
+     reference-assisted `docs/<project>_<reference>/<module_slug>.md`). Forward
+     slashes, even on Windows. One subagent writes exactly one file — never
      let two subagents target the same path. This is the disjoint-paths
      scheduling rule from `references/delegation.md` §4 applied to the build
      itself: these dispatches are safe to run concurrently precisely because no
@@ -347,7 +399,11 @@ before asking for configuration decisions:
    file contents) to reconcile the module list per Step 5's provisional-split
    note. Then draft `index.md` yourself from the reconciled module list and
    findings — the index needs a single view across every module, so keep this
-   step centralized rather than delegated.
+   step centralized rather than delegated. Fill its build provenance line while
+   you are there: today's local date, the short SHA of `HEAD` (or
+   `not-a-git-repo`), and the current atlas format version from
+   `references/atlas-contract.md`. A later refresh has no other way to know what
+   drifted.
 7. Read `references/delegation.md`, then generate the adapters yourself
    (centralized — adapter content follows fixed decisions and templates rather
    than per-module discovery, so delegating it adds coordination cost without
@@ -429,13 +485,79 @@ before asking for configuration decisions:
    and do the frontmatter names follow `<project-slug>-atlas` /
    `<project-slug>-worker` consistently across Claude Code and Codex. Report
    completion only after this pass.
-9. Apply the delivery policy resolved in Step 2, per
+9. Apply the delivery policy resolved in Step 3, per
    `references/atlas-contract.md` → Delivery: `no commit` stops here; `commit
    only` stages exactly this run's created/modified/deleted atlas files
    (including any generic-adapter deletion from Step 7) and commits;
    `commit and push` also pushes, and if the push is rejected because the
    remote has commits this run does not have, stop and ask the user how to
    reconcile instead of force-pushing.
+
+## Refresh Workflow
+
+A refresh updates an existing atlas in place. It does not re-introduce the skill,
+does not re-ask the initial decisions, and does not regenerate untouched files.
+Read `references/atlas-contract.md` → Refresh before starting; it defines the
+drift classification this workflow executes.
+
+1. Read the index. Take the working language, delivery policy, reporting level,
+   and reference mode from it — those decisions are settled, so do not re-ask
+   them. Read the build provenance line: build date, commit, atlas format
+   version. If there is no provenance line, this atlas predates it: say so, and
+   offer either a full rebuild or a refresh scoped to modules the user names.
+2. Compute the drift set per the contract's Refresh section —
+   `git diff --name-only <recorded-commit>..HEAD`, with the documented fallback
+   when the commit is unreachable, and the same Scan Boundaries exclusions a
+   build uses. Add `git status --porcelain` only if the user wants uncommitted
+   work counted.
+3. Classify every module as stale, unmapped, removed, or untouched by matching
+   the drift set against each module doc's **Scope** section. Read only the Scope
+   sections to do this — classification does not require reading whole module
+   docs, and reading them all would cost what the refresh exists to save.
+4. Present the refresh plan and wait for confirmation, in the working language
+   and in plain terms: which modules will be re-scanned, which unmapped files
+   turned up and what you propose to do with them (fold into an existing module,
+   or open a new one), which module docs will be deleted, and how many modules
+   stay untouched. This is the atlas's own Before/After gate. A refresh rewrites
+   documentation the user relies on, so it never runs unconfirmed — and the
+   unmapped-file judgement is exactly the kind a scanning subagent cannot make,
+   because it sees only its own module.
+
+   If the plan comes back with more than roughly half the modules stale, or the
+   drift is in the boundaries rather than inside them, recommend a full rebuild
+   instead and say why.
+5. Re-scan the stale and newly created modules in parallel — one subagent per
+   module, all dispatches in one message, one file per subagent, disjoint paths.
+   Use the same inline prompt contract as Initialization Step 6 (module scope,
+   the contract's Module Requirements, the module template, scan boundaries,
+   language and reporting level, ground-every-claim instruction, exact output
+   path). Add one line the initialization prompt does not carry: the existing
+   module doc's path, with an instruction to **update it in place** — preserve
+   project-specific notes that are still true, and rewrite only what the code
+   changed. A refresh that regenerates a module doc from zero throws away
+   hand-added knowledge that no scan can recover.
+6. Update the index yourself, centrally, and only where it changed: add, remove,
+   or rewrite the affected module links and summaries, and leave every untouched
+   module's summary byte-identical. Delete the docs of removed modules. Do not
+   touch the Architecture Decisions table — decisions are not scan output.
+7. Regenerate the adapters only when the index's recorded format version is
+   behind the current one in `references/atlas-contract.md`, or when the user
+   changed a decision this run. Otherwise leave them alone: adapters carry no
+   per-module content, so no scan result can invalidate them. If you do
+   regenerate, generate the full pair per Initialization Step 7 — never a lead
+   without its worker.
+8. Verify only what this run wrote: one verification subagent per written file,
+   same prompt shape as Initialization Step 8, then the centralized cross-file
+   pass from `references/quality-checklist.md` → Refresh. Run that cross-file
+   pass even for a single-module refresh — adding or removing one module is
+   precisely what breaks agreement between the index and the docs on disk.
+9. Rewrite the build provenance line last, to today's date and the current
+   `HEAD`, and only after verification passes. An atlas that records a refresh it
+   did not finish will skip the unfinished modules next time.
+10. Apply the delivery policy read from the index, per
+    `references/atlas-contract.md` → Delivery. In the report, name both the
+    modules re-scanned and the modules deliberately left alone — someone reading
+    "atlas refreshed" needs to know what was not looked at.
 
 ## Core Rules
 
@@ -465,8 +587,8 @@ before asking for configuration decisions:
 - Update affected atlas docs only when module boundaries, ownership, external
   APIs, or documented repository facts change.
 - Atlas updates during ordinary work are incremental: update only affected
-  module docs and index entries. A full rescan requires the user to explicitly
-  request a rebuild.
+  module docs and index entries. A scan of any kind requires the user to ask —
+  a refresh re-scans only the modules that drifted, a rebuild scans everything.
 
 ## When Not To Use This Skill
 
@@ -481,5 +603,6 @@ all of these instead of rerunning Codebase Atlas.
 Do not run it inside a delegated subagent task at all. A worker that decides the
 map is stale reports that; it does not rebuild it.
 
-Rerun Codebase Atlas only when a human explicitly asks for a rebuild,
-refresh, regenerate, or rescan of the atlas itself.
+Rerun Codebase Atlas only when a human explicitly asks for a rebuild, refresh,
+regenerate, or rescan of the atlas itself — and when they do, check which one
+they need before spending a rebuild. See Rebuild Or Refresh.

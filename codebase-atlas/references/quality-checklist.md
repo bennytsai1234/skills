@@ -31,6 +31,9 @@ complete.
 - The index has no "Decisions" metadata block and no links to workflow docs.
 - The index includes concrete project operating constraints, links to all module
   docs, and an Architecture Decisions section (empty at initialization).
+- The index carries a build provenance line — build date, source commit, atlas
+  format version — directly under the settings line. Without it this atlas can
+  only ever be rebuilt, never refreshed.
 - Every selected platform has **both** a lead adapter (`<project-slug>-atlas`)
   and a worker adapter (`<project-slug>-worker`). A lead adapter without its
   worker is a failed build, not a partial one.
@@ -46,6 +49,11 @@ complete.
   preserved according to the user's explicit choice; no unrelated `.agents/` or
   `.claude/` files were deleted.
 - Local Markdown links resolve.
+- Every path and link in the generated Markdown uses forward slashes and stays
+  relative — no backslashes, no drive letters, no `~` — regardless of the host
+  OS the atlas was generated on.
+- No file was rewritten purely to normalize line endings. Diffs contain content
+  changes only.
 - No unreplaced init-time placeholders remain (the runtime tokens `{{DATE}}` and
   `{{SLUG}}` in the lead adapter are intentionally kept).
 
@@ -135,6 +143,41 @@ complete.
   and the worker records that delivery is the lead's.
 - Atlas update instructions are incremental and lead-only: update only affected
   module docs and index entries, not the full atlas.
+- The lead adapter carries the command-portability rule: `Acceptance` and
+  `Verification You May Run` entries are written for the shell the worker will
+  actually get, one command per line rather than an `&&` chain.
+
+## Refresh
+
+Run this section in place of the Decisions section when the run was a refresh —
+a refresh inherits its decisions from the index and re-asks nothing.
+
+- The run was routed as a refresh only because an atlas with a usable build
+  provenance line existed. Missing provenance or an unreachable recorded commit
+  was reported to the user, who then chose a rebuild or a hand-scoped refresh.
+- The drift set came from the recorded commit to `HEAD` with Scan Boundaries
+  exclusions applied — a changed lockfile or a rebuilt `dist/` did not mark a
+  module stale.
+- Every module was classified stale / unmapped / removed / untouched, and the
+  classification was confirmed with the user before any subagent was dispatched.
+- Unmapped changed files were resolved by an explicit decision — folded into an
+  existing module, or given a new one — never silently dropped.
+- Untouched module docs are byte-identical to their pre-refresh state. A diff on
+  a module nothing changed under means the refresh over-scanned, or a subagent
+  regenerated a doc it was told to update in place.
+- Re-scanned module docs were updated in place and kept the project-specific
+  notes that are still true, rather than being rewritten from zero.
+- Removed modules had their docs deleted and their index entries dropped.
+- The Architecture Decisions table is unchanged, and so is everything under
+  `docs/changes/`.
+- Adapters were regenerated only because the recorded format version was behind
+  the current one or because a decision changed — and if regenerated, as a full
+  lead + worker pair.
+- The build provenance line was rewritten to today's date and the current `HEAD`
+  only after verification passed, and records the current atlas format version.
+- The cross-file pass ran even though only part of the atlas was written: the
+  index's module list matches the module docs on disk, and local links resolve.
+- The report names both what was re-scanned and what was deliberately left alone.
 
 ## Reference-Assisted Quality
 
@@ -150,7 +193,12 @@ Per the Initialization Workflow, items 1-6 below are first checked by a
 dedicated subagent per file (index / each module doc / each adapter), which
 fixes what it can directly. After all of them return, run this same list
 yourself once more as a centralized pass, focused on cross-file consistency
-that no single-file subagent can see:
+that no single-file subagent can see.
+
+On a refresh, only the files this run actually wrote get a subagent — spending
+one on an untouched module doc is the cost the refresh exists to avoid. The
+centralized pass still runs in full, because adding or removing a single module
+is exactly what breaks cross-file agreement.
 
 1. Reread the index and confirm every module summary says when future work should
    start there, and that no Decisions block or workflow links remain.
@@ -169,9 +217,11 @@ that no single-file subagent can see:
    platform.
 5. Confirm `CLAUDE.md` / `AGENTS.md` have no forced skill-invocation mandate.
 6. Confirm every init-time placeholder is replaced per the placeholder map in
-   `references/atlas-contract.md`, that `{{INDEX_FILE}}` appears in the lead
-   adapter and not the worker, and that `{{DATE}}` and `{{SLUG}}` remain intact
-   in the lead adapter (filled per change, not at initialization).
+   `references/atlas-contract.md` — including `{{BUILD_DATE}}`,
+   `{{BUILD_COMMIT}}`, and `{{ATLAS_FORMAT}}` in the index — that
+   `{{INDEX_FILE}}` appears in the lead adapter and not the worker, and that
+   `{{DATE}}` and `{{SLUG}}` remain intact in the lead adapter (filled per
+   change, not at initialization).
 
 ## Final Report
 

@@ -10,12 +10,13 @@ process.
   not break*; grep answers *where exactly is it*.
 - Delegated subagents do not read this file. They receive the module doc paths
   they need in their task contract.
-- Codebase Atlas runs once to build this map. Rerun it only for an explicit
-  rebuild/refresh/rescan — a full scan that rebuilds this index from current
-  repository reality.
+- Codebase Atlas runs once to build this map, and is rerun only when a human
+  asks. A **refresh** re-scans just the modules the repository changed under
+  since the build below; a **rebuild** discards the map and scans everything.
 
 Working language: {{WORKING_LANGUAGE}} · Delivery: {{DELIVERY_POLICY}} ·
 Reporting: {{REPORTING_LEVEL}}
+Atlas built: {{BUILD_DATE}} · from commit {{BUILD_COMMIT}} · format {{ATLAS_FORMAT}}
 {{REFERENCE_BOUNDARY}}
 
 ## Project Operating Constraints

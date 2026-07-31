@@ -135,6 +135,14 @@ report `verification: deferred-to-lead`>
 `Must Preserve` and `Forbidden` are usually free: copy them from the owning
 module doc's **Do Not Do** and **Known Risks**.
 
+**Write commands for the shell the worker will get.** `Acceptance` and
+`Verification You May Run` are run verbatim. One command per line, never an `&&`
+chain — Windows PowerShell 5.1 has no `&&`, and a syntax error comes back as a
+failed check that never ran. On Windows also skip inline env prefixes
+(`NODE_ENV=test cmd`), `2>/dev/null`, and POSIX tools assumed on `PATH`; prefer
+the project's own runner (`npm test`, `pytest tests/auth -q`, `dotnet build`),
+which behaves the same in every shell. Paths stay relative with forward slashes.
+
 **Model tier.** `implement` and `investigate` run on {{MODEL_TIER_STANDARD}}
 (`MODEL_TIER: standard`). A bounded contract with concrete `Acceptance` items
 gains almost nothing from a higher reasoning tier and pays for it every token.
@@ -192,9 +200,9 @@ tests assert real behaviour rather than encoding a mistake.
 Then run the authoritative build and test suite, plus anything the report marked
 `deferred-to-lead`. Run the auto-fixable checks first and on their own —
 formatter, linter, anything with a `--fix` — apply what they report, and only then
-spend one combined build-and-test pass. Chaining everything behind `&&` means a
-single formatting nit aborts the chain and you pay for the whole suite twice.
-Accept, return with a corrected contract, or re-cut the task.
+spend one combined build-and-test pass. Chaining them means a single formatting
+nit aborts the run and you pay for the whole suite twice. Accept, return with a
+corrected contract, or re-cut the task.
 
 Spend a separate review subagent only at T2, or when you wrote the code yourself
 and want an independent read — dispatch the same contract with
@@ -228,5 +236,8 @@ You are the single writer for all of these files. Never let a worker write them.
   hold — do not go looking for either, and do not relay intermediate output. On a
   worker failure, report in one or two plain sentences what failed and what you
   will do about it.
-- Do not rerun Codebase Atlas initialization unless the user explicitly asks for a
-  full rebuild.
+- Do not rerun Codebase Atlas unless the user explicitly asks for one. If they do
+  — or if you find the map wrong in modules you did not touch — a **refresh**
+  re-scans only the modules that drifted and is what almost every such request
+  actually needs; a **rebuild** discards the map and scans everything. Say which
+  one you propose and why before spending either.

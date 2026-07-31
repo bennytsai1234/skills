@@ -17,6 +17,9 @@ Codebase Atlas is built around six principles:
   search.
 - **Initialize once, reuse often**: a strong initialization pass creates context
   that ordinary follow-up work can reuse.
+- **Refresh, don't rebuild**: a map that drifted in two modules does not justify
+  re-scanning twenty. The index records the commit it was built from, so a later
+  run can compute exactly what went stale.
 - **Human confirmation matters**: code-changing workflows must explain the
   plain Before / After state before editing — and that gate belongs to the agent
   a human is actually reading.
@@ -102,6 +105,32 @@ blocks the damaging case either way.
    cross-file check plus the quality checklist.
 7. Apply the delivery policy (no commit / commit only / commit and push),
    never force-pushing.
+
+## Refresh vs Rebuild
+
+Every generated index records a build provenance line: the date it was built,
+the commit it was built from, and the atlas format version. That line is what
+makes a cheap update possible.
+
+- **Refresh** — for an atlas that has drifted. Diff the recorded commit against
+  `HEAD`, map the changed files onto modules through each module doc's scope, and
+  classify every module as *stale*, *unmapped*, *removed*, or *untouched*. Only
+  stale and new modules are re-scanned, and their docs are updated in place so
+  hand-added notes survive. Untouched docs are left byte-identical, the
+  Architecture Decisions table is not touched, and adapters are regenerated only
+  when the recorded format version is behind the current one. The plan is
+  confirmed with the user before any subagent runs — a refresh rewrites docs
+  people rely on.
+- **Rebuild** — for an atlas whose *structure* is wrong: no usable provenance,
+  most modules stale, or a restructure that invalidated the module split itself.
+  A refresh over most of the atlas costs more than a rebuild and produces a worse
+  result, because each subagent still reasons from a split the restructure
+  already broke.
+
+*Unmapped* files are the interesting class: a changed file that belongs to no
+module's scope means a new module appeared or a boundary moved. That judgement is
+made centrally and confirmed with the user, never inferred by a scanning subagent
+that can only see its own module.
 
 ## Modes
 

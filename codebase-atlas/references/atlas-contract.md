@@ -1,6 +1,6 @@
 # Atlas Contract
 
-Use this contract for every Codebase Atlas initialization or rebuild.
+Use this contract for every Codebase Atlas initialization, rebuild, or refresh.
 
 The atlas is a compact engineering map, not a full architecture book. Keep
 generated docs concise, navigable, and grounded in repository-persistent facts.
@@ -13,6 +13,18 @@ Two entrypoints are generated, split by **role**, not by activity: a lead
 adapter for the agent talking to the human, and a worker adapter for delegated
 subagents. `references/delegation.md` carries the doctrine behind that split —
 read it before generating either adapter.
+
+## Atlas Format Version
+
+**Current atlas format: `2`.** Format 2 is the lead/worker adapter pair plus a
+build provenance line in the index. Format 1 was the single self-contained
+adapter with separate workflow docs.
+
+Every generated index records the format it was built to. That number is what
+lets a later run tell an out-of-date *map* (fix with a refresh — cheap) from an
+out-of-date *structure* (needs adapters regenerated, or a rebuild). Bump it only
+when the generated file set or the adapter split changes shape, never for
+wording changes inside a template.
 
 ## Initial Decisions
 
@@ -139,6 +151,45 @@ the lead adapter, and execution discipline inside the worker adapter.
 Use lowercase snake_case slugs for generated files and folders. Use relative
 links for generated Markdown.
 
+## Path And Shell Portability
+
+The atlas is generated on whatever machine the user happens to run it on, and
+read on every machine that clones the repository. Three things break that if
+left implicit.
+
+**Paths in generated Markdown are POSIX-shaped, always.** Forward slashes,
+relative, no drive letters, no backslashes, no `~`. This holds for module doc
+links, the `{{INDEX_FILE}}` value, contract `Read First` entries, and
+`Allowed Paths` globs — and it holds when generating on Windows, where an agent
+that mirrors what it sees in a shell will write `docs\project\module.md` and
+silently break every link in the atlas. The host OS is not allowed to show
+through here.
+
+**Do not rewrite a file to change its line endings.** On Windows, `core.autocrlf`
+makes the working tree and the committed blob differ by design. A generator that
+normalizes endings turns a two-line refresh into a whole-file diff, which buries
+the real change and makes review worthless. Write the lines that changed and
+leave the rest of the file untouched.
+
+**Commands written into the atlas must run in the shell that will run them.** A
+worker executes the lead's `Acceptance` and `Verification You May Run` entries
+verbatim, so the lead writes them for the shell the worker will actually get, not
+for a POSIX one it assumed. Concretely:
+
+- Chain nothing. One command per line, not an `&&` chain: Windows PowerShell 5.1
+  has no `&&` at all, and even where it exists, chaining an auto-fix step onto a
+  build bills the build twice when the fix step trips
+  (`references/delegation.md` §7).
+- On a Windows host, do not write inline environment prefixes
+  (`NODE_ENV=test cmd`), `2>/dev/null`, `rm -rf`, or POSIX utilities (`grep`,
+  `sed`, `head`) as though they were on `PATH`.
+- Prefer the project's own runner — `npm test`, `pytest tests/auth -q`,
+  `dotnet build`. It behaves the same in every shell. Reach for shell syntax only
+  when no runner covers the check.
+
+None of this makes the atlas Windows-specific. It makes it host-neutral, which is
+what a committed document has to be.
+
 ## Required Templates
 
 Use the templates under `assets/templates/`:
@@ -160,23 +211,6 @@ docs. The only exceptions are the two runtime tokens `{{DATE}}` and `{{SLUG}}` i
 the lead adapter — leave them intact; the lead adapter fills them per change. See the
 placeholder map below.
 
-## Optional Templates
-
-These are not part of the required output shape and are generated only when the
-project warrants them and the user opts in. They never expand the required
-`index + module docs + adapter pair` shape.
-
-- `design.md` — a generic, **format-only** scaffold for mapping a project's design
-  system in the google-labs-code/design.md two-layer format (YAML token
-  front-matter + prose rationale, canonical section order). Format-only: it never
-  requires installing or running `@google/design.md` (its CLI / lint / export), so
-  it suits no-build, supply-chain-restricted environments. Normativity follows the
-  project's declared source of truth (mirror when code/CSS/tokens are canonical;
-  normative only when the file is declared canonical). Record the mapped design
-  system as a normal module doc and/or an index link; do not hardcode
-  project-specific layering (e.g. a per-page override system) into the skill. See
-  `references/modes.md` → "Optional: Design System Mapping".
-
 ## Placeholder Map
 
 Replace every token below at initialization **except** the two runtime tokens,
@@ -190,6 +224,9 @@ Init-time tokens (replace with concrete values):
 | `{{PROJECT_NAME}}` | Human-readable project name | adapters |
 | `{{PROJECT_SLUG}}` | kebab-case project slug; the lead skill is `<slug>-atlas`, the worker skill `<slug>-worker` | platform adapters only |
 | `{{WORKING_LANGUAGE}}` | Selected working language | index |
+| `{{BUILD_DATE}}` | ISO `YYYY-MM-DD` on which this atlas was built or last refreshed | index |
+| `{{BUILD_COMMIT}}` | Short SHA of `HEAD` at build time; `not-a-git-repo` when the project is not under git | index |
+| `{{ATLAS_FORMAT}}` | The atlas format version generated — see Atlas Format Version | index |
 | `{{DELIVERY_POLICY}}` | `no commit` / `commit only` / `commit and push` | index, adapters |
 | `{{REPORTING_LEVEL}}` | `plain` or `technical` | index, adapters |
 | `{{REFERENCE_BOUNDARY}}` | Reference boundary block in reference-assisted mode; empty otherwise | index |
@@ -219,6 +256,11 @@ include:
   (through the lead adapter, which reads the index and carries its own
   discipline; workers enter through a task contract instead).
 - A single inline line for working language, delivery policy, and reporting level.
+- A **build provenance line**: when this atlas was built or last refreshed, the
+  commit it was built from, and the atlas format version. Refresh reads this line
+  to compute what drifted; without it the only available update is a full
+  rebuild, so it is required, not decorative. Keep it on one line directly under
+  the settings line.
 - Project operating constraints inherited from existing guidance: concrete rules
   all work must follow, such as language, architecture, testing, release flow,
   maintenance state, CI, and work style.
@@ -382,6 +424,17 @@ the old single adapter plus two workflow docs. It must:
 - Do not rerun Codebase Atlas initialization unless the user explicitly asks for a
   full rebuild.
 
+## Decision Recording (Lead-Only)
+
+Where a settled decision goes. A worker never writes any of these — it reports
+the needed record upward and the lead writes it.
+
+- Cross-module decisions: add a row to the Architecture Decisions table in the
+  index (title, chosen option, affected modules, rationale).
+- Module-level decisions: add a note to the affected module's Known Risks or Do
+  Not Do section, referencing the index entry if cross-module.
+- Do not create separate decision log files.
+
 ## Worker Adapter Requirements
 
 The worker adapter is the entrypoint for a delegated subagent. It is short by
@@ -411,14 +464,6 @@ delegation exists for. It must:
 The worker adapter must not contain: the index path, the module list, the tier
 model, planning, the Before/After gate, the Decision Gate, or the plan
 lifecycle. If a worker needs any of that, the contract was written wrong.
-
-### Decision recording
-
-- Cross-module decisions: add a row to the Architecture Decisions table in the
-  index (title, chosen option, affected modules, rationale).
-- Module-level decisions: add a note to the affected module's Known Risks or Do
-  Not Do section, referencing the index entry if cross-module.
-- Do not create separate decision log files.
 
 ## Plan File Lifecycle
 
@@ -476,8 +521,69 @@ During ordinary work, atlas updates are incremental:
 3. Do not rescan unrelated modules.
 4. Note what changed and why in the report.
 
-A full rescan and rebuild requires the user to explicitly request it by running
-Codebase Atlas again.
+This is the lead keeping the map honest as it changes code — the change that
+invalidated the doc is right there in context. It is not a scan. When the map has
+drifted from work the lead did not do, that is a Refresh.
+
+## Refresh
+
+A refresh brings an existing atlas back in line with the repository without
+rebuilding it. It exists because the two failure modes have very different
+prices: a map that is stale in two modules does not justify re-scanning twenty.
+
+**Preconditions.** An atlas exists, and its index carries a build provenance
+line. No provenance means no drift set can be computed — offer a full rebuild, or
+a refresh scoped to modules the user names by hand.
+
+**Decisions are not re-asked.** Working language, delivery policy, reporting
+level, and reference mode are read back out of the index. A refresh re-opens a
+decision only if the user raises it.
+
+**Drift set.** The changed files between the recorded commit and `HEAD`:
+
+- `git diff --name-only <recorded-commit>..HEAD` when the commit is reachable.
+- When it is not (rebased, squashed, shallow clone), fall back to
+  `git log --since=<recorded-date> --name-only --pretty=format:` and say so —
+  that form over-reports, and the user should know the scan is wider than
+  necessary rather than wonder why it cost more.
+- Apply the same Scan Boundaries exclusions as a build. A refreshed lockfile or a
+  rebuilt `dist/` is not module drift.
+
+**Classification.** Map the drift set onto modules through each module doc's
+**Scope** section:
+
+| Class | Meaning | Action |
+|---|---|---|
+| stale | the module owns at least one changed file | re-scan, update its doc in place |
+| unmapped | a changed file falls in no module's scope | needs a boundary judgement — see below |
+| removed | the module's whole scope is gone from the tree | delete the doc, drop it from the index |
+| untouched | everything else | do not re-scan, do not re-read, do not rewrite |
+
+Untouched modules are the entire point. Leave their docs byte-identical — a
+refresh whose diff touches every module doc has silently become a rebuild that
+also lost the user's chance to review it as one.
+
+**Unmapped files are the signal, not the noise.** They mean a new module was
+added, an existing module's scope grew past what its doc claims, or a boundary
+moved. That is a judgement the lead makes centrally and confirms with the user;
+it is never inferred by a scanning subagent, which sees only its own module.
+
+**Escalate to a full rebuild** — after saying why and getting agreement — when
+there is no usable provenance, when more than roughly half the modules come back
+stale, or when the drift is in the boundaries themselves rather than inside them.
+A refresh that touches most of the atlas costs more than a rebuild and produces a
+worse result, because each subagent still reasons from a module split that the
+restructure already invalidated.
+
+**What a refresh never touches:** the Architecture Decisions table (decisions are
+not scan output), anything under `docs/changes/`, and the adapters — unless the
+index's recorded format version is behind the current one, or the user changed a
+decision this run. Adapters carry no per-module content, so no scan result can
+invalidate them.
+
+**Provenance is rewritten last**, to the current date and `HEAD`, and only after
+verification passes. An atlas that records a refresh it did not finish will skip
+the unfinished modules on the next run.
 
 ## Entrypoint Adapters
 
