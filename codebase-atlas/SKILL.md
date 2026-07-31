@@ -23,14 +23,11 @@ Keep this skill simple:
   to this skill.
 - Delegate the per-module scan/draft pass and the per-file verify/fix pass to
   subagents run in parallel (Agent tool). Keep module-boundary judgment, the
-  index, and adapter generation centralized — those need a single holistic
-  view across files that independent subagents do not share.
+  index, and adapter generation centralized.
 
   This is **build-time** parallelism, and it is the one place this skill spawns
-  anything. It is safe here because each subagent writes one documentation file
-  at a disjoint path, with no code change, no test run, and no shared state. It
-  says nothing about how the generated atlas works day to day — the workflow the
-  adapters describe has no automated dispatch at all.
+  anything. The workflow the generated adapters describe has no automated
+  dispatch at all.
 - The atlas this skill generates is built for a **human-mediated two-agent**
   workflow. It produces **two** entrypoints per platform — a lead adapter for the
   agent talking to the human, and a worker adapter for the implementation agent
@@ -74,9 +71,8 @@ Before outputting anything, scan only for old Codebase Atlas artifacts:
 2. Detect whether generated Codebase Atlas entrypoints exist under `.agents/`
    or other configured prompt or skill directories.
 3. Detect existence only. Do not deeply read old atlas content.
-4. If old atlas docs or generated entrypoints exist, record them. Also read one
-   thing out of the existing index — its build provenance line — because that
-   line alone decides whether a refresh is possible at all. This is the one
+4. If old atlas docs or generated entrypoints exist, record them, and read one
+   thing out of the existing index: its build provenance line. This is the only
    exception to "existence only" in item 3.
 5. Present the choice in Step 2 and wait for the user to pick refresh, rebuild,
    or a partial preservation before continuing.
@@ -115,44 +111,29 @@ following meaning in that language; do not output this English template verbatim
 unless English was selected:
 
 ```markdown
-Before we start, let me explain what this skill will create for your project.
+Before we start, here is what this skill will create for your project.
 
 **What it creates:**
-This skill scans your repo once and creates a durable engineering map under
-`docs/`.
-That map includes:
-- The project's module structure and boundaries.
-- A universal entrypoint skill that future work on this project should start
-  from.
+A durable engineering map under `docs/` — your project's module structure and
+boundaries — plus two entrypoint skills: one for the agent you talk to, and one
+for the agent that implements changes.
 
 **How to use it later:**
-After the map exists, you do not need to run this skill again.
-For future requests in this project, the universal entrypoint skill will
-automatically identify what you want to do and choose the right workflow,
-whether the task is understanding the project, changing code, or validating
-behavior.
+You do not run this skill again. Future requests load the first entrypoint
+automatically, which reads the map and routes the task.
 
-**Why it works:**
-Before every operation, the agent reads the map instead of blindly searching the
-entire repo again. This helps the agent locate the right area precisely instead
-of guessing.
-
-More importantly, every file-editing operation first explains in plain language:
+**What you will see on every code change:**
 - Before: what the current situation is and where the problem is.
 - After: what will become true after the change.
 
-This Before / After is the main thing you need to judge. By default the agent
-reports in plain language, so you can usually confirm from the Before / After
-alone without reading code. If the Before description matches the real problem
-and the After description is the result you want, you can confirm. If the agent
-misunderstood, the Before will be wrong and you can catch it immediately.
+Confirm from that Before / After. If the Before does not match the real problem,
+say so and I will re-diagnose before anything is written.
 
 This initialization only needs to happen once.
 ```
 
-**Skip the introduction above entirely when Step 1 found an existing atlas.**
-That user already has one and does not need it explained; go straight to the
-choice below.
+**Skip the introduction above entirely when Step 1 found an existing atlas.** Go
+straight to the choice below.
 
 If Step 1 found an existing atlas **with** a build provenance line, present this
 in the working language, filling in the recorded date and commit:
@@ -168,8 +149,8 @@ B. Rebuild it from scratch. I delete the current atlas and scan the whole
 Either way, tell me if there are parts you want kept as they are.
 ```
 
-If an atlas exists but has **no** provenance line, it predates this mechanism and
-no drift can be computed. Say so and offer the two workable options:
+If an atlas exists but has **no** provenance line, no drift can be computed. Say
+so and offer the two workable options:
 
 ```markdown
 This project already has an atlas, but it does not record which commit it was
@@ -180,8 +161,7 @@ scratch, or refresh only the areas you name.
 Then route:
 
 - **Refresh** → stop here and go to the Refresh Workflow. Do not continue to
-  Step 3; a refresh inherits its decisions from the index instead of re-asking
-  them.
+  Step 3; a refresh inherits its decisions from the index.
 - **Rebuild** → carry out the Step 1 deletions, then continue to Step 3.
 - **No existing atlas** → continue directly to Step 3.
 
@@ -323,12 +303,11 @@ before asking for configuration decisions:
     the tests, and reports back. Then I review it against the package and either
     accept or send back a short list of precise gaps.
 
-    I never edit the code myself, including for changes that look trivial. That
-    keeps whoever writes the code and whoever reviews it as two different agents.
+    I never edit the code myself, including for changes that look trivial.
     ```
 
-    There is no model decision to make: the implementation agent is whichever one
-    you run, and the package is written to be model-agnostic.
+    Do not ask a model-tier question. The implementation agent is whichever one
+    the user runs, and the package is written to be model-agnostic.
 11. Use this confirmation shape for preserved rules:
 
     ```text
@@ -336,16 +315,12 @@ before asking for configuration decisions:
     Rule: <specific inherited rule>
     Handling: <how this rule will be recorded or applied>
     ```
-
-    The user must be able to judge whether the agent correctly understood the
-    existing project guidance.
 12. Wait for user confirmation before starting the full scan.
 
 ## Rebuild Or Refresh
 
-Both arrive as "run the atlas again," and they cost very differently, so decide
-which one this is before doing anything expensive. Decide after Step 1's
-detection, as part of the Step 2 conversation.
+Decide which one this is after Step 1's detection, as part of the Step 2
+conversation.
 
 - **No atlas exists** → initialization. Run the Initialization Workflow.
 - **An atlas exists and the user asked to rebuild, rescan, or start over** →
@@ -353,12 +328,10 @@ detection, as part of the Step 2 conversation.
   delete-and-rebuild confirmation.
 - **An atlas exists and the user asked to refresh, update, or sync it — or just
   said the map is out of date** → run the Refresh Workflow. It re-scans only the
-  modules the repository actually changed under and leaves the rest untouched,
-  so it costs a fraction of a rebuild.
+  modules the repository changed under and leaves the rest untouched.
 
 When the request is ambiguous and an atlas exists, propose the refresh and say
-what it will skip. The user can always ask for the rebuild; nobody thanks you for
-silently spending one.
+what it will skip.
 
 ## Initialization Workflow
 
@@ -395,8 +368,7 @@ silently spending one.
    - The exact output path to write: `docs/<project>/<module_slug>.md` (or the
      reference-assisted `docs/<project>_<reference>/<module_slug>.md`). Forward
      slashes, even on Windows. One subagent writes exactly one file — never
-     let two subagents target the same path. These dispatches are safe to run
-     concurrently precisely because no two of them can touch the same file.
+     let two subagents target the same path.
 
    These prompts are build-time instructions, not the `atlas/v2` task packages
    the generated workflow uses. Keep them to what the subagent cannot derive, and
@@ -404,25 +376,18 @@ silently spending one.
    After all module subagents return, read their brief findings (not the full
    file contents) to reconcile the module list per Step 5's provisional-split
    note. Then draft `index.md` yourself from the reconciled module list and
-   findings — the index needs a single view across every module, so keep this
-   step centralized rather than delegated. Fill its build provenance line while
+   findings — keep this step centralized. Fill its build provenance line while
    you are there: today's local date, the short SHA of `HEAD` (or
    `not-a-git-repo`), and the current atlas format version from
-   `references/atlas-contract.md`. A later refresh has no other way to know what
-   drifted.
+   `references/atlas-contract.md`.
 7. Read `references/delegation.md`, then generate the adapters yourself
-   (centralized — adapter content follows fixed decisions and templates rather
-   than per-module discovery, so delegating it adds coordination cost without
-   benefit) for all platforms selected in Step 3.
+   (centralized) for all platforms selected in Step 3.
 
    Each platform gets a **pair**, split by role: a lead adapter for the agent
    talking to the human (entry router, investigate/change discipline, Decision
    Gate, Before/After gate, task-package authoring, review, governance writes)
    and a worker adapter for the implementation agent the human hands a package to
-   (execution only). Never generate one without the other — a lone lead adapter
-   is the single-agent design this version replaces, and an implementation agent
-   handed a package will load it and start managing the project instead of doing
-   the work.
+   (execution only). Never generate one without the other.
    - If Claude Code was selected: create `.claude/skills/<project-slug>-atlas/`
      and `.claude/skills/<project-slug>-worker/` if needed, then generate
      `SKILL.md` in each from `assets/templates/lead_adapter.md` and
@@ -435,8 +400,7 @@ silently spending one.
      `docs/<project>_worker_adapter.md` (same templates with the frontmatter
      block dropped) only when no platform adapter exists this run — the user
      chose "None" in Step 3, or detection was inconclusive and no platform was
-     picked. If a platform pair exists, skip the generic pair: nothing loads it
-     automatically once a platform adapter does (see
+     picked. If a platform pair exists, skip the generic pair (see
      `references/atlas-contract.md` → Entrypoint Adapters → Generic Adapters).
      If generic adapter files already exist from a prior run — including the
      pre-split single `docs/<project>_adapter.md` — and a platform adapter now
@@ -453,14 +417,11 @@ silently spending one.
    - Render each adapter's `description` in the Step 0 working language, and
      keep the cross-reference in it: the lead description points an agent
      executing a task package at `<project-slug>-worker`, and the worker
-     description points a human-facing agent at `<project-slug>-atlas`. That
-     description is the only part an agent reads before deciding to load a skill,
-     so it carries the role boundary.
+     description points a human-facing agent at `<project-slug>-atlas`.
    - Do **not** write a forced "run the atlas skill before every operation"
-     mandate into `CLAUDE.md` or `AGENTS.md`. Each skill's `description` makes
-     it discoverable when a task needs it. At most, if the file has no pointer to
-     the atlas, add a single plain-language line noting the navigation map lives
-     at `docs/<project>_index.md`. Render it in the Step 0 working language.
+     mandate into `CLAUDE.md` or `AGENTS.md`. At most, if the file has no pointer
+     to the atlas, add a single plain-language line noting the navigation map
+     lives at `docs/<project>_index.md`. Render it in the Step 0 working language.
    - If a rebuild detects existing adapter files, include them in the
      delete-and-rebuild confirmation (Step 1) before overwriting.
 8. Verify and fix in parallel. Dispatch one subagent per generated file — the
@@ -518,20 +479,16 @@ drift classification this workflow executes.
    work counted.
 3. Classify every module as stale, unmapped, removed, or untouched by matching
    the drift set against each module doc's **Scope** section. Read only the Scope
-   sections to do this — classification does not require reading whole module
-   docs, and reading them all would cost what the refresh exists to save.
+   sections — do not read whole module docs to classify.
 4. Present the refresh plan and wait for confirmation, in the working language
    and in plain terms: which modules will be re-scanned, which unmapped files
    turned up and what you propose to do with them (fold into an existing module,
    or open a new one), which module docs will be deleted, and how many modules
-   stay untouched. This is the atlas's own Before/After gate. A refresh rewrites
-   documentation the user relies on, so it never runs unconfirmed — and the
-   unmapped-file judgement is exactly the kind a scanning subagent cannot make,
-   because it sees only its own module.
+   stay untouched. Never run a refresh unconfirmed.
 
-   If the plan comes back with more than roughly half the modules stale, or the
-   drift is in the boundaries rather than inside them, recommend a full rebuild
-   instead and say why.
+   If more than roughly half the modules come back stale, or the drift is in the
+   boundaries rather than inside them, recommend a full rebuild instead and say
+   why.
 5. Re-scan the stale and newly created modules in parallel — one subagent per
    module, all dispatches in one message, one file per subagent, disjoint paths.
    Use the same inline prompt contract as Initialization Step 6 (module scope,
@@ -540,30 +497,25 @@ drift classification this workflow executes.
    path). Add one line the initialization prompt does not carry: the existing
    module doc's path, with an instruction to **update it in place** — preserve
    project-specific notes that are still true, and rewrite only what the code
-   changed. A refresh that regenerates a module doc from zero throws away
-   hand-added knowledge that no scan can recover.
+   changed. Never regenerate a module doc from zero on a refresh.
 6. Update the index yourself, centrally, and only where it changed: add, remove,
    or rewrite the affected module links and summaries, and leave every untouched
    module's summary byte-identical. Delete the docs of removed modules. Do not
-   touch the Architecture Decisions table — decisions are not scan output.
+   touch the Architecture Decisions table.
 7. Regenerate the adapters only when the index's recorded format version is
    behind the current one in `references/atlas-contract.md`, or when the user
-   changed a decision this run. Otherwise leave them alone: adapters carry no
-   per-module content, so no scan result can invalidate them. If you do
-   regenerate, generate the full pair per Initialization Step 7 — never a lead
-   without its worker.
+   changed a decision this run. Otherwise leave them alone. If you do regenerate,
+   generate the full pair per Initialization Step 7 — never a lead without its
+   worker.
 8. Verify only what this run wrote: one verification subagent per written file,
    same prompt shape as Initialization Step 8, then the centralized cross-file
    pass from `references/quality-checklist.md` → Refresh. Run that cross-file
-   pass even for a single-module refresh — adding or removing one module is
-   precisely what breaks agreement between the index and the docs on disk.
+   pass even for a single-module refresh.
 9. Rewrite the build provenance line last, to today's date and the current
-   `HEAD`, and only after verification passes. An atlas that records a refresh it
-   did not finish will skip the unfinished modules next time.
+   `HEAD`, and only after verification passes.
 10. Apply the delivery policy read from the index, per
     `references/atlas-contract.md` → Delivery. In the report, name both the
-    modules re-scanned and the modules deliberately left alone — someone reading
-    "atlas refreshed" needs to know what was not looked at.
+    modules re-scanned and the modules deliberately left alone.
 
 ## Core Rules
 
@@ -572,21 +524,20 @@ drift classification this workflow executes.
 - Generated docs must describe repository-persistent facts, not facts about the
   current agent, model, editor, shell, chat session, or temporary workspace.
 - Code-changing work must state a plain Before / After before the task package is
-  written. This is the user-facing checkpoint; do not replace it with secondary
-  engineering reports. It belongs to the agent talking to the human — an
-  implementation agent never runs it, because nobody is reading. At T1/T2, wait
-  for confirmation before writing the package; at T0, announce the one-line
+  written. It is the user-facing checkpoint; do not replace it with secondary
+  engineering reports, and never run it agent-to-agent. At T1/T2, wait for
+  confirmation before writing the package; at T0, announce the one-line
   Before / After and proceed, then report:
   - **Before**: current state and what is wrong, missing, confusing, or risky.
   - **After**: what the change will make true.
 - Split generated entrypoints by role, not by activity. Understanding, deciding,
-  specifying, reviewing, and knowledge maintenance all belong to the same agent
-  on the same timeline, so they ship in one lead adapter; implementation ships
-  separately.
+  specifying, reviewing, and knowledge maintenance ship in the lead adapter;
+  implementation ships separately.
 - The generated workflow has no automated dispatch. The lead writes a task
   package to a file and stops; a human carries it to the implementation agent and
   brings the result back. Only one agent is active on the working tree at a time,
   and whoever holds it runs whatever build or test it needs.
+- The lead never edits source code or tests, at any tier.
 - Exactly one agent writes any governance file: the lead.
 - Before proposing a change, calibrate scope: owning module, boundary modules,
   contracts, shared state, generated artifacts, tests, downstream users, and
@@ -602,16 +553,14 @@ drift classification this workflow executes.
 ## When Not To Use This Skill
 
 Do not run Codebase Atlas for ordinary daily work after an atlas exists. The
-generated lead adapter is self-contained and already handles daily work:
-read-only tasks (explanations, investigations, reviews, reproductions, profiling,
-CI failures, risk assessment) follow its investigate path, and every code edit
-follows its change path, which scales specification to the task and ends in a
-task package the user hands over. Use the generated atlas for all of these
-instead of rerunning Codebase Atlas.
+generated lead adapter handles it: read-only tasks (explanations, investigations,
+reviews, reproductions, profiling, CI failures, risk assessment) follow its
+investigate path, and every code edit follows its change path, ending in a task
+package the user hands over.
 
-Do not run it while executing a task package at all. A worker that decides the
-map is stale reports that; it does not rebuild it.
+Do not run it while executing a task package. A worker that finds the map stale
+reports that; it does not rebuild it.
 
 Rerun Codebase Atlas only when a human explicitly asks for a rebuild, refresh,
-regenerate, or rescan of the atlas itself — and when they do, check which one
-they need before spending a rebuild. See Rebuild Or Refresh.
+regenerate, or rescan of the atlas itself. When they do, check which one they
+need first — see Rebuild Or Refresh.

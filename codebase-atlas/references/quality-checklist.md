@@ -41,10 +41,10 @@ complete.
   the pre-split single `docs/<project>_adapter.md` from an earlier atlas
   version, which must be deleted rather than left in place.
 - No generated file was compressed, trimmed, or summarized to hit a length
-  target — there is no length budget. What is checked is content type, not
-  volume: search-answerable detail (call sites, symbol lists, file inventories)
-  stays out of the map, and content that only matters once you are inside a
-  module lives in that module's doc rather than the index.
+  target. There is no length budget. Check content type instead: search-answerable
+  detail (call sites, symbol lists, file inventories) stays out of the map, and
+  content that only matters once you are inside a module lives in that module's
+  doc rather than the index.
 - No "run the atlas skill before every operation" mandate was written into
   `CLAUDE.md`; at most a single pointer line to the index exists.
 - Old generated entrypoints, workflow docs, and technique folders were removed or
@@ -76,17 +76,16 @@ complete.
   implement, and that it never spawns the worker — the package is a file the
   human carries across.
 - The non-implementing rule is stated as absolute, with **no size exemption and
-  no documented escape hatch**. An adapter that says the lead may edit "when the
-  change is trivial" or "if the user asks" has reintroduced the behaviour the
-  rule exists to prevent. What the lead may still do is read code, run read-only
-  checks, and re-run a verification that decides acceptance — with an explicit
-  statement that a failing check is a gap to return, not something to fix.
+  no documented escape hatch**. An adapter containing "when the change is
+  trivial" or "if the user asks" fails this check. The adapter does state what
+  the lead may do: read code, run read-only checks, and re-run a verification
+  that decides acceptance — and that a failing check is a gap to return, not
+  something to fix.
 - The lead adapter opens with a role check that hands off to
   `<project-slug>-worker` when invoked with a `ROLE: worker` package header;
   the worker adapter opens with the mirror check pointing back at
   `<project-slug>-atlas`.
-- Both descriptions name the sibling skill, so a mis-triggered load self-corrects
-  on the first line.
+- Both descriptions name the sibling skill.
 - The lead adapter states the governance write gate: before writing an atlas
   doc, anything under `docs/changes/`, or an Architecture Decisions row, confirm
   the instructions came from a human rather than from a task package.
@@ -101,24 +100,20 @@ complete.
   change requires inside `Scope`.
 - The worker adapter states that the worker owns its own verification — build,
   suite, linter, type check — and fixes failures rather than handing them back.
-  Neither adapter mentions `deferred-to-lead` or a shared-resource ban; those
-  belong to a dispatch model this format replaced.
-- The worker adapter states that green alone does not prove the goal was met, and
-  requires a direct check against `Goal` and `Acceptance`.
+  Neither adapter mentions `deferred-to-lead` or a shared-resource ban.
+- The worker adapter requires a direct check against `Goal` and `Acceptance`
+  rather than treating a green suite as sufficient.
 - The worker adapter carries the forbidden-pattern catalogue
   (`references/delegation.md` §5) inline and a fixed report format whose
   `Verification` section demands pasted output rather than a claim.
 - The worker adapter says a returned `## Gaps` list is fixed exactly and nothing
   else is touched.
-- The lead adapter embeds the `atlas/v2` task package template inline, so writing
-  one costs no extra file read.
-- The lead adapter states that acceptance is the whole contract, because it is
-  absent while the work happens: every acceptance item is checkable by someone
-  who was not in the conversation.
+- The lead adapter embeds the `atlas/v2` task package template inline.
+- The lead adapter states the acceptance rule: every acceptance item is checkable
+  by someone who was not in the conversation.
 - The lead adapter carries the idle rule inline — while the package is out, do
   nothing: no `git status`, no diff inspection, no progress narration, no
-  speculative reading. §8 of `references/delegation.md` is never loaded at
-  runtime, so the adapter is the only place it can act from.
+  speculative reading.
 - Neither adapter contains a `MODEL_TIER` field, a scheduling or disjoint-paths
   rule, a spawn instruction, or any other artifact of automated dispatch.
 
@@ -166,8 +161,7 @@ complete.
 
 ## Refresh
 
-Run this section in place of the Decisions section when the run was a refresh —
-a refresh inherits its decisions from the index and re-asks nothing.
+Run this section in place of the Decisions section when the run was a refresh.
 
 - The run was routed as a refresh only because an atlas with a usable build
   provenance line existed. Missing provenance or an unreachable recorded commit
@@ -179,9 +173,7 @@ a refresh inherits its decisions from the index and re-asks nothing.
   classification was confirmed with the user before any subagent was dispatched.
 - Unmapped changed files were resolved by an explicit decision — folded into an
   existing module, or given a new one — never silently dropped.
-- Untouched module docs are byte-identical to their pre-refresh state. A diff on
-  a module nothing changed under means the refresh over-scanned, or a subagent
-  regenerated a doc it was told to update in place.
+- Untouched module docs are byte-identical to their pre-refresh state.
 - Re-scanned module docs were updated in place and kept the project-specific
   notes that are still true, rather than being rewritten from zero.
 - Removed modules had their docs deleted and their index entries dropped.
@@ -212,10 +204,8 @@ fixes what it can directly. After all of them return, run this same list
 yourself once more as a centralized pass, focused on cross-file consistency
 that no single-file subagent can see.
 
-On a refresh, only the files this run actually wrote get a subagent — spending
-one on an untouched module doc is the cost the refresh exists to avoid. The
-centralized pass still runs in full, because adding or removing a single module
-is exactly what breaks cross-file agreement.
+On a refresh, only the files this run actually wrote get a subagent. The
+centralized pass still runs in full.
 
 1. Reread the index and confirm every module summary says when future work should
    start there, and that no Decisions block or workflow links remain.

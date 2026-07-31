@@ -2,25 +2,23 @@
 
 Use this contract for every Codebase Atlas initialization, rebuild, or refresh.
 
-The atlas is an engineering map, not a full architecture book. Generated docs
-must be navigable and grounded in repository-persistent facts. There is no length
-limit on any generated file, and nothing is compressed, trimmed, or summarized
-after it is written — a map is worth what it explains, and a doc cut to fit a
-budget is a doc that stopped explaining. Write what routing a future agent
-actually requires, then stop because you are done, not because you ran out of
-room.
+Generated docs must be navigable and grounded in repository-persistent facts.
 
-What still matters is *what kind* of content goes where: the map answers *what
+**There is no length limit on any generated file.** Do not compress, trim, or
+summarize a doc after writing it. Write what routing a future agent requires,
+then stop.
+
+What is constrained is *what kind* of content goes where: the map answers *what
 owns this, where do I start, what must I not break*; search answers *where
-exactly is it*. Keeping search-answerable detail out of the map is a content
+exactly is it*. Keep search-answerable detail out of the map. This is a content
 rule, not a length rule.
 
 The atlas targets a **human-mediated two-agent** setup. Two entrypoints are
 generated, split by **role**: a lead adapter for the agent talking to the human,
 and a worker adapter for the implementation agent the human hands a task package
 to. The lead does not spawn the worker — it writes a package to a file and the
-human carries it across. `references/delegation.md` carries the doctrine behind
-that split; read it before generating either adapter.
+human carries it across. Read `references/delegation.md` before generating either
+adapter.
 
 ## Atlas Format Version
 
@@ -30,15 +28,13 @@ strong agent that explores, designs across files, and owns its own tests and
 build. Format 2 was the lead-dispatches-cheap-subagents split. Format 1 was the
 single self-contained adapter with separate workflow docs.
 
-An atlas whose index records a format below the current one has adapters built
-to a workflow that no longer applies. Refreshing the map will not fix that —
-regenerate the adapter pair.
+Every generated index records the format it was built to. An index recording a
+format below the current one has adapters built to a workflow that no longer
+applies: regenerate the adapter pair — a refresh of the map alone will not fix
+it.
 
-Every generated index records the format it was built to. That number is what
-lets a later run tell an out-of-date *map* (fix with a refresh — cheap) from an
-out-of-date *structure* (needs adapters regenerated, or a rebuild). Bump it only
-when the generated file set or the adapter split changes shape, never for
-wording changes inside a template.
+Bump the format only when the generated file set or the adapter split changes
+shape, never for wording changes inside a template.
 
 ## Initial Decisions
 
@@ -116,7 +112,7 @@ module unless engineers normally edit or review it directly.
 
 ## Map Tiers
 
-The map is layered so that no agent loads more of it than its task needs:
+The map is layered so no agent loads more of it than its task needs:
 
 | Tier | Where | Who loads it |
 |---|---|---|
@@ -125,23 +121,16 @@ The map is layered so that no agent loads more of it than its task needs:
 | 3 — module detail | `docs/<project>/<module_slug>.md` | whoever works in that module |
 | 4 — live search | grep, symbol search, call hierarchy | whoever needs an exact location |
 
-The tiers exist so nothing loads more of the map than its task needs. They are
-not size classes — none of them has a line budget, and none is trimmed to fit
-one. A module doc is the right length when it has said what someone working in
-that module needs to know.
+Tiers are scope classes, not size classes. None has a line budget and none is
+trimmed to fit one. Tier 1-2 route *between* modules; tier 3 explains *inside*
+one. Content that only matters once you are already working in a module belongs
+in that module's doc, not the index.
 
-What separates the tiers is scope, not volume: tier 1-2 route *between* modules,
-tier 3 explains *inside* one. Index content that only matters once you are
-already working in a module belongs in that module's doc — for navigability, not
-for economy.
-
-A task package names tier-3 starting points. The worker reads those first and
-then explores whatever the change requires; the package orients it rather than
-capping what it may read.
+A task package names tier-3 starting points. The worker reads those first, then
+explores whatever the change requires.
 
 Do not push search-answerable detail (call sites, symbol lists, file
-inventories) into any tier of the map. Not because it is long, but because it is
-the part that goes stale fastest and that search answers better anyway.
+inventories) into any tier of the map.
 
 ## Output Shape
 
@@ -175,42 +164,25 @@ links for generated Markdown.
 
 ## Path And Shell Portability
 
-The atlas is generated on whatever machine the user happens to run it on, and
-read on every machine that clones the repository. Three things break that if
-left implicit.
-
 **Paths in generated Markdown are POSIX-shaped, always.** Forward slashes,
 relative, no drive letters, no backslashes, no `~`. This holds for module doc
 links, the `{{INDEX_FILE}}` value, and a task package's `Starting Points` and
-`Scope` entries — and it holds when generating on Windows, where an agent
-that mirrors what it sees in a shell will write `docs\project\module.md` and
-silently break every link in the atlas. The host OS is not allowed to show
-through here.
+`Scope` entries, on every host — including Windows, where mirroring what a shell
+prints produces `docs\project\module.md` and breaks every link.
 
-**Do not rewrite a file to change its line endings.** On Windows, `core.autocrlf`
-makes the working tree and the committed blob differ by design. A generator that
-normalizes endings turns a two-line refresh into a whole-file diff, which buries
-the real change and makes review worthless. Write the lines that changed and
-leave the rest of the file untouched.
+**Do not rewrite a file to change its line endings.** Write the lines that
+changed and leave the rest of the file untouched.
 
 **Commands written into the atlas must run in the shell that will run them.** A
-worker executes the lead's `Acceptance` and `Verification You May Run` entries
-verbatim, so the lead writes them for the shell the worker will actually get, not
-for a POSIX one it assumed. Concretely:
+worker executes the lead's `Acceptance` and evidence commands verbatim:
 
-- Chain nothing. One command per line, not an `&&` chain: Windows PowerShell 5.1
-  has no `&&` at all, and even where it exists, chaining an auto-fix step onto a
-  build bills the build twice when the fix step trips
-  (`references/delegation.md` §7).
+- Chain nothing. One command per line, not an `&&` chain — Windows PowerShell
+  5.1 has no `&&`.
 - On a Windows host, do not write inline environment prefixes
   (`NODE_ENV=test cmd`), `2>/dev/null`, `rm -rf`, or POSIX utilities (`grep`,
   `sed`, `head`) as though they were on `PATH`.
 - Prefer the project's own runner — `npm test`, `pytest tests/auth -q`,
-  `dotnet build`. It behaves the same in every shell. Reach for shell syntax only
-  when no runner covers the check.
-
-None of this makes the atlas Windows-specific. It makes it host-neutral, which is
-what a committed document has to be.
+  `dotnet build`. Reach for shell syntax only when no runner covers the check.
 
 ## Required Templates
 
@@ -277,11 +249,10 @@ It must include:
   (through the lead adapter, which reads the index and carries its own
   discipline; the implementation agent enters through a task package instead).
 - A single inline line for working language, delivery policy, and reporting level.
-- A **build provenance line**: when this atlas was built or last refreshed, the
-  commit it was built from, and the atlas format version. Refresh reads this line
-  to compute what drifted; without it the only available update is a full
-  rebuild, so it is required, not decorative. Keep it on one line directly under
-  the settings line.
+- A **build provenance line**, required: when this atlas was built or last
+  refreshed, the commit it was built from, and the atlas format version. Keep it
+  on one line directly under the settings line. Refresh reads this line to
+  compute what drifted.
 - Project operating constraints inherited from existing guidance: concrete rules
   all work must follow, such as language, architecture, testing, release flow,
   maintenance state, CI, and work style.
@@ -311,13 +282,11 @@ Each module doc must include:
 - A Reference Notes section only when reference-assisted mode makes it useful.
 
 Avoid file inventories. A module doc is successful when it helps a future agent
-decide whether to start there, and then work confidently once it has. There is no
-line budget: a genuinely complex module gets a longer doc, and that is correct.
-Do not trim a finished doc to a target length.
+decide whether to start there, and work confidently once it has. There is no line
+budget — do not trim a finished doc to a target length.
 
 Write **Do Not Do** and **Known Risks** so they can be pasted verbatim into a
-task package's `Must Preserve` and `Forbidden` sections. That is their main
-consumer, and it makes each package nearly free to constrain properly.
+task package's `Must Preserve` and `Forbidden` sections.
 
 ## Agent Roles And Write Ownership
 
@@ -334,10 +303,9 @@ must enforce:
   across whatever files it needs, its own tests and build, and one evidenced
   report.
 
-**Role resolution.** Do not sniff the environment; neither platform exposes a
-reliable signal. An explicit `ROLE: worker` header in the invoking prompt wins;
-with no header, assume lead, so the human-alignment gate is never silently
-skipped. Backstop that with a **governance write gate**: before writing any
+**Role resolution.** Do not sniff the environment. An explicit `ROLE: worker`
+header in the invoking prompt wins; with no header, assume lead. Backstop that
+with a **governance write gate**: before writing any
 atlas doc, anything under `docs/changes/`, or an Architecture Decisions row, the
 agent asks whether its instructions came from a human turn or from a task
 package — and if from a package, does not write, but reports the needed change
@@ -349,12 +317,10 @@ upward.
 `docs/<project>/*.md`, everything under `docs/changes/`, and the Architecture
 Decisions table.
 
-**Working tree.** Only one agent is ever active on the tree, because the handoff
-runs through a human. Whoever holds it owns it outright: while the worker is
-implementing, it runs whatever build, suite, server, or migration its task needs;
-while the lead holds it, no worker is running. There is no shared-resource
-negotiation to encode and no `deferred-to-lead` — a worker that cannot verify its
-own change has not finished it.
+**Working tree.** Only one agent is active on the tree at a time. Whoever holds
+it owns it: while implementing, the worker runs whatever build, suite, server, or
+migration its task needs. Encode no shared-resource negotiation and no
+`deferred-to-lead`.
 
 ## Lead Adapter Requirements (carries the discipline)
 
@@ -366,8 +332,7 @@ and reviews; it does not implement and it does not dispatch. It must:
   implementation agent, never code. It does not edit source or tests — not a
   typo, not a one-line constant. It may read code, run read-only checks, and
   re-run a verification that decides acceptance; when one fails, that is a gap to
-  return, not something to fix. The adapter must not offer an escape hatch: a
-  documented exception is an exception that gets used.
+  return, not something to fix. The adapter must contain no escape-hatch clause.
 - **Role check** first: hand off to the worker adapter if invoked with a
   `ROLE: worker` package header, and state the governance write gate.
 - **Entry / router**: preserve the request; read the index once; confirm in one
@@ -380,7 +345,7 @@ and reviews; it does not implement and it does not dispatch. It must:
   after the user agrees. Carry one-line discipline pointers (debugging, review,
   design questions) instead of referencing external docs.
 - **Change (any edit)**: judge a discipline tier. The tier scales how much
-  specification the change needs, not who does the work:
+  specification the change needs:
   - **T0 trivial** (no logic change, reversible, single file): one-line
     Before/After; a minimal package — goal, the exact edit, one acceptance check;
     no Decision Gate.
@@ -421,31 +386,30 @@ and reviews; it does not implement and it does not dispatch. It must:
   dump. `Must Preserve` and `Forbidden` are normally copied from the owning
   module doc's **Do Not Do** and **Known Risks**. Then tell the user the package
   is ready and where it is; do not spawn anything.
-- **State that acceptance is the whole contract**: the lead is absent while the
-  work happens and cannot correct course, so every acceptance item must be
-  checkable by someone who was not in the conversation — an exact command with an
-  expected result, or an observable behaviour. "Works correctly" is not an
-  acceptance criterion.
+- **State the acceptance rule**: every acceptance item must be checkable by
+  someone who was not in the conversation — an exact command with an expected
+  result, or an observable behaviour. "Works correctly" is not an acceptance
+  criterion.
 - **Command portability**, inline: write `Acceptance` and evidence commands for
   the shell the worker will actually get — one command per line, no `&&` chain,
   and on Windows no inline env prefixes, no `2>/dev/null`, no POSIX utilities
   assumed on `PATH`. Prefer the project's own runner.
 - **Idle rule**, inline and explicit: while the package is out, do nothing at all
   — no `git status`, no diff inspection, no progress narration, no speculative
-  reading. This is the dominant avoidable cost, and `references/delegation.md` §8
-  is never loaded at runtime, so the adapter is the only place it can act from.
+  reading. `references/delegation.md` §8 is never loaded at runtime, so the
+  adapter must carry this itself.
 - **Review** what the human brings back, in order: requirement conformance
   (against pasted evidence, re-running anything whose result decides acceptance —
   a claim of a passing check is not a passing check); architecture against the
   atlas's module boundaries and `Must Preserve`; the diff for `Scope` containment
   and the forbidden-pattern catalogue (`references/delegation.md` §5); and the
   tests, for whether they assert real behaviour and would fail if the bug
-  returned.
+  returned. State that everything found at this step is a gap, including a check
+  that fails on re-run, and that the lead does not fix it.
 - **Return gaps, and only gaps**: a numbered list of what is wrong and what fixed
-  looks like, ending with an explicit "everything else is accepted, change nothing
-  outside these points" — without that line a capable agent asked to fix two
-  things improves five and the review restarts. Cap it at two returns; a third
-  means the package was wrong, so withdraw and reissue it.
+  looks like, ending with the required line "everything else is accepted, change
+  nothing outside these points". Cap it at two returns; on a third, withdraw the
+  package and reissue it.
 - **Verification and completion**: the verification result is in the user-facing
   report regardless of reporting level; never claim completion on a failed check.
   On completion move the package to
@@ -461,8 +425,8 @@ and reviews; it does not implement and it does not dispatch. It must:
 
 ## Decision Recording (Lead-Only)
 
-Where a settled decision goes. A worker never writes any of these — it reports
-the needed record upward and the lead writes it.
+Where a settled decision goes. A worker writes none of these; it reports the
+needed record upward and the lead writes it.
 
 - Cross-module decisions: add a row to the Architecture Decisions table in the
   index (title, chosen option, affected modules, rationale).
@@ -473,8 +437,7 @@ the needed record upward and the lead writes it.
 ## Worker Adapter Requirements
 
 The worker adapter is the entrypoint for the implementation agent the human hands
-a task package to. It grants latitude and fixes the boundaries of that latitude.
-It must:
+a task package to. It must:
 
 - **Scope itself** to prompts carrying a `ROLE: worker` package header, and point
   anything else at the lead adapter.
@@ -486,8 +449,9 @@ It must:
   they pass; check the result against `Goal` and `Acceptance` directly; report;
   stop.
 - **State that the worker owns verification**: it runs its own build, suite,
-  linter, and type check and fixes what fails. A failing check is its problem,
-  not a finding to hand back, and green alone does not prove the goal was met.
+  linter, and type check, and fixes what fails rather than handing it back. State
+  also that a green suite does not substitute for checking the change against
+  `Goal` and `Acceptance` directly.
 - **State the prohibitions explicitly**: no plan/summary/dated folder/completion
   doc or anything else under `docs/changes/`, no atlas or Architecture Decisions
   edit, no Before/After to a human, no re-opening a settled decision, no
@@ -499,7 +463,7 @@ It must:
   materially different approaches, or a package premise the code contradicts —
   and state that an early return with a clear blocker is a success.
 - **Handle a returned `## Gaps` list**: fix exactly the named points and nothing
-  else, because everything unnamed has already been accepted.
+  else.
 - **Fix the report format** (`references/delegation.md` §6): changed files,
   approach, root cause, verification with **pasted output rather than a claim**,
   risks, needs-a-decision. No exploration narrative, no restating the diff.
@@ -511,18 +475,15 @@ lifecycle. If a worker needs any of that, the package was written wrong.
 
 ## Plan File Lifecycle
 
-**The plan file and the task package are the same file.** The lead writes one
-document: it is the plan while the lead is thinking, and it is the handoff
-artifact once the human carries it to the implementation agent. There is no
-separate spec to keep in sync.
+**The plan file and the task package are the same file.** There is no separate
+spec to keep in sync.
 
-Every tier writes one, because the package has to exist as a file to be handed
-over. What differs is what happens to it afterwards: T0's is deleted on
-completion, T1 and T2 are archived with a summary line.
+Every tier writes one. What differs is what happens to it afterwards: T0's is
+deleted on completion, T1 and T2 are archived with a summary line.
 
 **Lead-only.** Everything under `docs/changes/` is a governance file. A worker
-never creates a plan, a dated folder, a completion doc, or a summary line, no
-matter how large its task was — including the package it was handed.
+never creates a plan, a dated folder, a completion doc, or a summary line —
+including the package it was handed.
 
 **Date format.** Every `{{DATE}}` is ISO 8601 `YYYY-MM-DD` — zero-padded, local
 date (for example `2026-06-09`, never `2026-6-9` or `06/09/2026`). The same date
@@ -545,12 +506,10 @@ docs/changes/
 
 1. After the Before/After is confirmed, write the package to
    `planning/{{DATE}}-{{SLUG}}.md`, then tell the user it is ready and where it
-   is. Amendments during review (the `## Gaps` list) are appended to the same
-   file, so the finished document records what was asked and what had to be
-   corrected.
+   is. Append each review `## Gaps` list to the same file.
 2. On completion at T1/T2, move it to `completed/{{DATE}}/{{SLUG}}.md` (create the
    date folder if missing). No copy is left behind in `planning/`. At T0, delete
-   it instead — a trivial change does not earn an archive entry.
+   it instead.
 3. At T1/T2, in the same step, append one line for the change to
    `completed/{{DATE}}/summary.md` (create it if missing), newest last:
 
@@ -558,13 +517,11 @@ docs/changes/
    - {{SLUG}} — <one-line what changed> · T<tier> · <verification result> · <delivery> · atlas: <updated <module(s)> / no change needed>
    ```
 
-   This file is the daily work summary; it accumulates every completed change for
-   that date.
+   This file accumulates every completed change for that date.
 
-Packages and summaries are developer artifacts and may name modules and files
-regardless of reporting level — the reporting level governs only user-facing chat
-reports. Their delivery (commit/push) follows the same delivery policy as the rest
-of the change.
+Packages and summaries may name modules and files regardless of reporting level;
+the reporting level governs only user-facing chat reports. Their delivery
+(commit/push) follows the same delivery policy as the rest of the change.
 
 ## Incremental Atlas Updates
 
@@ -575,18 +532,16 @@ During ordinary work, atlas updates are incremental:
 3. Do not rescan unrelated modules.
 4. Note what changed and why in the report.
 
-This is the lead keeping the map honest as it changes code — the change that
-invalidated the doc is right there in context. It is not a scan. When the map has
-drifted from work the lead did not do, that is a Refresh.
+This applies when the lead's own completed change invalidated a doc. When the map
+has drifted from work the lead did not do, run a Refresh instead.
 
 ## Refresh
 
 A refresh brings an existing atlas back in line with the repository without
-rebuilding it. It exists because the two failure modes have very different
-prices: a map that is stale in two modules does not justify re-scanning twenty.
+rebuilding it.
 
 **Preconditions.** An atlas exists, and its index carries a build provenance
-line. No provenance means no drift set can be computed — offer a full rebuild, or
+line. With no provenance, no drift set can be computed — offer a full rebuild, or
 a refresh scoped to modules the user names by hand.
 
 **Decisions are not re-asked.** Working language, delivery policy, reporting
@@ -597,9 +552,8 @@ decision only if the user raises it.
 
 - `git diff --name-only <recorded-commit>..HEAD` when the commit is reachable.
 - When it is not (rebased, squashed, shallow clone), fall back to
-  `git log --since=<recorded-date> --name-only --pretty=format:` and say so —
-  that form over-reports, and the user should know the scan is wider than
-  necessary rather than wonder why it cost more.
+  `git log --since=<recorded-date> --name-only --pretty=format:` and tell the
+  user — that form over-reports.
 - Apply the same Scan Boundaries exclusions as a build. A refreshed lockfile or a
   rebuilt `dist/` is not module drift.
 
@@ -613,39 +567,28 @@ decision only if the user raises it.
 | removed | the module's whole scope is gone from the tree | delete the doc, drop it from the index |
 | untouched | everything else | do not re-scan, do not re-read, do not rewrite |
 
-Untouched modules are the entire point. Leave their docs byte-identical — a
-refresh whose diff touches every module doc has silently become a rebuild that
-also lost the user's chance to review it as one.
+Leave untouched docs byte-identical.
 
-**Unmapped files are the signal, not the noise.** They mean a new module was
-added, an existing module's scope grew past what its doc claims, or a boundary
-moved. That is a judgement the lead makes centrally and confirms with the user;
-it is never inferred by a scanning subagent, which sees only its own module.
+**Unmapped files** mean a new module was added, an existing module's scope grew
+past what its doc claims, or a boundary moved. The lead resolves this centrally
+and confirms it with the user; never let a scanning subagent infer it.
 
 **Escalate to a full rebuild** — after saying why and getting agreement — when
 there is no usable provenance, when more than roughly half the modules come back
 stale, or when the drift is in the boundaries themselves rather than inside them.
-A refresh that touches most of the atlas costs more than a rebuild and produces a
-worse result, because each subagent still reasons from a module split that the
-restructure already invalidated.
 
-**What a refresh never touches:** the Architecture Decisions table (decisions are
-not scan output), anything under `docs/changes/`, and the adapters — unless the
-index's recorded format version is behind the current one, or the user changed a
-decision this run. Adapters carry no per-module content, so no scan result can
-invalidate them.
+**What a refresh never touches:** the Architecture Decisions table, anything
+under `docs/changes/`, and the adapters — unless the index's recorded format
+version is behind the current one, or the user changed a decision this run.
 
 **Provenance is rewritten last**, to the current date and `HEAD`, and only after
-verification passes. An atlas that records a refresh it did not finish will skip
-the unfinished modules on the next run.
+verification passes.
 
 ## Entrypoint Adapters
 
 Every initialization or rebuild generates **a pair** of adapters — one lead, one
 worker — for each confirmed platform. Never generate a lead adapter without its
-worker: a project with only a lead adapter is exactly the single-agent design
-this contract replaced, and an implementation agent handed a package will load
-the lead adapter and start managing the project instead of doing the work.
+worker.
 
 ### Platform Adapters (when selected)
 
@@ -674,12 +617,10 @@ English shown here):
   <project-slug>-atlas.`
 
 The two adapters commonly run on different platforms — the lead where the human
-works, the worker wherever the implementation agent runs. Generating the pair for
-every selected platform costs nothing and keeps either arrangement possible.
+works, the worker wherever the implementation agent runs. Generate the pair for
+every selected platform regardless.
 
-The descriptions carry the role boundary because a description is the only part
-of a skill an agent sees before deciding to load it. Each must name the sibling
-skill so a mis-triggered load self-corrects on the first line.
+Each description must name the sibling skill.
 
 Set `{{PROJECT_NAME}}`, `{{PROJECT_SLUG}}`, `{{DELIVERY_POLICY}}`, and
 `{{REPORTING_LEVEL}}` in both. Set `{{INDEX_FILE}}` in the lead adapter only, to
@@ -695,12 +636,9 @@ the relative path from its directory to the index (e.g.
 - Generate these only when Step 3's platform confirmation produced no
   platform-specific adapter — the user chose "None — skip adapter generation,"
   or platform detection was inconclusive and the user picked no platform. When
-  at least one platform adapter pair exists, that platform loads its own
-  adapters automatically; the generic `docs/` copies would then be duplicates
-  that nothing loads and no workflow keeps in sync, so skip them. Generate both
-  forms only if the user explicitly says they also need a plain-markdown
-  entrypoint alongside a platform adapter (e.g. for a tool without skill
-  support).
+  at least one platform adapter pair exists, skip them. Generate both forms only
+  if the user explicitly asks for a plain-markdown entrypoint alongside a
+  platform adapter.
 - **Cleanup:** on any initialization or rebuild, if generic adapter files exist
   from a prior run — including the pre-split single `docs/<project>_adapter.md`
   — and at least one platform adapter exists or is being generated this run,
@@ -709,8 +647,7 @@ the relative path from its directory to the index (e.g.
 ### Do Not Force-Load The Skill
 
 Do not write a "run the atlas skill before every operation" mandate into
-`CLAUDE.md`, `AGENTS.md`, or any always-on config. Each skill's `description`
-lets an agent discover it when a task actually needs it. At most, add a single
+`CLAUDE.md`, `AGENTS.md`, or any always-on config. At most, add a single
 plain-language pointer line noting that the navigation map lives at
 `docs/<project>_index.md`, and only if that file does not already say so.
 
@@ -719,8 +656,7 @@ plain-language pointer line noting that the navigation map lives at
 - Be self-contained for their role, per the Lead and Worker Adapter Requirements
   above. Do not point to separate workflow docs, and do not point at each other
   for content — only for role handoff.
-- Open with the role check, so a mis-triggered load costs one line instead of a
-  polluted repository.
+- Open with the role check.
 - Include the reporting level, and the delivery policy or the fact that delivery
   is the lead's.
 - Be included in delete-and-rebuild detection during Step 1 of a rebuild.

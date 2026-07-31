@@ -1,39 +1,25 @@
 # Codebase Atlas
 
 Codebase Atlas is a small Markdown protocol for creating a durable navigation
-layer for a repository. It scans a project once, writes a compact atlas under
-`docs/`, and gives future agents role-split entrypoints that route ordinary work
-before editing code.
+layer for a repository. It scans a project once, writes an atlas under `docs/`,
+and gives future agents role-split entrypoints that route ordinary work before
+editing code.
 
-## Design Manifesto
+## Rules
 
-AI agents should not treat a repository as a disposable search space on every
-task. They should inherit a durable map, use it to reason about ownership and
-impact, and only then propose a change.
-
-Codebase Atlas is built around six principles:
-
-- **Map before edit**: future work starts from the atlas, not from a blind file
-  search.
-- **Initialize once, reuse often**: a strong initialization pass creates context
-  that ordinary follow-up work can reuse.
-- **Refresh, don't rebuild**: a map that drifted in two modules does not justify
-  re-scanning twenty. The index records the commit it was built from, so a later
-  run can compute exactly what went stale.
-- **Human confirmation matters**: code-changing workflows must explain the
-  plain Before / After state before editing — and that gate belongs to the agent
-  a human is actually reading.
-- **Split by role, not by activity**: a lead agent understands, decides,
-  specifies, reviews, and writes the record; an implementation agent explores,
-  builds, tests, and reports. Anything else turns the implementer into a project
-  manager, or the manager into a distracted implementer.
-- **The specification is the leverage**: the lead is not present while the work
-  happens, so the task package is its only instrument. Acceptance criteria that a
-  stranger can check are worth more than any amount of supervision.
-- **Complete, bounded plans**: agents should avoid shortcut-oriented local
-  patches and instead propose a coherent scope that actually solves the problem.
-- **Markdown over infrastructure**: the atlas stays readable, reviewable,
-  versionable, and portable across tools.
+- **Map before edit**: work starts from the atlas, not from a blind file search.
+- **Initialize once, refresh after**: the index records the commit it was built
+  from, so a later run re-scans only the modules that drifted.
+- **Before / After before any change**: stated by the agent the human is reading,
+  never agent-to-agent.
+- **Split by role**: the lead understands, decides, specifies, reviews, and
+  writes the record; the implementation agent explores, builds, tests, and
+  reports.
+- **The lead never edits code**: no size exemption, no escape hatch.
+- **Acceptance criteria a stranger can check**: the lead is absent while the work
+  happens, so the package carries the whole contract.
+- **Complete, bounded plans**: no shortcut-oriented local patches.
+- **Markdown over infrastructure**: readable, reviewable, versionable, portable.
 
 ## What It Creates
 
@@ -65,23 +51,19 @@ Two entrypoints, split by role:
   or atlas docs, and never commits.
 
 Generic `docs/*_adapter.md` copies are generated only when no platform adapter
-exists — a platform adapter is loaded automatically by its platform, so the
-generic pair would otherwise sit unused.
+exists.
 
 ## The Handoff
 
 **The handoff is human-mediated.** The lead does not spawn the worker. It writes
 a task package to a file, tells you where it is, and stops. You hand that file to
 your implementation agent. You bring the result back. There is no dispatch, no
-concurrency, no scheduling — the unit of delegation is a file a person copies.
+concurrency, no scheduling.
 
-**The lead never edits code.** No size exemption: a typo leaves as a task
-package like everything else. Strong implementation capacity is cheap, so the
-tokens a lead saves by editing directly are the least valuable ones in the loop —
-and a lead that edits becomes the author of the code it is supposed to review,
-which is the one check that cannot be recovered afterwards. It reads, it runs
-read-only checks, it re-runs a verification that decides acceptance; a failure
-there is a gap to return, not something to fix.
+**The lead never edits code.** No size exemption: a typo leaves as a task package
+like everything else. It reads, runs read-only checks, and re-runs a verification
+that decides acceptance; a failure there is a gap to return, not something to
+fix.
 
 ```text
 You       → state the need
@@ -101,36 +83,29 @@ Lead     11. final acceptance, then deliver
 The **task package** (`atlas/v2`) carries goal, why, the solution boundary,
 starting points, scope, what must be preserved, what is forbidden, acceptance
 criteria, required tests, and the evidence to bring back. `Must Preserve` and
-`Forbidden` are normally copied straight out of the owning module doc's **Do Not
-Do** and **Known Risks** — which is why those sections are written the way they
-are. It is the same file as the plan; there is no second document to keep in
-sync.
+`Forbidden` are copied straight out of the owning module doc's **Do Not Do** and
+**Known Risks**. It is the same file as the plan.
 
-Three rules make the loop hold:
+Three rules hold the loop together:
 
-- **Acceptance is the whole contract.** The lead is absent while the work
-  happens and cannot correct course, so every acceptance item must be checkable
+- **Acceptance is the whole contract.** Every acceptance item must be checkable
   by someone who was not in the conversation — an exact command with an expected
   result, or an observable behaviour. "Works correctly" is not one.
-- **Evidence, not claims.** The worker pastes command output. A claim that a
-  check passed is exactly what the review exists to test, so it cannot also be
-  the thing reviewed.
+- **Evidence, not claims.** The worker pastes command output, never a summary of
+  it.
 - **Single writer.** Only the lead writes atlas docs, plans, completed folders,
   and summaries. A worker that finds the map wrong reports it upward.
 
-Because only one agent is ever active on the tree, whoever holds it owns it: the
-worker runs its own build, suite, and migrations while implementing, and there is
-nothing to negotiate.
+Only one agent is active on the tree at a time, and whoever holds it owns it: the
+worker runs its own build, suite, and migrations while implementing.
 
 Role is resolved from the instructions, not from the environment: an explicit
 `ROLE: worker` header wins, no header means lead, and a governance write gate
-blocks the damaging case either way.
+backstops both.
 
-**Returning work** names gaps and nothing else, and says so explicitly —
-"everything else is accepted, change nothing outside these points." Without that
-line a capable agent asked to fix two things will improve five, and the review
-starts over. Two returns maximum; a third means the package was wrong, so it is
-withdrawn and reissued rather than patched.
+**Returning work** names gaps and nothing else, ending with the required line
+"everything else is accepted, change nothing outside these points." Two returns
+maximum; on a third the package is withdrawn and reissued rather than patched.
 
 ## How It Works
 
@@ -155,8 +130,7 @@ withdrawn and reissued rather than patched.
 ## Refresh vs Rebuild
 
 Every generated index records a build provenance line: the date it was built,
-the commit it was built from, and the atlas format version. That line is what
-makes a cheap update possible.
+the commit it was built from, and the atlas format version.
 
 - **Refresh** — for an atlas that has drifted. Diff the recorded commit against
   `HEAD`, map the changed files onto modules through each module doc's scope, and
@@ -165,18 +139,13 @@ makes a cheap update possible.
   hand-added notes survive. Untouched docs are left byte-identical, the
   Architecture Decisions table is not touched, and adapters are regenerated only
   when the recorded format version is behind the current one. The plan is
-  confirmed with the user before any subagent runs — a refresh rewrites docs
-  people rely on.
+  confirmed with the user before any subagent runs.
 - **Rebuild** — for an atlas whose *structure* is wrong: no usable provenance,
   most modules stale, or a restructure that invalidated the module split itself.
-  A refresh over most of the atlas costs more than a rebuild and produces a worse
-  result, because each subagent still reasons from a split the restructure
-  already broke.
 
-*Unmapped* files are the interesting class: a changed file that belongs to no
-module's scope means a new module appeared or a boundary moved. That judgement is
-made centrally and confirmed with the user, never inferred by a scanning subagent
-that can only see its own module.
+An *unmapped* file — one that belongs to no module's scope — means a new module
+appeared or a boundary moved. That judgement is made centrally and confirmed with
+the user, never inferred by a scanning subagent.
 
 ## Modes
 
@@ -209,33 +178,23 @@ lead adapter, which reads the index and handles the task itself:
   explicit evidence requirements), ending in a task package you hand over.
 
 Neither adapter is force-loaded on every conversation. Their skill
-`description`s make them discoverable when a task needs them, so unrelated
-conversations pay no context cost — and each description names the sibling
-skill, so a mis-triggered load self-corrects on the first line.
+`description`s make them discoverable when a task needs them, and each names the
+sibling skill so a mis-triggered load self-corrects on the first line.
 
 Code-changing work uses a plain Before / After gate as the user-facing
-checkpoint. Supporting analysis may guide the agent, but it must not replace the
-Before / After explanation.
+checkpoint. Supporting analysis may guide the agent, but must not replace it.
 
 ## Cost
 
-The lead is alive across the whole loop and its context only grows, so that is
-where the money goes. Three rules cover it.
-
 **While the package is out, the lead does nothing** — no `git status`, no diff
-inspection, no progress narration, no speculative reading. The work is happening
-in another process that will report when it is done, and "not finished yet" is
-the whole of what any check could return. Each idle turn re-sends a growing
-context to buy that non-answer. This is the single largest avoidable cost.
+inspection, no progress narration, no speculative reading. It waits for you to
+bring back the report.
 
-**Specify once, completely.** The lead's one shot at the outcome is the package.
-Time spent making acceptance criteria checkable is the cheapest spend in the
-loop; every round trip after that costs your attention as well as tokens — and
-your attention is the scarce resource here, not tokens.
+**Specify once, completely.** Spend the effort on making acceptance criteria
+checkable, before the handoff.
 
 **Review once, in a batch.** One pass over the whole returned change, one list of
-gaps. Reviewing partially and returning twice doubles the number of times you
-have to carry something across.
+gaps.
 
 ## Skill Files
 
