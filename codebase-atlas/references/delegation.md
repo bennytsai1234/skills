@@ -55,9 +55,21 @@ turn begins from what it is given, not from a poll.
   daily summaries, architecture decisions.
 - Final acceptance and delivery.
 
-The lead does not write production code as part of this loop. If the human asks
-it to make a small edit directly, that is the human's call to make, not a
-shortcut the lead takes on its own.
+**The lead never edits source code or tests.** Not a typo, not a one-line
+constant, not "while I'm in there." Every code change leaves as a task package,
+however small.
+
+This is a hard rule rather than a preference, for three reasons. Strong
+implementation capacity is cheap now, so the tokens a lead saves by editing
+directly are the least valuable tokens in the loop. A lead that edits becomes the
+author of the code it is supposed to review, and self-review is the one check
+that cannot be recovered later. And a boundary with a size exemption has no
+boundary — "small enough to just do" is a judgement made by the party who
+benefits from making it, and it ratchets.
+
+The lead does read code, run read-only checks, and re-run a verification whose
+result decides acceptance. When one of those fails, that is a gap to return, not
+something to fix.
 
 **Worker** — a strong implementation agent, run by the human against one task
 package. It owns:

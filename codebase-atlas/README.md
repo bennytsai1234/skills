@@ -75,6 +75,14 @@ a task package to a file, tells you where it is, and stops. You hand that file t
 your implementation agent. You bring the result back. There is no dispatch, no
 concurrency, no scheduling — the unit of delegation is a file a person copies.
 
+**The lead never edits code.** No size exemption: a typo leaves as a task
+package like everything else. Strong implementation capacity is cheap, so the
+tokens a lead saves by editing directly are the least valuable ones in the loop —
+and a lead that edits becomes the author of the code it is supposed to review,
+which is the one check that cannot be recovered afterwards. It reads, it runs
+read-only checks, it re-runs a verification that decides acceptance; a failure
+there is a gap to return, not something to fix.
+
 ```text
 You       → state the need
 Lead      1. understand the project and the need

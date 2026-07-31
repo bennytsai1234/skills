@@ -74,8 +74,13 @@ complete.
 
 - The lead adapter opens by stating that it specifies and reviews but does not
   implement, and that it never spawns the worker — the package is a file the
-  human carries across. Its one exception is an explicit user request to edit
-  directly.
+  human carries across.
+- The non-implementing rule is stated as absolute, with **no size exemption and
+  no documented escape hatch**. An adapter that says the lead may edit "when the
+  change is trivial" or "if the user asks" has reintroduced the behaviour the
+  rule exists to prevent. What the lead may still do is read code, run read-only
+  checks, and re-run a verification that decides acceptance — with an explicit
+  statement that a failing check is a gap to return, not something to fix.
 - The lead adapter opens with a role check that hands off to
   `<project-slug>-worker` when invoked with a `ROLE: worker` package header;
   the worker adapter opens with the mirror check pointing back at

@@ -322,6 +322,9 @@ before asking for configuration decisions:
     not launch anything. It explores the code, makes the change, writes and runs
     the tests, and reports back. Then I review it against the package and either
     accept or send back a short list of precise gaps.
+
+    I never edit the code myself, including for changes that look trivial. That
+    keeps whoever writes the code and whoever reviews it as two different agents.
     ```
 
     There is no model decision to make: the implementation agent is whichever one

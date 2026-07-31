@@ -361,9 +361,13 @@ own change has not finished it.
 The lead adapter is the entrypoint for the agent talking to a human. It specifies
 and reviews; it does not implement and it does not dispatch. It must:
 
-- **State the non-implementing role** up front: the lead's output is a task
-  package the human carries to an implementation agent, not code. It may edit
-  directly only when the user explicitly asks it to.
+- **State the non-implementing role** up front, as a hard rule with no size
+  exemption: the lead's output is a task package the human carries to an
+  implementation agent, never code. It does not edit source or tests — not a
+  typo, not a one-line constant. It may read code, run read-only checks, and
+  re-run a verification that decides acceptance; when one fails, that is a gap to
+  return, not something to fix. The adapter must not offer an escape hatch: a
+  documented exception is an exception that gets used.
 - **Role check** first: hand off to the worker adapter if invoked with a
   `ROLE: worker` package header, and state the governance write gate.
 - **Entry / router**: preserve the request; read the index once; confirm in one
