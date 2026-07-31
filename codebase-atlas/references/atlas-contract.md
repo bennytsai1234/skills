@@ -474,8 +474,8 @@ that, the package was written wrong.
 **The plan file and the task package are the same file.** There is no separate
 spec to keep in sync.
 
-Every tier writes one. What differs is what happens to it afterwards: T0's is
-deleted on completion, T1 and T2 are archived with a summary line.
+Every tier writes one. On completion, every package is archived with a summary
+line; no completed package is deleted.
 
 **Lead-only.** Everything under `docs/changes/` is a governance file. A worker
 never creates a plan, a dated folder, a completion doc, or a summary line —
@@ -503,10 +503,9 @@ docs/changes/
 1. After the Before/After is confirmed, write the package to
    `planning/{{DATE}}-{{SLUG}}.md`, then tell the user it is ready and where it
    is. Append each review `## Gaps` list to the same file.
-2. On completion at T1/T2, move it to `completed/{{DATE}}/{{SLUG}}.md` (create the
-   date folder if missing). No copy is left behind in `planning/`. At T0, delete
-   it instead.
-3. At T1/T2, in the same step, append one line for the change to
+2. On completion at any tier, move it to `completed/{{DATE}}/{{SLUG}}.md` (create
+   the date folder if missing). No copy is left behind in `planning/`.
+3. In the same step, append one line for the change to
    `completed/{{DATE}}/summary.md` (create it if missing), newest last:
 
    ```text

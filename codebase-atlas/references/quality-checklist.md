@@ -141,8 +141,9 @@ complete.
 - The package is written to `docs/changes/planning/{{DATE}}-{{SLUG}}.md`
   (`{{DATE}}` = ISO `YYYY-MM-DD`) — the same file serves as plan and handoff
   artifact — and the lead then tells the user it is ready and where it is. On
-  completion at T1/T2 it moves to `docs/changes/completed/{{DATE}}/{{SLUG}}.md`
-  with an entry appended to that day's summary; at T0 it is deleted.
+  completion at every tier it moves to
+  `docs/changes/completed/{{DATE}}/{{SLUG}}.md` with an entry appended to that
+  day's summary; no completed package is deleted.
 - The Before / After gate is stated as lead-only, happening between the lead and
   the human and never agent-to-agent.
 - Review is specified in order — requirement conformance against pasted evidence

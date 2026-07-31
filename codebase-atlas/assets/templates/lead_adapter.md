@@ -200,12 +200,13 @@ affected atlas doc(s) now, as part of this same completion step — not a
 follow-up. Update only the affected module docs and index entries; do not rescan
 unrelated modules.
 
-Then, at T1/T2, move the package to `docs/changes/completed/{{DATE}}/{{SLUG}}.md`
-and append one line to that day's `docs/changes/completed/{{DATE}}/summary.md`,
-noting whether atlas docs were updated or that none needed updating. Record
-decisions, divergences from the package, known limits, and remaining debt. Do not
-record a step-by-step operation log, a restatement of the diff, or the worker's
-narrative. At T0, delete the package instead of archiving it.
+Then, at every tier, move the package to
+`docs/changes/completed/{{DATE}}/{{SLUG}}.md` and append one line to that day's
+`docs/changes/completed/{{DATE}}/summary.md`, noting whether atlas docs were
+updated or that none needed updating. Record decisions, divergences from the
+package, known limits, and remaining debt. Do not record a step-by-step operation
+log, a restatement of the diff, or the worker's narrative. Never leave a completed
+package in `planning/`.
 
 You are the single writer for all of these files. A worker never writes them.
 
