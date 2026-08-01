@@ -40,8 +40,7 @@ dispatch the next" is a good default.
 
 ## Dispatch
 
-One subagent per task package, with model and reasoning set explicitly — never
-left to inheritance:
+One subagent per task package, with model and reasoning set explicitly:
 
 ```json
 { "model": "gpt-5.6-luna", "reasoning_effort": "max" }
@@ -50,9 +49,8 @@ left to inheritance:
 The field is `reasoning_effort`, not `thinking`. Spawning is non-blocking and
 returns an `agent_id`; keep every id, because waiting is done by id.
 
-Hand over the task package and nothing else — no chat history, no other package,
-no commentary of your own. Adding to it only creates a second, weaker
-specification.
+Hand over the task package alone. Adding chat history, another package, or your
+own commentary creates a second, weaker specification.
 
 ## Wait
 
@@ -84,7 +82,7 @@ remains, until the list is empty.
 not yours to invoke — the human starts you in it, and you work fine without it.
 Never apply it to a subagent.
 
-**While a subagent is in flight, leave the work alone.** That covers three
+**While a subagent is in flight, the work belongs to it.** That covers three
 things: the shared tree (no `git status`, no diff inspection, no build or test),
 the subagent (no progress query), and the schedule (no re-dispatch of a task
 that may still be running).
@@ -101,7 +99,7 @@ scheduling, not interference.
 ## Accept
 
 A subagent's report is a claim, not a result — and you dispatched the work, so
-you are biased toward believing it. Never accept on text alone:
+you are biased toward believing it. Acceptance re-runs the decisive checks:
 
 - Re-run the decisive acceptance commands yourself and read the real output.
 - Read the diff. Does it match the goal, or only make the check pass?
@@ -125,7 +123,7 @@ When acceptance fails, hand the package back naming **only** the gaps:
 Everything else is accepted. Change nothing outside these points.
 ```
 
-The last line is required. Do not restate the task or resend the package.
+The last line is required. The gaps list is the whole return.
 
 ## When a package cannot be executed as written
 
@@ -153,15 +151,18 @@ Per package, after acceptance, in this order:
      API/contract.
    - Known limits, remaining debt, residual risk.
 2. **Move** it to `docs/changes/completed/{{DATE}}/{{SLUG}}.md` (`{{DATE}}` =
-   completion date, ISO `YYYY-MM-DD`). Create the folder if needed. Leave nothing
-   in `planning/`, and never delete a completed package — the archive is the
-   project's work history.
+   completion date, ISO `YYYY-MM-DD`). Create the folder if needed. The archive
+   is the project's work history: completed packages stay archived, and
+   `planning/` holds only open work.
 3. **Append** one line to `docs/changes/completed/{{DATE}}/summary.md`, newest
    last — after the move, never before, so nothing it says is already stale.
 4. **Commit and push**, with code and change-record files in the same commit.
 
-After the last package: run the plan's `Shared Verification` over the merged
-tree, then report.
+After the last package: move the dispatch plan to
+`docs/changes/completed/{{DATE}}/{{SLUG}}-dispatch-plan.md` alongside the
+packages — the archive keeps the batch structure, and `planning/` holds only
+pending batches. Then run the plan's `Shared Verification` over the merged tree,
+and report.
 
 The atlas (`docs/*_index.md`, `docs/<project>/*.md`), Architecture Decisions
 rows, and new task packages belong to the planning tier. Report boundary and

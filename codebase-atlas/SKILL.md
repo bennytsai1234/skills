@@ -20,8 +20,11 @@ Keep this skill simple:
 
 - Generated Markdown under `docs/` is the canonical atlas.
 - References define the rules; templates define the output shape.
-- Do not add runtime assumptions, helper scripts, or product-specific behavior
-  to this skill.
+- This skill contains only rules, references, and templates — no runtime
+  assumptions, helper scripts, or product-specific behavior.
+- Two principles govern the design: avoid over-design — only what a task needs,
+  nothing speculative; and avoid defensive design — ownership and intent over
+  prohibition lists.
 - Delegate the per-module scan/draft pass and the per-file verify/fix pass to
   subagents run in parallel (Agent tool). Keep module-boundary judgment, the
   index, and adapter generation centralized.
@@ -71,7 +74,8 @@ Before outputting anything, scan only for old Codebase Atlas artifacts:
 1. Detect whether old atlas docs exist under `docs/`.
 2. Detect whether generated Codebase Atlas entrypoints exist under `.agents/`
    or other configured prompt or skill directories.
-3. Detect existence only. Do not deeply read old atlas content.
+3. Detect existence only — deep reading of old atlas content waits until the
+   user asks to preserve part of it.
 4. If old atlas docs or generated entrypoints exist, record them, and read one
    thing out of the existing index: its build provenance line. This is the only
    exception to "existence only" in item 3.
@@ -92,11 +96,10 @@ Before outputting anything, scan only for old Codebase Atlas artifacts:
    - Any "run the atlas skill before every operation" mandate that a previous
      atlas wrote into `CLAUDE.md` or `AGENTS.md` (remove only that block, not
      the whole file).
-7. Never delete `docs/changes/`. Plans, completed folders, and daily summaries
-   are accumulated work history, not atlas output — a rebuild replaces the map,
-   not the record of what was done to the project. Likewise, do not delete
-   unrelated `.agents/` content or any file whose Codebase Atlas origin cannot
-   be confirmed.
+7. `docs/changes/` is accumulated work history, not atlas output — a rebuild
+   replaces the map, not the record of what was done to the project. Deletions
+   are limited to files whose Codebase Atlas origin is confirmed; unrelated
+   `.agents/` content is left alone.
 8. If the user wants to preserve any part, read only the parts the user asked
    to preserve after the user gives preservation instructions.
 9. Detect whether a `.claude/` directory exists at the project root. If found,
@@ -190,11 +193,11 @@ before asking for configuration decisions:
    - The selected working language and why it was selected.
    - Recommended values for the initial decisions.
 5. Present the initial decisions as plain-language questions in the working
-   language. Do not expose internal setting names such as `mode`,
-   `delivery_policy`, `reporting_level`, `platform_targets`,
-   `reference_template_mode`, or `feature_parity` to the user. For each
-   decision, include the question the user needs to answer, the recommended
-   value, and why that value is recommended.
+   language. Internal setting names such as `mode`, `delivery_policy`,
+   `reporting_level`, `platform_targets`, `reference_template_mode`, or
+   `feature_parity` stay internal. For each decision, include the question the
+   user needs to answer, the recommended value, and why that value is
+   recommended.
 6. Present the reference-template decision in this plain-language shape,
    translated into the working language:
 
@@ -211,8 +214,8 @@ before asking for configuration decisions:
    error-handling approach.
    ```
 
-   Do not use the term "feature parity" in user-facing explanations. Keep that
-   term, if needed, for internal reasoning only.
+   The term "feature parity" stays internal; user-facing explanations describe
+   the choice in plain language.
 7. Present the reporting-level decision in this plain-language shape,
    translated into the working language:
 
@@ -347,16 +350,16 @@ what it will skip.
 2. Run the language detection, old-atlas detection, introduction, and pre-scan
    above, then resolve the initial decisions with the user.
 3. Inspect the target repository yourself, but only shallowly: manifests,
-   top-level directories, README/config, and existing docs. This pass exists
-   only to propose candidate module boundaries — do not deep-read individual
-   source files here; that happens per module in Step 6.
+   top-level directories, README/config, and existing docs. This pass proposes
+   candidate module boundaries; deep reading of individual source files happens
+   per module in Step 6.
 4. Read `references/modes.md` and follow either standalone or
    reference-assisted guidance.
 5. Propose the module split from the shallow pass, using change-boundary
    quality, not a hard module count. Treat this split as provisional: a
    scanning subagent in Step 6 may report that its module should merge with
-   another or split further. When that happens, adjust the split and
-   reconcile — do not force the subagent's file to fit a wrong boundary.
+   another or split further. When that happens, adjust the split and reconcile —
+   the boundary follows what the scan found.
 6. Scan and draft in parallel. Dispatch one subagent per candidate module
    (Agent tool, `general-purpose`, all dispatches in one message so they run
    concurrently) to deep-scan that module's scope and write its module doc
@@ -370,17 +373,17 @@ what it will skip.
    - The "Scan Boundaries" exclusions from `references/atlas-contract.md`
      (ignore `node_modules/`, build output, vendored code, etc.).
    - The working language from Step 0 and the reporting level from Step 3.
-   - An instruction to ground every claim in committed files and write real
-     uncertainty as `TODO` rather than inventing content, and to avoid file
-     inventories in favor of routing-oriented notes.
+   - An instruction to ground every claim in committed files, write real
+     uncertainty as `TODO`, and prefer routing-oriented notes over file
+     inventories.
    - The exact output path to write: `docs/<project>/<module_slug>.md` (or the
      reference-assisted `docs/<project>_<reference>/<module_slug>.md`). Forward
-     slashes, even on Windows. One subagent writes exactly one file — never
-     let two subagents target the same path.
+     slashes, even on Windows. One subagent writes exactly one file, on a path
+     no other subagent targets.
 
    These prompts are build-time instructions, not the `atlas/v3` task packages
-   the generated workflow uses. Keep them to what the subagent cannot derive, and
-   do not paste this conversation into them.
+   the generated workflow uses. They carry only what the subagent cannot derive;
+   the conversation is not pasted into them.
    After all module subagents return, read their brief findings (not the full
    file contents) to reconcile the module list per Step 5's provisional-split
    note. Then draft `index.md` yourself from the reconciled module list and
@@ -395,8 +398,9 @@ what it will skip.
    investigate/change discipline, Decision Gate, Before/After gate, package and
    dispatch-plan authoring, review, atlas writes), a relay adapter (ordering,
    dispatch, waiting, acceptance, completion records, commits), and a worker
-   adapter (implementation only). Never generate a partial set — without the relay
-   adapter, acceptance and archival strand whenever the human does not return.
+   adapter (implementation only). The set is generated together — without the
+   relay adapter, acceptance and archival strand whenever the human does not
+   return.
    - If Claude Code was selected: create
      `.claude/skills/<project-slug>-{atlas,relay,worker}/` if needed, then
      generate `SKILL.md` in each from `assets/templates/lead_adapter.md`,
@@ -428,10 +432,9 @@ what it will skip.
    - Render each adapter's `description` in the Step 0 working language, and keep
      the cross-references in it: every description names **both** sibling skills,
      so an agent that loaded the wrong one self-corrects on the first line.
-   - Do **not** write a forced "run the atlas skill before every operation"
-     mandate into `CLAUDE.md` or `AGENTS.md`. At most, if the file has no pointer
-     to the atlas, add a single plain-language line noting the navigation map
-     lives at `docs/<project>_index.md`. Render it in the Step 0 working language.
+   - `CLAUDE.md` or `AGENTS.md` get at most a single plain-language line noting
+     the navigation map lives at `docs/<project>_index.md`, added only when the
+     file has no pointer to the atlas. Render it in the Step 0 working language.
    - If a rebuild detects existing adapter files, include them in the
      delete-and-rebuild confirmation (Step 1) before overwriting.
 8. Verify and fix in parallel. Dispatch one subagent per generated file — the
@@ -494,7 +497,7 @@ drift classification this workflow executes.
    and in plain terms: which modules will be re-scanned, which unmapped files
    turned up and what you propose to do with them (fold into an existing module,
    or open a new one), which module docs will be deleted, and how many modules
-   stay untouched. Never run a refresh unconfirmed.
+   stay untouched. Confirmation comes before any subagent runs.
 
    If more than roughly half the modules come back stale, or the drift is in the
    boundaries rather than inside them, recommend a full rebuild instead and say
@@ -507,16 +510,15 @@ drift classification this workflow executes.
    path). Add one line the initialization prompt does not carry: the existing
    module doc's path, with an instruction to **update it in place** — preserve
    project-specific notes that are still true, and rewrite only what the code
-   changed. Never regenerate a module doc from zero on a refresh.
+   changed.
 6. Update the index yourself, centrally, and only where it changed: add, remove,
    or rewrite the affected module links and summaries, and leave every untouched
    module's summary byte-identical. Delete the docs of removed modules. Do not
    touch the Architecture Decisions table.
 7. Regenerate the adapters only when the index's recorded format version is
    behind the current one in `references/atlas-contract.md`, or when the user
-   changed a decision this run. Otherwise leave them alone. If you do regenerate,
-   generate the full set of three per Initialization Step 7 — never a partial
-   set.
+   changed a decision this run. If you do regenerate, generate the full set of
+   three per Initialization Step 7.
 8. Verify only what this run wrote: one verification subagent per written file,
    same prompt shape as Initialization Step 8, then the centralized cross-file
    pass from `references/quality-checklist.md` → Refresh. Run that cross-file
@@ -529,8 +531,8 @@ drift classification this workflow executes.
 
 ## Core Rules
 
-- Do not blindly overwrite existing atlas docs. Preserve useful project-specific
-  notes and remove stale boundaries during rebuilds.
+- Preserve useful project-specific notes and remove stale boundaries when
+  overwriting atlas docs during rebuilds.
 - Generated docs must describe repository-persistent facts, not facts about the
   current agent, model, editor, shell, chat session, or temporary workspace.
 - Code-changing work must state a plain Before / After before any task package is

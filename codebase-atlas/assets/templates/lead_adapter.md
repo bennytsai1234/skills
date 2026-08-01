@@ -39,13 +39,14 @@ upward instead.
 1. Preserve the user's original request.
 2. Read `{{INDEX_FILE}}` once, then confirm in one plain sentence what this
    project does.
-3. Pick only the relevant module doc(s) from the index — never read them all. If
-   unfamiliar with the area, zoom out to the module map first, then narrow.
+3. Pick the relevant module doc(s) from the index — read the ones the task
+   touches. If unfamiliar with the area, zoom out to the module map first, then
+   narrow.
 4. Route by intent: **know** (explain, locate, feasibility, ownership, behaviour
    check, review, reproduce, profile, CI failure, risk) → Investigate; **change**
    (any code edit) → Change; mixed/unclear → investigate first, then decide.
-5. Pass conclusions forward; do not reread the index or module docs across steps
-   unless you need context not yet gathered.
+5. Pass conclusions forward; reread the index or module docs only for context not
+   yet gathered.
 
 ## Investigate (read-only)
 
@@ -81,10 +82,10 @@ in this workflow — it goes straight to an execution model without a lead, a
 dispatch plan, or a package. Say so in one sentence and let the user decide. Do
 not invent a shortcut path; do not edit it yourself.
 
-**Decision Gate** — use it only when the human must decide something the code
-cannot settle, such as an external compatibility promise, schema ownership, or
-which product area owns a change. Do not use it to choose the implementation for
-the worker. Present Context / Options / Recommendation and wait for a choice.
+**Decision Gate** — for choices only the human can settle, such as an external
+compatibility promise, schema ownership, or which product area owns a change.
+Implementation for the worker is the worker's to choose. Present Context /
+Options / Recommendation and wait for a choice.
 
 For a deep or unclear decision tree, interview one question at a time, each with
 a recommended answer, before presenting options.
@@ -159,20 +160,21 @@ conversation history. No length limit. Include, when they apply:
 - Known limits of the analysis, so the worker does not chase an impossible
   standard.
 
-Do not add generic rules such as "preserve existing functionality", "use a
-reasonable architecture", or "maintain code quality". Add a constraint only when
-it records a real requirement the worker cannot infer from the repository or
-ordinary engineering judgement.
+Add a constraint only when it records a real requirement the worker cannot infer
+from the repository or ordinary engineering judgement — "preserve existing
+functionality", "use a reasonable architecture", or "maintain code quality" are
+not requirements.
 
 **Acceptance rules.** Every item must be checkable by someone who was not in this
 conversation — an exact command with an expected result, or a behaviour described
 precisely enough to disagree with. "Works correctly" is not an acceptance
 criterion. Prefer exact expected values over existence claims. Cover the negative
-case and say what a negative fixture must contain. Name what must not change. Ban
-passing by weakening — no relaxed rule, lowered threshold, loosened detector, or
-deleted assertion — and require any drop in a previously passing count to be
-explained item by item. Make an item skippable when it depends on something that
-may not exist on the execution machine, without invalidating the rest.
+case and say what a negative fixture must contain. Name what must not change.
+Passing by weakening — a relaxed rule, lowered threshold, loosened detector, or
+deleted assertion — happens only deliberately and is explained item by item, and
+so is any drop in a previously passing count. Make an item skippable when it
+depends on something that may not exist on the execution machine, without
+invalidating the rest.
 
 **Command rules.** One command per line, never an `&&` chain — Windows PowerShell
 5.1 has no `&&`. On Windows also skip inline env prefixes (`NODE_ENV=test cmd`),
@@ -182,15 +184,14 @@ forward slashes.
 
 **`Starting Points` is a map, not a fence.** The worker explores, follows the real
 data flow, and changes whatever the goal requires — including a full architectural
-correction. Restrict scope in `Constraints` only when: another package runs in
-parallel and could collide; a shared file belongs to a later cleanup package; the
-task genuinely is local; or a safety, compatibility, or governance boundary must
-hold. When two packages would conflict, schedule them serially instead of fencing
-both.
+correction. `Constraints` restrict scope when: another package runs in parallel
+and could collide; a shared file belongs to a later cleanup package; the task
+genuinely is local; or a safety, compatibility, or governance boundary must hold.
+When two packages would conflict, schedule them serially instead of fencing both.
 
-**Never** paste chat history, the index, or a full spec into a package. Do not
-prescribe the implementation when the worker can determine it from the goal and
-the code.
+A package carries only what a worker with zero conversation history needs: goal,
+background, acceptance, and constraints. Implementation the worker can determine
+from the goal and the code is left to it.
 
 ## Write the dispatch plan
 
@@ -201,6 +202,11 @@ them itself.
 Write one **even for a single package** — a package handed over alone carries a
 `ROLE: worker` header, so its receiver becomes a worker and the sequencing tier
 disappears.
+
+The dispatch plan archives with the batch: once the last package of the batch is
+accepted, it moves to `docs/changes/completed/{{DATE}}/{{SLUG}}-dispatch-plan.md`
+alongside the packages, so `planning/` holds only pending batches. A dispatch
+plan that must stay in `planning/` says so in its own Completion Protocol.
 
 ```markdown
 ---
@@ -240,8 +246,8 @@ parallelism or serialize a group, never raise it past what you permit.
 
 **Cut packages along change boundaries, not files.** A cut earns itself when it
 lets two packages run at once safely, or isolates a risky piece so its failure
-does not block the rest. It does not when the halves must be re-verified together
-anyway.
+does not block the rest. It earns nothing when the halves must be re-verified
+together anyway.
 
 **Commit and push the packages and the dispatch plan** ({{DELIVERY_POLICY}})
 before handover — the execution tier reads them out of the repository, and
@@ -254,14 +260,17 @@ while running" locally) — their action, not any agent's.
 
 ## While the batch is out
 
-Do nothing. No `git status`, no diff inspection, no speculative reading, no
-progress narration. The work is on another platform and another timeline. The
-user may never return to this conversation; that is expected, not a failure.
+The work belongs to the execution tier. No `git status`, no diff inspection, no
+speculative reading, no progress narration. The work is on another platform and
+another timeline. The user may never return to this conversation; that is
+expected, not a failure.
 
 ## Review (when results come back)
 
-The relay lead already accepted each package and recorded the outcome. Your
-review is a second pass, not the primary gate. Check in this order:
+The relay lead already accepted each package, archived the batch — packages and
+the dispatch plan together in `docs/changes/completed/{{DATE}}/` — and recorded
+the outcome. Your review is a second pass, not the primary gate. Check in this
+order:
 
 1. **Requirement conformance.** Does the change do what `Goal` asked, and does
    every `Acceptance` item hold? Verify against the `Completion record`, and
@@ -278,8 +287,8 @@ review is a second pass, not the primary gate. Check in this order:
 Everything you find at this step is a gap, including a check that fails when you
 re-run it. Do not fix it yourself.
 
-**Returning gaps.** Name gaps and nothing else. Do not re-explain the task, do
-not restate the goal, do not re-send the package.
+**Returning gaps.** Name gaps and nothing else; re-explaining the task, the goal,
+or the package adds nothing.
 
 ```markdown
 ## Gaps
@@ -304,8 +313,8 @@ modules.
 This is the one governance step that survives the user not returning to this
 conversation. Do it whenever results come back, however late.
 
-The relay lead already moved the packages to `docs/changes/completed/` and wrote
-the daily summary. Do not redo either.
+The relay lead already moved the packages and the dispatch plan to
+`docs/changes/completed/` and wrote the daily summary. Do not redo either.
 
 ## Reporting & delivery
 

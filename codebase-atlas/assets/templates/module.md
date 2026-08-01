@@ -28,11 +28,11 @@
   risk, or complex state. Record repository-specific facts and hidden constraints,
   not generic engineering advice.
 
-## Do Not Do
+## Boundaries
 
-- TODO: Explicit requirements future work cannot infer from the repository, such as
-  compatibility, schema, dependency, ownership, or deterministic-verdict rules.
-  Copy only the items relevant to a task into its `Constraints` section.
+- TODO: Repository-specific constraints future work cannot infer — compatibility,
+  schema, dependency, ownership, or deterministic-verdict rules. Copy only the
+  items relevant to a task into its `Constraints` section.
 
 <!-- Reference-assisted mode only: add a "Reference Notes" section here with useful
 reference counterparts and patterns. Omit it in standalone mode. -->

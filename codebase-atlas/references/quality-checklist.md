@@ -65,8 +65,8 @@ complete.
 - Module boundaries are stable change surfaces.
 - Module summaries route future work instead of listing files.
 - Each module doc names scope, dependencies, change entry points and routes,
-  known risks, and do-not-do boundaries.
-- Do Not Do and Known Risks contain repository-specific facts and hidden
+  known risks, and boundaries.
+- Boundaries and Known Risks contain repository-specific facts and hidden
   constraints, not generic engineering advice. A task package copies only the
   items relevant to its Goal into `Constraints`.
 - Repository facts are supported by committed files or project docs; invocation-
@@ -111,8 +111,8 @@ complete.
   explained** — a catalogue of absolute bans fails this check.
 - The worker adapter carries a concise report format whose `Verification` section
   demands pasted output rather than a claim.
-- The worker adapter says a returned `## Gaps` list is fixed exactly and nothing
-  else is touched.
+- The worker adapter says a returned `## Gaps` list is fixed exactly and
+  everything else is already accepted.
 - The lead adapter embeds the `atlas/v3` task package template inline: Goal,
   Background, objective Acceptance checks, optional explicit Constraints, optional
   Starting Points, Evidence, and an empty `Completion record`. It does not require
@@ -123,18 +123,19 @@ complete.
 - The lead adapter embeds the dispatch-plan template inline and requires one even
   for a single package.
 - The lead adapter states the acceptance rules: checkable by a stranger, exact
-  values over existence claims, the negative case, what must not change, and a ban
-  on passing by weakening.
-- The lead adapter carries the idle rule inline — while the batch is out, do
-  nothing: no `git status`, no diff inspection, no progress narration, no
-  speculative reading — and states that the user may never return.
+  values over existence claims, the negative case, what must not change, and that
+  passing by weakening is deliberate and explained.
+- The lead adapter carries the idle rule inline — while the batch is out, the
+  work belongs to the execution tier: no `git status`, no diff inspection, no
+  progress narration, no speculative reading — and states that the user may never
+  return.
 - The relay adapter waits with `wait_agent` rather than `sleep`, sets
   `timeout_ms: 3600000`, treats `timed_out: true` as "still running, wait again",
   and re-waits on remaining ids when several subagents are in flight.
 - The relay adapter attributes `/goal` to the human, never invoking it for itself
   or applying it to a subagent.
 - The relay adapter accepts by re-running the decisive checks, never on the
-  subagent's text, and never repairs a specification.
+  subagent's text, and leaves specification defects to the planning tier.
 - Model assignment appears literally as GPT-5.6-Luna, reasoning Max, in the relay
   adapter, the worker adapter, and both embedded template headers. No adapter
   contains a `MODEL_TIER` field or any other abstract tier system.
@@ -165,9 +166,11 @@ complete.
   the user which single file to hand over.
 - The completion protocol appears in order with the correct owner: the relay lead
   fills the `Completion record`, moves the package to
-  `docs/changes/completed/{{DATE}}/{{SLUG}}.md`, appends that day's summary line
-  after the move, then commits and pushes code and records together. No completed
-  package is deleted.
+  `docs/changes/completed/{{DATE}}/{{SLUG}}.md`, archives the batch's dispatch
+  plan at `completed/{{DATE}}/{{SLUG}}-dispatch-plan.md` after the last package,
+  appends that day's summary line after the move, then commits and pushes code
+  and records together. No completed package is deleted, and `planning/` holds
+  only pending batches.
 - The Before / After gate is stated as lead-only, happening between the lead and
   the human and never agent-to-agent.
 - Acceptance is specified in order and assigned to the right tier: the relay lead
@@ -247,8 +250,9 @@ centralized pass still runs in full.
    respects hard ordering while owning parallelism, dispatches with the literal
    model parameters, waits with `wait_agent` at `timeout_ms: 3600000`, treats a
    timeout as "still running", re-waits on remaining ids, accepts by re-running
-   checks, never repairs a specification, and carries the completion protocol in
-   order ending in commit and push.
+   checks, never repairs a specification, archives the dispatch plan with the
+   batch, and carries the completion protocol in order ending in commit and
+   push.
 4. Reread the worker adapter and confirm it opens with the mirror role check,
    grants exploration and implementation choice, makes the worker own the checks
    needed for acceptance including full builds and suites, states other tiers'

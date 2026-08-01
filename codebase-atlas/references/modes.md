@@ -21,8 +21,8 @@ Split the project into stable modules. Judge the split by quality:
   still cross several modules.
 - Too few modules means the boundary is not meaningful and most work starts in
   the same place.
-- Small repositories naturally have fewer modules. Do not split modules just to
-  create more files.
+- Small repositories naturally have fewer modules. Module count follows change
+  boundaries, not a target file count.
 - Large monorepos may have more modules, but prefer product or domain
   boundaries over technical-layer boundaries.
 
@@ -35,14 +35,12 @@ The reference-template decision has three modes:
 
 **A. No Reference**
 
-Use the target repository as the only source of truth. Do not inspect or apply
-external reference material.
+Use the target repository as the only source of truth.
 
 **B. Partial Reference**
 
 Use the reference only for the scope the user selected. Out-of-scope reference
-features, flows, UI, architecture, or behavior are not relevant and must not be
-treated as missing target functionality.
+features, flows, UI, architecture, or behavior are simply not part of the target.
 
 Examples of partial reference scope:
 
@@ -66,9 +64,9 @@ Rules for Partial Reference and Full Alignment:
 - Keep the target project as the primary subject unless Full Alignment
   explicitly makes reference functionality part of the target goal.
 
-Do not use the reference to:
+The target project stays the primary subject:
 
-- Add unrelated features outside the selected mode.
-- Force the target into the reference architecture unless explicitly requested.
-- Treat out-of-scope reference features as bugs.
-- Turn the reference into an open-ended backlog.
+- The reference adds only what the selected mode calls for.
+- Architecture follows the target's reality unless full alignment was requested.
+- Out-of-scope reference features are out of scope, not defects.
+- The reference stays bounded to the selected mode.

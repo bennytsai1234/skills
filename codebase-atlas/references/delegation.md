@@ -228,21 +228,21 @@ apply:
   but only by luck", since a worker skips exactly those otherwise.
 - Known limits of single-file or single-pass analysis.
 
-Do not add generic rules such as "preserve existing functionality", "use a
-reasonable architecture", or "maintain code quality". Add a constraint only when
-it records a real requirement that the worker cannot infer from the repository or
-ordinary engineering judgement.
+Add a constraint only when it records a real requirement that the worker cannot
+infer from the repository or ordinary engineering judgement — "preserve existing
+functionality", "use a reasonable architecture", or "maintain code quality" are
+not requirements.
 
 **Acceptance rules.** Every acceptance item must be checkable by someone who was
 not in the conversation — an exact command with an expected result, or an
 observable behaviour described precisely enough to disagree with. "Works
 correctly" is not an acceptance criterion. Prefer exact expected values over
 existence claims. Cover the negative case and say what a negative fixture must
-contain. Name what must not change. Ban passing by weakening — no relaxed rule,
-lowered threshold, loosened detector, or deleted assertion — and require any drop
-in a previously passing count to be explained item by item. Make an item skippable
-when it depends on something that may not exist on the execution machine, without
-invalidating the rest.
+contain. Name what must not change. Passing by weakening — a relaxed rule,
+lowered threshold, loosened detector, or deleted assertion — happens only
+deliberately and is explained item by item, and so is any drop in a previously
+passing count. Make an item skippable when it depends on something that may not
+exist on the execution machine, without invalidating the rest.
 
 **Command rules.** Write commands for the shell the worker will get. One command
 per line, never an `&&` chain — Windows PowerShell 5.1 has no `&&`. On a Windows
@@ -254,21 +254,22 @@ forward slashes, on every host.
 **`Starting Points` is a map, not a fence.** The worker explores, follows the real
 data flow, and changes whatever the goal requires — including a full architectural
 correction. Fencing a capable model into two or three files is how a proper fix
-degrades into a local patch. Restrict scope in `Constraints` only when: another
-package runs in parallel and could collide; a shared file belongs to a later
-cleanup package; the task genuinely is local; or a safety, compatibility, or
-governance boundary must hold. When two packages would conflict, run them
-serially rather than fencing both.
+degrades into a local patch. `Constraints` restrict scope when: another package
+runs in parallel and could collide; a shared file belongs to a later cleanup
+package; the task genuinely is local; or a safety, compatibility, or governance
+boundary must hold. When two packages would conflict, run them serially rather
+than fencing both.
 
-**Never** paste chat history, the index, or a full spec into a package. Do not
-prescribe the implementation when the worker can determine it from the goal and
-the code.
+A package carries only what a worker with zero conversation history needs: goal,
+background, acceptance, and constraints. Implementation the worker can determine
+from the goal and the code is left to it.
 
 ## 6. Concurrency And Waiting
 
 ### Deciding what runs in parallel
 
-Parallelism is a means, not a goal. Never widen it to keep subagents busy.
+Parallelism is a means, not a goal. It exists to shorten the batch, not to keep
+subagents busy.
 
 Parallel when packages touch disjoint code *and* will not thrash a shared
 resource. Serial when: edits could overlap; each would drive a large build in the
@@ -313,10 +314,9 @@ Codex) belongs to the **human**, who starts the relay lead in it; the relay lead
 never invokes it for itself and never applies it to a subagent. A relay lead
 started without it still works.
 
-**While a subagent is in flight, the relay lead leaves the work alone** — the
-shared tree (no `git status`, no diff inspection, no build or test), the subagent
-(no progress query), and the schedule (no re-dispatch of a task that may still be
-running).
+**While a subagent is in flight, the work belongs to it** — the shared tree (no
+`git status`, no diff inspection, no build or test), the subagent (no progress
+query), and the schedule (no re-dispatch of a task that may still be running).
 
 Re-dispatch does the real damage: two agents then edit the same files and
 overwrite each other silently, which is very hard to see in the final diff. A
@@ -384,19 +384,17 @@ If it contradicts itself, rests on a false premise, or sets an unsatisfiable
 constraint, the worker stops and reports the conflict rather than quietly
 reinterpreting the goal.
 
-The relay lead does the same, upward. It does not rewrite the goal, lower or drop
-an acceptance item, or adjust the spec to match what the implementation happens
-to do. It records the problem and its reason in the `Completion record`, stops
-that package, and continues with every package the failure does not block — so
-the least possible work is lost before the human returns. A specification defect
-belongs to the planning tier.
+The relay lead does the same, upward. It records the problem and its reason in
+the `Completion record`, stops that package, and continues with every package the
+failure does not block — so the least possible work is lost before the human
+returns. A specification defect belongs to the planning tier.
 
 ## 9. Acceptance
 
 **Relay acceptance is the primary gate**, and the only one guaranteed to happen.
 A subagent's report is a claim, not a result — and the relay lead dispatched the
 work, so it is biased toward believing it. Scale depth to what the package
-matters; never accept on text alone.
+matters; acceptance re-runs the decisive checks.
 
 - Re-run the decisive acceptance commands and read the real output.
 - Read the diff. Does it match the goal, or only make the check pass?
@@ -406,8 +404,8 @@ matters; never accept on text alone.
   justifies is fine; an unexplained one is the finding.
 - Check the report's stated risks against what the diff shows.
 
-**Returning.** A return names gaps and nothing else. Do not re-explain the task,
-do not restate the goal, do not re-send the package.
+**Returning.** A return names gaps and nothing else; re-explaining the task, the
+goal, or the package adds nothing.
 
 ```markdown
 ## Gaps
@@ -444,26 +442,31 @@ describes a state that no longer exists. Per package, after acceptance:
    last — now, not before.
 4. **Commit and push**, code and change-record files together.
 
-After the last package: run the plan's `Shared Verification` over the merged
-tree, then report the batch. The lead updates atlas docs afterward, from the
+After the last package: move the dispatch plan to
+`completed/{{DATE}}/{{SLUG}}-dispatch-plan.md` alongside the packages, so the
+completed folder holds the whole batch and `planning/` keeps only pending
+batches. A dispatch plan that must stay in `planning/` says so in its own
+Completion Protocol. Then run the plan's `Shared Verification` over the merged
+tree, and report the batch. The lead updates atlas docs afterward, from the
 `Completion record` entries that flagged a boundary, ownership, or contract
 change.
 
 ## 11. Cost And Context Discipline
 
-- **While work is out, do nothing.** No `git status`, no diff inspection, no
-  speculative reading, no progress narration — for the lead across the whole
-  batch, and for the relay lead while a subagent is in flight.
+- **While work is out, leave it to the execution tier.** Waiting is scheduling:
+  read undispatched packages, plan the order. No `git status`, no diff
+  inspection, no speculative reading, no progress narration — for the lead across
+  the whole batch, and for the relay lead while a subagent is in flight.
 - **Specify once, completely.** Spend the effort on `Background` and on making
   `Acceptance` checkable, before the handoff. A thin package makes the worker pay
   to rediscover what the lead already knew.
-- **Do not re-read what you already concluded.** Carry conclusions forward across
-  steps rather than re-reading the index at review time.
+- **Carry conclusions forward.** Move conclusions across steps instead of
+  re-reading the index at review time.
 - **Batch the review.** Review once against the whole returned change, and issue
   one list of gaps.
-- **Split by change boundary, never by file.** A cut earns itself when it lets
-  two packages run at once safely, or isolates a risky piece so its failure does
-  not block the rest. It does not when the halves must be re-verified together
+- **Split by change boundary, not by file.** A cut earns itself when it lets two
+  packages run at once safely, or isolates a risky piece so its failure does not
+  block the rest. It earns nothing when the halves must be re-verified together
   anyway.
-- **Do not multiply builds.** Several subagents each building the same tree is
+- **Serialize shared builds.** Several subagents each building the same tree is
   the most expensive way to get the least reliable answer; serialize instead.

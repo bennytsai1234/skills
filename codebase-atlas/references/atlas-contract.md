@@ -4,14 +4,17 @@ Use this contract for every Codebase Atlas initialization, rebuild, or refresh.
 
 Generated docs must be navigable and grounded in repository-persistent facts.
 
-**There is no length limit on any generated file.** Do not compress, trim, or
-summarize a doc after writing it. Write what routing a future agent requires,
-then stop.
+Two principles govern everything this skill writes: **avoid over-design** — say
+only what a future task needs, nothing speculative; and **avoid defensive
+design** — state ownership and intent rather than prohibition lists.
+
+**There is no length limit on any generated file.** Write what routing a future
+agent requires, then stop; a finished doc stands as written.
 
 What is constrained is *what kind* of content goes where: the map answers *what
 owns this, where do I start, what must I not break*; search answers *where
-exactly is it*. Keep search-answerable detail out of the map. This is a content
-rule, not a length rule.
+exactly is it*. Search-answerable detail belongs to live search, not to the map.
+This is a content rule, not a length rule.
 
 The atlas targets a **human-mediated three-tier** setup. Three entrypoints are
 generated, split by **role**:
@@ -70,10 +73,10 @@ Resolve these before the full scan:
   platform-native adapter exists — see Entrypoint Adapters → Generic Adapters.
 
 Internal decision keys are for atlas generation only. User-facing confirmation
-must present these decisions as plain-language questions in the working language,
-with the recommended value and reason. Do not expose internal setting names such
-as `mode`, `reference_template_mode`, `delivery_policy`, `reporting_level`,
-`platform_targets`, or `feature_parity` directly to the user.
+presents these decisions as plain-language questions in the working language,
+with the recommended value and reason; internal setting names such as `mode`,
+`reference_template_mode`, `delivery_policy`, `reporting_level`,
+`platform_targets`, or `feature_parity` stay internal.
 
 The reference-template decision must be presented as three plain-language
 choices:
@@ -99,8 +102,9 @@ Generated docs must describe facts supported by committed files, project docs,
 configuration, templates, commands, public APIs, package metadata, or explicit
 integrations in the repository.
 
-Do not write invocation-local facts into the atlas: current agent, model,
-editor, shell, chat session, temporary workspace state, or session-only tools.
+The atlas records repository-persistent facts. Invocation-local facts — current
+agent, model, editor, shell, chat session, temporary workspace state, or
+session-only tools — are outside its scope.
 
 For every dependency, risk, flow, and ownership note, ask whether a committed
 file or project doc proves it. If not, remove it or write it as uncertainty.
@@ -118,8 +122,8 @@ inferring module boundaries unless the user explicitly asks to document them:
 - compiled artifacts, minified bundles, and binary assets that do not define
   source ownership
 
-Generated code may be mentioned as downstream impact, but should not define a
-module unless engineers normally edit or review it directly.
+Generated code may be mentioned as downstream impact; it defines a module only
+when engineers normally edit or review it directly.
 
 ## Map Tiers
 
@@ -140,8 +144,8 @@ in that module's doc, not the index.
 A task package names tier-3 starting points. The worker reads those first, then
 explores whatever the change requires.
 
-Do not push search-answerable detail (call sites, symbol lists, file
-inventories) into any tier of the map.
+Search-answerable detail (call sites, symbol lists, file inventories) belongs to
+live search, not to any tier of the map.
 
 ## Output Shape
 
@@ -214,10 +218,9 @@ generate a generic `docs/` adapter by dropping the frontmatter block entirely.
 Claude Code and Codex use identical adapter bodies — only the destination path
 differs, so there is one template per role rather than one per platform.
 
-Replace every init-time placeholder with concrete project values. Do not leave
-init-time tokens such as `{{ATLAS_TITLE}}` or `{{DELIVERY_POLICY}}` in generated
-docs. The only exceptions are the two runtime tokens `{{DATE}}` and `{{SLUG}}` in
-the lead adapter — leave them intact; the lead adapter fills them per change. See the
+Replace every init-time placeholder with concrete project values at
+initialization. Only the two runtime tokens `{{DATE}}` and `{{SLUG}}` in the lead
+adapter survive intact — the lead adapter fills them per change. See the
 placeholder map below.
 
 ## Placeholder Map
@@ -285,8 +288,9 @@ It must include:
 - Architecture Decisions table for cross-module decisions. Starts empty.
 - Reference boundary when in reference-assisted mode.
 
-Do not add a "Decisions" metadata block (atlas mode, reference template mode,
-entrypoint policy) or links to workflow docs — neither exists anymore.
+The index has no "Decisions" metadata block (atlas mode, reference template
+mode, entrypoint policy) and no workflow-doc links — workflow docs no longer
+exist.
 
 ## Module Requirements
 
@@ -299,17 +303,17 @@ Each module doc must include:
 - Key flows.
 - Change entry points and routes: where to start and what must stay synchronized.
 - Known risks.
-- Do not do boundaries.
+- Boundaries.
 - A Reference Notes section only when reference-assisted mode makes it useful.
 
-Avoid file inventories. A module doc is successful when it helps a future agent
-decide whether to start there, and work confidently once it has. There is no line
-budget — do not trim a finished doc to a target length.
+File inventories do not serve routing. A module doc succeeds when it helps a
+future agent decide whether to start there, and work confidently once it has.
+There is no line budget — write for routing, not for a target length.
 
-Write **Do Not Do** and **Known Risks** as repository-specific facts, invariants,
-and hidden constraints. A lead may copy only the items relevant to a task into
-its `Constraints` section; do not treat these sections as a catalogue of generic
-engineering rules.
+Write **Boundaries** and **Known Risks** as repository-specific facts,
+invariants, and hidden constraints — not a catalogue of generic engineering
+rules. A lead copies only the items relevant to a task into its `Constraints`
+section.
 
 ## Agent Roles And Write Ownership
 
@@ -353,9 +357,8 @@ unpushed planning files may not be there when it looks.
 
 **Working tree.** One agent implements on the tree at a time. Whoever holds it
 owns it: while implementing, the worker runs whatever build, suite, server, or
-migration its task needs. Encode no shared-resource negotiation and no
-`deferred-to-lead`. Where two packages would contend, the relay lead serializes
-them rather than fencing either.
+migration its task needs. Where two packages would contend, the relay lead
+serializes them rather than fencing either.
 
 ## Lead Adapter Requirements (carries the discipline)
 
@@ -423,9 +426,10 @@ and reviews; it does not implement and it does not dispatch. It must:
   `references/delegation.md` §5, embedded inline in the lead adapter so the lead
   needs no extra file read. It carries the Goal, Background, objective Acceptance
   checks, explicit Constraints only when needed, optional Starting Points,
-  Evidence, and an empty `Completion record` the relay lead fills in. Never chat
-  history, never the index, never a spec dump, never a prescribed implementation.
-- **Explain `Background` at length**: it is what makes a package portable to a
+  Evidence, and an empty `Completion record` the relay lead fills in. The package
+  carries only what a worker with zero conversation history needs — not chat
+  history, the index, or a prescribed implementation.
+- **Explain `Background` with no length limit**: it makes a package portable to a
   model with zero conversation history, on another platform. No length limit;
   quote the wrong code; show real input against real wrong output; carry forward
   any inventory already done, marking entries that are "currently correct but only
@@ -436,31 +440,36 @@ and reviews; it does not implement and it does not dispatch. It must:
   header, so its receiver becomes a worker and the ordering tier disappears. It
   carries the objective, the package table, the hard execution order with reasons,
   permitted parallel groups, the batch-level shared verification, and the
-  completion protocol.
+  completion protocol. It archives with the batch: once the last package is
+  accepted, the relay lead moves it to
+  `completed/{{DATE}}/{{SLUG}}-dispatch-plan.md`, so `planning/` holds only
+  pending batches. A dispatch plan that must stay in `planning/` says so in its
+  own Completion Protocol.
 - **Commit and push the packages and the dispatch plan before handover**, then
   tell the user which single file to hand over. Do not spawn anything.
 - **State the acceptance rules**: every item checkable by someone who was not in
   the conversation — an exact command with an expected result, or an observable
   behaviour ("works correctly" is not one); exact expected values over existence
   claims; the negative case and what a negative fixture must contain; what must
-  not change; a ban on passing by weakening a rule, threshold, detector, or
-  assertion, with any drop in a previously passing count explained item by item;
-  and skippable items for checks depending on something that may not exist on the
-  execution machine.
+  not change; passing by weakening a rule, threshold, detector, or assertion is
+  deliberate and explained, with any drop in a previously passing count explained
+  item by item; and skippable items for checks depending on something that may
+  not exist on the execution machine.
 - **State that `Starting Points` is a map, not a fence**: the worker explores and
   changes whatever the goal requires, including a full architectural correction.
   Scope is restricted only in `Constraints`, and when two packages would conflict
   they are scheduled serially rather than both fenced.
-- **State the granularity rule**: cut along change boundaries, never by file.
+- **State the granularity rule**: cut along change boundaries, not files.
 - **Command portability**, inline: write `Acceptance` and evidence commands for
   the shell the worker will actually get — one command per line, no `&&` chain,
   and on Windows no inline env prefixes, no `2>/dev/null`, no POSIX utilities
   assumed on `PATH`. Prefer the project's own runner.
-- **Idle rule**, inline and explicit: while the batch is out, do nothing at all —
-  no `git status`, no diff inspection, no progress narration, no speculative
-  reading. `references/delegation.md` §11 is never loaded at runtime, so the
-  adapter must carry this itself. State that the user may never return to the
-  conversation, and that this is expected rather than a failure.
+- **Idle rule**, inline and explicit: while the batch is out, the work belongs to
+  the execution tier — no `git status`, no diff inspection, no progress
+  narration, no speculative reading. `references/delegation.md` §11 is never
+  loaded at runtime, so the adapter carries this itself. State that the user may
+  never return to the conversation, and that this is expected rather than a
+  failure.
 - **Review as a second pass**, when and if the human brings results back — the
   relay lead already accepted each package and is the primary gate. Read in
   order: requirement conformance (against the `Completion record`, re-running
@@ -470,9 +479,9 @@ and reviews; it does not implement and it does not dispatch. It must:
   that everything found is a gap, including a check that fails on re-run, and that
   the lead does not fix it — but that a wrong specification is the lead's to
   withdraw, fix, and reissue.
-- **Return gaps, and only gaps**: a numbered list of what is wrong and what fixed
-  looks like, ending with the required line "everything else is accepted, change
-  nothing outside these points".
+- **Return gaps**: a numbered list of what is wrong and what fixed looks like,
+  ending with the required line "everything else is accepted, change nothing
+  outside these points".
 - **Verification reporting**: the verification result is in the user-facing report
   regardless of reporting level; never claim completion on a failed check. State
   that archival and the daily summary were already done by the relay lead and are
@@ -504,8 +513,8 @@ plan to. It never plans and never implements. It must:
   good default, and parallelism is never a goal in itself.
 - **Name the dispatch parameters literally**:
   `{"model": "gpt-5.6-luna", "reasoning_effort": "max"}`, the field being
-  `reasoning_effort` rather than `thinking`, never left to inheritance. Hand over
-  the package and nothing else.
+  `reasoning_effort` rather than `thinking`, set explicitly rather than
+  inherited. Hand over the package alone.
 - **Wait with the platform's blocking wait, never a sleep** (`wait_agent` on
   Codex), because a completion event does not preempt a synchronous shell tool
   already running.
@@ -519,23 +528,23 @@ plan to. It never plans and never implements. It must:
 - **State that staying alive is the wait loop's job**, and that the long-running
   work mode (`/goal` on Codex) belongs to the human — the relay lead never invokes
   it for itself, never applies it to a subagent, and works without it.
-- **Wait passively**: while a subagent is in flight, leave the shared tree, the
-  subagent, and the schedule alone — no `git status`, no diff inspection, no build
-  or test, no progress query, no declaring failure from a closed window, and no
-  re-dispatch of a task that may still be running. Permitted meanwhile: reading
-  undispatched packages, planning the schedule, and dispatching the next package
-  under the plan's permitted parallelism.
-- **Accept by re-running**, never on text: a report is a claim, and the relay lead
-  is biased toward believing work it dispatched. Re-run the decisive commands,
-  read the diff against the goal, check nothing outside the goal broke, and check
-  the stated risks against what the diff shows. A shortcut the report explains and
+- **Wait passively**: while a subagent is in flight, the shared tree, the
+  subagent, and the schedule belong to it — no `git status`, no diff inspection,
+  no build or test, no progress query, no declaring failure from a closed window,
+  and no re-dispatch of a task that may still be running. Meanwhile: read
+  undispatched packages, plan the schedule, and dispatch the next package under
+  the plan's permitted parallelism.
+- **Accept by re-running**: a report is a claim, and the relay lead is biased
+  toward believing work it dispatched. Re-run the decisive commands, read the
+  diff against the goal, check nothing outside the goal broke, and check the
+  stated risks against what the diff shows. A shortcut the report explains and
   justifies is fine; an unexplained one is the finding.
 - **Return gaps** naming only the gaps, with the required closing line. At most
   two returns; on a third the specification is the suspect, and that is the lead's
   to fix.
-- **Never repair a specification** — no rewriting a goal, lowering an acceptance
-  item, or bending the spec to match the implementation. Record the problem, stop
-  that package, continue with everything it does not block.
+- **Leave specification to the planning tier**: a defect in the goal, an
+  acceptance item, or the spec is recorded, that package stops, and everything it
+  does not block continues.
 - **Follow the completion protocol in order** (see Plan File Lifecycle):
   completion record → move → summary → commit and push, code and records together.
 - **Run the plan's `Shared Verification`** after the last package, then report the
@@ -552,9 +561,9 @@ needed record upward and the lead writes it.
 
 - Cross-module decisions: add a row to the Architecture Decisions table in the
   index (title, chosen option, affected modules, rationale).
-- Module-level decisions: add a note to the affected module's Known Risks or Do
-  Not Do section, referencing the index entry if cross-module.
-- Do not create separate decision log files.
+- Module-level decisions: add a note to the affected module's Known Risks or
+  Boundaries section, referencing the index entry if cross-module.
+- Decision records live in the index and module docs, not in separate files.
 
 ## Worker Adapter Requirements
 
@@ -589,8 +598,8 @@ against one task package. It must:
   plus its usual shapes** — do not substitute making the check pass for solving
   the problem; any of those shapes can be right, so do it deliberately and say why
   — never as a catalogue of absolute bans.
-- **Handle a returned `## Gaps` list**: fix exactly the named points and nothing
-  else.
+- **Handle a returned `## Gaps` list**: fix exactly the named points; everything
+  else is already accepted.
 - **Fix the report format** (`references/delegation.md` §8): changed files, root
   cause, verification with **pasted output rather than a claim**, risks, and any
   needed decision. No exploration narrative or restatement of the task.
@@ -607,13 +616,14 @@ worker needs any of that, the package was written wrong.
 spec to keep in sync.
 
 Both discipline tiers (T1 and T2) write one. On completion, every package is
-archived with a summary line; no completed package is deleted.
+archived with a summary line and the batch's dispatch plan moves alongside; no
+completed package is deleted.
 
 **Split ownership.** Everything under `docs/changes/` is a governance file, but
 the halves have different writers: the lead owns `planning/` (packages and
-dispatch plans), the relay lead owns `completed/` plus the `Completion record`
-section inside each package. A worker writes neither — not even the package it was
-handed.
+dispatch plans), the relay lead owns `completed/` (archived packages and their
+dispatch plans) plus the `Completion record` section inside each package. A
+worker writes neither — not even the package it was handed.
 
 **Date format.** Every `{{DATE}}` is ISO 8601 `YYYY-MM-DD` — zero-padded, local
 date (for example `2026-06-09`, never `2026-6-9` or `06/09/2026`). The same date
@@ -630,6 +640,7 @@ docs/changes/
   completed/
     {{DATE}}/                  # one folder per calendar day, by completion date
       {{SLUG}}.md              # the finished package, moved here on acceptance
+      {{SLUG}}-dispatch-plan.md  # the batch's dispatch plan, moved here with it
       summary.md               # that day's work summary, appended per package
 ```
 
@@ -659,9 +670,11 @@ that is correct — the filename records authorship, the folder records completi
 
 5. Then **commits and pushes**, with the code and the change-record files in the
    **same** commit.
-
-The dispatch plan is a routing artifact for one batch; it is not archived and not
-required to survive.
+6. **After the last package of the batch**, moves the dispatch plan to
+   `completed/{{DATE}}/{{SLUG}}-dispatch-plan.md` alongside the packages, so the
+   completed folder holds the whole batch and `planning/` keeps only pending
+   batches. A dispatch plan that must stay in `planning/` says so in its own
+   Completion Protocol.
 
 Packages and summaries may name modules and files regardless of reporting level;
 the reporting level governs only user-facing chat reports.
@@ -802,12 +815,12 @@ GPT-5.6-Luna, reasoning Max, literally.
   adapter exists or is being generated this run, delete them. Do this as part of
   adapter generation, not as a follow-up task.
 
-### Do Not Force-Load The Skill
+### Skill Loading Is On-Demand
 
-Do not write a "run the atlas skill before every operation" mandate into
-`CLAUDE.md`, `AGENTS.md`, or any always-on config. At most, add a single
+`CLAUDE.md`, `AGENTS.md`, and any always-on config get at most a single
 plain-language pointer line noting that the navigation map lives at
-`docs/<project>_index.md`, and only if that file does not already say so.
+`docs/<project>_index.md`, and only if that file does not already say so. The
+atlas skill loads on demand, not before every operation.
 
 ### All Three Adapters Must
 

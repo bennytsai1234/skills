@@ -29,7 +29,7 @@ Inherited rules from existing project guidance. All work must follow these:
 ## Architecture Decisions
 
 Cross-module decisions recorded during development. Module-level decisions live in
-each module's Known Risks or Do Not Do section.
+each module's Known Risks or Boundaries section.
 
 {{ARCHITECTURE_DECISIONS}}
 

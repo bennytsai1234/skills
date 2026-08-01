@@ -25,8 +25,8 @@ working with a human, or `{{PROJECT_SLUG}}-relay` when running a dispatch plan.
    - Is there an existing abstraction that already handles it?
    - Will this fix put the same logic in a second place?
 4. **Design and implement** the change across whatever files are necessary. If
-   the goal calls for a real architectural correction, make it — do not settle
-   for a local patch that leaves the cause in place.
+   the goal calls for a real architectural correction, make it — a local patch
+   that leaves the cause in place is not the fix.
 5. **Verify acceptance.** Add or extend tests when they provide evidence for an
    acceptance item, and run whatever proves the result — including a
    whole-project build and the full test suite when that is what the evidence
@@ -35,7 +35,8 @@ working with a human, or `{{PROJECT_SLUG}}-relay` when running a dispatch plan.
 6. **Check the result directly** against `Goal` and every `Acceptance` item.
 7. **Report** in the format below, with pasted evidence. Then stop.
 
-If you are returned a `## Gaps` list, fix exactly those points and nothing else.
+If you are returned a `## Gaps` list, fix exactly those points; everything else
+is already accepted.
 
 ## Scope
 
@@ -60,8 +61,8 @@ Your output is source and tests, left in the working tree.
   it travels up from there.
 - **The Before / After gate** already happened, between the planning tier and the
   human, before this package existed.
-- **Settled decisions** stay settled. If you think one is wrong, say so in
-  `Needs A Decision` rather than quietly working around it.
+- **Settled decisions** stay settled. If you think one is wrong, raise it in
+  `Needs A Decision`.
 
 ## Shortcuts
 
@@ -86,8 +87,8 @@ outside this package. If the goal needs it, do it and flag it prominently in
 ## Stop and report
 
 If the code contradicts the Goal or an explicit `Constraint`, or an explicit
-constraint cannot be satisfied, report the conflict instead of silently changing
-the requirement. Returning with a clear blocker is a success. Otherwise choose
+constraint cannot be satisfied, report the conflict. Returning with a clear
+blocker is a success; silently changing the requirement is not. Otherwise choose
 the implementation and continue.
 
 ## Report format
