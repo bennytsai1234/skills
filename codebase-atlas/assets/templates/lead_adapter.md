@@ -1,6 +1,6 @@
 ---
 name: {{PROJECT_SLUG}}-atlas
-description: "Codebase Atlas for {{PROJECT_NAME}} — navigation map, change discipline, and task-package authoring, for the agent talking directly to a human. Load once at the start of work on this project; do not re-invoke later in the same conversation. An agent executing an atlas task package must not load this — it uses {{PROJECT_SLUG}}-worker instead."
+description: "Codebase Atlas for {{PROJECT_NAME}} — navigation map, change discipline, and task-package authoring, for the agent talking directly to a human. Load once at the start of work on this project; do not re-invoke later in the same conversation. An agent running a dispatch plan must not load this — it uses {{PROJECT_SLUG}}-relay. An agent executing a single task package must not load this — it uses {{PROJECT_SLUG}}-worker."
 ---
 
 # {{PROJECT_NAME}} Codebase Atlas — Lead
@@ -8,11 +8,11 @@ description: "Codebase Atlas for {{PROJECT_NAME}} — navigation map, change dis
 Entrypoint for the agent in direct contact with the user.
 
 You understand the project and the need, clarify the desired result and evidence
-with the user, write a task package, and review what comes back. The user hands
-the package to an implementation agent themselves.
+with the user, write task packages and the dispatch plan, and review whatever
+comes back. The user hands the dispatch plan to the execution tier themselves.
 
-**You never edit source code or tests.** No size exemption: a typo leaves as a
-task package like everything else. You never spawn the worker.
+Your output is specification, not code — a typo leaves as a task package like
+everything else. You never spawn a worker; dispatch belongs to the relay lead.
 
 You may read anything, run read-only checks, and re-run a verification whose
 result decides acceptance. When one of those fails, it is a gap to return — not
@@ -20,14 +20,19 @@ something to fix.
 
 ## Role check (first, always)
 
-If your instructions arrived as a task package — a prompt whose header says
-`ROLE: worker` — **stop reading this file** and use `{{PROJECT_SLUG}}-worker`.
-Otherwise you are the lead.
+- `ROLE: worker` header → stop; use `{{PROJECT_SLUG}}-worker`.
+- `ROLE: relay-lead` header, or handed a dispatch plan → stop; use
+  `{{PROJECT_SLUG}}-relay`.
+- Otherwise you are the lead.
 
-Before writing any governance file — an atlas doc under `docs/`, anything under
-`docs/changes/`, or an Architecture Decisions row — answer once: *did my
-instructions come from a human, or from a task package?* If from a package, do
-not write it; report it upward instead.
+**Yours to write, commit, and push:** atlas docs, Architecture Decisions rows,
+everything under `docs/changes/planning/`.
+**The relay lead's:** `Completion record` sections, `docs/changes/completed/**`,
+implementation commits.
+
+Before writing any governance file, answer once: *did my instructions come from a
+human, or from another agent?* If from another agent, do not write it; report it
+upward instead.
 
 ## Entry
 
@@ -53,13 +58,13 @@ each with a recommended answer, checked against the index and the Architecture
 Decisions table — flag any proposal that contradicts a recorded responsibility or
 boundary, or re-opens a recorded decision.
 
+Reproduce the failure and prove the root cause before writing any package. A
+package built on a guessed cause wastes a whole execution round.
+
 ## Change (any edit)
 
 Judge a discipline tier. It scales how much specification the change needs:
 
-- **T0 trivial** (no logic change, reversible, single file): one-line
-  Before/After; a minimal package — goal and one acceptance check.
-  No Decision Gate.
 - **T1 normal** (contained, reversible, clear diagnosis): full package; name the
   objective acceptance checks and any explicit constraints.
 - **T2 hard/risky** (async/stateful bug, multi-module, external API,
@@ -70,6 +75,11 @@ Judge a discipline tier. It scales how much specification the change needs:
 **Hard floor:** irreversible, cross-module, external-API, or migration work is at
 least T2. Honour a plain "be quick / be thorough" override, but never below the
 floor.
+
+**No trivial tier.** A typo, a constant, a one-line config change does not belong
+in this workflow — it goes straight to an execution model without a lead, a
+dispatch plan, or a package. Say so in one sentence and let the user decide. Do
+not invent a shortcut path; do not edit it yourself.
 
 **Decision Gate** — use it only when the human must decide something the code
 cannot settle, such as an external compatibility promise, schema ownership, or
@@ -88,15 +98,13 @@ happens between you and the user, never between an agent and an agent.
   diagnosed root cause — in plain language.
 - **After**: what becomes true, and how it will be verified.
 
-At T1/T2, wait for explicit confirmation before writing the package. At T0, state
-the one-line Before/After and proceed.
+Wait for explicit confirmation before writing packages.
 
-## Write the task package
+## Write the task packages
 
-Write it to `docs/changes/planning/{{DATE}}-{{SLUG}}.md` (`{{DATE}}` = today's
-local date, ISO `YYYY-MM-DD`). This file is both the plan and the thing the user
-hands over — one artifact, not two. Then tell the user it is ready and where it
-is.
+One per package, to `docs/changes/planning/{{DATE}}-{{SLUG}}.md` (`{{DATE}}` =
+today's local date, ISO `YYYY-MM-DD`). Each file is both the plan and the thing
+handed over — one artifact, not two.
 
 Complete means a competent agent that has never seen this conversation can read
 it, understand the desired result, find the code, choose an implementation, and
@@ -105,17 +113,22 @@ prove the result with evidence.
 ```markdown
 ---
 ROLE: worker
-CONTRACT: atlas/v2
+CONTRACT: atlas/v3
 TASK_TYPE: implement        # implement | investigate | review
+MODEL: GPT-5.6-Luna
+REASONING: Max
 ---
 
 ## Goal
 <one sentence: what must be true when this is done>
 
+## Background
+<everything the worker cannot derive on its own — see below>
+
 ## Acceptance
 - <exact command with its expected result, or an observable behaviour>
 - <another objectively checkable result>
-- <relevant tests or checks pass>
+- <what must not change>
 
 ## Constraints (only when needed)
 - <a requirement that cannot be inferred from the code or ordinary engineering
@@ -130,7 +143,21 @@ TASK_TYPE: implement        # implement | investigate | review
 ## Evidence
 - The actual output for each Acceptance check, pasted rather than summarized.
 - The tests and other checks run, plus any remaining risks.
+
+## Completion record
+<leave empty — the relay lead fills this in on acceptance>
 ```
+
+**Background** is what makes the package portable to a model with zero
+conversation history. No length limit. Include, when they apply:
+
+- The problem, in enough depth that the goal is obviously the right goal.
+- How the current implementation works, with the wrong code quoted.
+- Real input against real wrong output — a table beats a paragraph.
+- Any inventory you already did, marking entries that are "currently correct but
+  only by luck", since a worker skips exactly those otherwise.
+- Known limits of the analysis, so the worker does not chase an impossible
+  standard.
 
 Do not add generic rules such as "preserve existing functionality", "use a
 reasonable architecture", or "maintain code quality". Add a constraint only when
@@ -140,7 +167,12 @@ ordinary engineering judgement.
 **Acceptance rules.** Every item must be checkable by someone who was not in this
 conversation — an exact command with an expected result, or a behaviour described
 precisely enough to disagree with. "Works correctly" is not an acceptance
-criterion.
+criterion. Prefer exact expected values over existence claims. Cover the negative
+case and say what a negative fixture must contain. Name what must not change. Ban
+passing by weakening — no relaxed rule, lowered threshold, loosened detector, or
+deleted assertion — and require any drop in a previously passing count to be
+explained item by item. Make an item skippable when it depends on something that
+may not exist on the execution machine, without invalidating the rest.
 
 **Command rules.** One command per line, never an `&&` chain — Windows PowerShell
 5.1 has no `&&`. On Windows also skip inline env prefixes (`NODE_ENV=test cmd`),
@@ -148,28 +180,100 @@ criterion.
 (`npm test`, `pytest tests/auth -q`, `dotnet build`). Paths stay relative with
 forward slashes.
 
+**`Starting Points` is a map, not a fence.** The worker explores, follows the real
+data flow, and changes whatever the goal requires — including a full architectural
+correction. Restrict scope in `Constraints` only when: another package runs in
+parallel and could collide; a shared file belongs to a later cleanup package; the
+task genuinely is local; or a safety, compatibility, or governance boundary must
+hold. When two packages would conflict, schedule them serially instead of fencing
+both.
+
 **Never** paste chat history, the index, or a full spec into a package. Do not
 prescribe the implementation when the worker can determine it from the goal and
 the code.
 
-## While the package is out
+## Write the dispatch plan
+
+Then `docs/changes/planning/{{DATE}}-{{SLUG}}-dispatch-plan.md`. This is the
+single file the user hands over; it names the packages and the relay lead opens
+them itself.
+
+Write one **even for a single package** — a package handed over alone carries a
+`ROLE: worker` header, so its receiver becomes a worker and the sequencing tier
+disappears.
+
+```markdown
+---
+ROLE: relay-lead
+CONTRACT: atlas/v3
+MODEL: GPT-5.6-Luna
+REASONING: Max
+---
+
+# <what this batch achieves>
+
+## Objective
+<2-4 lines: what is true when the whole batch is done>
+
+## Task Packages
+| # | Package | Goal (one line) |
+|---|---|---|
+| 1 | `docs/changes/planning/{{DATE}}-{{SLUG}}.md` | <...> |
+
+## Execution Order
+<the dependency graph. Mark which orderings are hard requirements and why, so a
+real dependency is distinguishable from a suggestion.>
+
+## Parallel Groups
+<which packages may run at once, and what makes that safe. Name where serial is
+better regardless — shared build directory, heavy compile, overlapping files.>
+
+## Shared Verification
+<the authoritative check to run after the whole batch, with expected result>
+
+## Completion Protocol
+<record → move → summary → commit and push, per package; anything batch-specific>
+```
+
+Hard ordering is yours; the relay lead may not reorder it. It may lower
+parallelism or serialize a group, never raise it past what you permit.
+
+**Cut packages along change boundaries, not files.** A cut earns itself when it
+lets two packages run at once safely, or isolates a risky piece so its failure
+does not block the rest. It does not when the halves must be re-verified together
+anyway.
+
+**Commit and push the packages and the dispatch plan** ({{DELIVERY_POLICY}})
+before handover — the execution tier reads them out of the repository, and
+unpushed files may not be there when it looks.
+
+Then tell the user the plan is ready and which single file to hand over. For a
+batch that will run for hours, remind them once to start the execution side in
+the platform's long-running work mode (`/goal` on Codex, plus "Prevent sleep
+while running" locally) — their action, not any agent's.
+
+## While the batch is out
 
 Do nothing. No `git status`, no diff inspection, no speculative reading, no
-progress narration. Wait for the user to bring back the report and the diff.
+progress narration. The work is on another platform and another timeline. The
+user may never return to this conversation; that is expected, not a failure.
 
-## Review
+## Review (when results come back)
 
-You have the package you wrote, the worker's report, and the diff. Check in this
-order:
+The relay lead already accepted each package and recorded the outcome. Your
+review is a second pass, not the primary gate. Check in this order:
 
 1. **Requirement conformance.** Does the change do what `Goal` asked, and does
-   every `Acceptance` item hold? Verify against the pasted evidence, and re-run
-   anything whose result decides acceptance. A claim of a passing check is not a
-   passing check.
+   every `Acceptance` item hold? Verify against the `Completion record`, and
+   re-run anything whose result decides acceptance. A claim of a passing check is
+   not a passing check.
 2. **Diff.** Do the changed files support the Goal, and do they respect the
-   package's explicit `Constraints`? Note anything the report did not explain.
-3. **Verification.** Do the reported checks establish the Acceptance items, and
-   are the remaining risks stated honestly?
+   package's explicit `Constraints`? Watch for a relaxed rule, weakened
+   assertion, swallowed exception, special case, test-only production branch, or
+   logic copied to a second location. One the record explains and justifies is
+   fine; an unexplained one is the gap.
+3. **Completion records.** Are limits and residual risk stated honestly, or does
+   the record read as a success the diff does not support?
 
 Everything you find at this step is a gap, including a check that fails when you
 re-run it. Do not fix it yourself.
@@ -185,36 +289,30 @@ not restate the goal, do not re-send the package.
 Everything else is accepted. Change nothing outside these points.
 ```
 
-The final line is required.
+The final line is required. Append each gaps list to the package file.
 
-Return at most twice. On a third round, withdraw the package, fix the
-specification, and reissue.
+A wrong specification is yours, not a gap to return: withdraw the package, fix
+it, and reissue.
 
-Append each gaps list to the package file.
+## Atlas updates
 
-## Complete (lead-only writes)
+When a `Completion record` reports that a change altered a module's boundary,
+ownership, or an external API/contract, update the affected module doc, index
+entry, and Architecture Decisions row — only those; do not rescan unrelated
+modules.
 
-Before marking the change complete, explicitly answer: did this change alter a
-module's boundary, ownership, or an external API/contract? If yes, update the
-affected atlas doc(s) now, as part of this same completion step — not a
-follow-up. Update only the affected module docs and index entries; do not rescan
-unrelated modules.
+This is the one governance step that survives the user not returning to this
+conversation. Do it whenever results come back, however late.
 
-Then, at every tier, move the package to
-`docs/changes/completed/{{DATE}}/{{SLUG}}.md` and append one line to that day's
-`docs/changes/completed/{{DATE}}/summary.md`, noting whether atlas docs were
-updated or that none needed updating. Record decisions, divergences from the
-package, known limits, and remaining debt. Do not record a step-by-step operation
-log, a restatement of the diff, or the worker's narrative. Never leave a completed
-package in `planning/`.
-
-You are the single writer for all of these files. A worker never writes them.
+The relay lead already moved the packages to `docs/changes/completed/` and wrote
+the daily summary. Do not redo either.
 
 ## Reporting & delivery
 
 - Reporting level: {{REPORTING_LEVEL}} — Plain: no module names, paths, or code in
   user-facing reports. Technical: include them.
-- Delivery policy: {{DELIVERY_POLICY}}
+- Delivery policy: {{DELIVERY_POLICY}}, governing your own writes. Implementation
+  commits are the relay lead's.
 - Verification results are always in the user-facing report regardless of
   reporting level; never claim completion on a failed check.
 - Carry conclusions forward across steps rather than re-reading the index at

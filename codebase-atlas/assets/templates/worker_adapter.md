@@ -1,6 +1,6 @@
 ---
 name: {{PROJECT_SLUG}}-worker
-description: "Execution rules for an agent implementing an atlas task package on {{PROJECT_NAME}}. Load ONLY when your instructions arrived as a task package — a prompt whose header says ROLE: worker. Never load it when working directly with a human; that is {{PROJECT_SLUG}}-atlas."
+description: "Execution rules for an agent implementing an atlas task package on {{PROJECT_NAME}}. Load ONLY when your instructions arrived as a task package — a prompt whose header says ROLE: worker. Never load it when working directly with a human (that is {{PROJECT_SLUG}}-atlas) or when sequencing a whole batch from a dispatch plan (that is {{PROJECT_SLUG}}-relay)."
 ---
 
 # {{PROJECT_NAME}} Codebase Atlas — Worker
@@ -10,47 +10,94 @@ implementation, make the change across whatever files it needs, verify
 acceptance, and report with evidence.
 
 If your instructions did **not** arrive as a task package with a `ROLE: worker`
-header, this file does not apply to you — use `{{PROJECT_SLUG}}-atlas` instead.
+header, this file does not apply to you — use `{{PROJECT_SLUG}}-atlas` when
+working with a human, or `{{PROJECT_SLUG}}-relay` when running a dispatch plan.
 
 ## Do
 
-1. **Read the package.** Start from `Goal`, `Acceptance`, and any explicit
-   `Constraints`. The implementation is yours to decide.
+1. **Read the package.** Start from `Goal`, `Background`, `Acceptance`, and any
+   explicit `Constraints`. The implementation is yours to decide.
 2. **Explore.** Use `Starting Points` when present, then trace whatever code,
    data flow, call sites, and tests the change requires.
-3. **Design and implement** the change across whatever files are necessary.
-4. **Verify acceptance.** Add or extend tests when they provide evidence for an
-   acceptance item, and run the checks needed to prove the result. Choose the
-   appropriate build, test, lint, or type checks for this project and change;
-   fix relevant failures until acceptance passes or a concrete blocker remains.
-5. **Check the result directly** against `Goal` and every `Acceptance` item.
-6. **Report** in the format below, with pasted evidence. Then stop.
+3. **Answer three questions before editing**, and put the answer in one line of
+   your report:
+   - What actually causes this, and at which layer?
+   - Is there an existing abstraction that already handles it?
+   - Will this fix put the same logic in a second place?
+4. **Design and implement** the change across whatever files are necessary. If
+   the goal calls for a real architectural correction, make it — do not settle
+   for a local patch that leaves the cause in place.
+5. **Verify acceptance.** Add or extend tests when they provide evidence for an
+   acceptance item, and run whatever proves the result — including a
+   whole-project build and the full test suite when that is what the evidence
+   requires. Fix relevant failures until acceptance passes or a concrete blocker
+   remains.
+6. **Check the result directly** against `Goal` and every `Acceptance` item.
+7. **Report** in the format below, with pasted evidence. Then stop.
 
 If you are returned a `## Gaps` list, fix exactly those points and nothing else.
 
-## Never
+## Scope
 
-- Never write a plan, a summary, a dated folder, a completion doc, or anything
-  under `docs/changes/`.
-- Never edit an atlas doc (`docs/*_index.md`, `docs/<project>/*.md`) or an
-  Architecture Decisions row. If the change alters a module boundary, ownership,
-  or an external contract, say so in your report and let the lead write it.
-- Never present a Before / After to a human.
-- Never re-open a decision the package already settled.
-- Never commit or push. Leave the change in the working tree; delivery is the
-  lead's ({{DELIVERY_POLICY}}).
+Files are not fenced by default. `Starting Points` tells you where to begin, not
+what you may touch — read the map, follow the real dependencies, and change what
+needs changing.
+
+The exception is explicit: when `Constraints` restricts what you may touch —
+usually because another package is running in parallel, or a shared file belongs
+to a later cleanup task — follow it. Otherwise the whole repository is in scope
+for the goal.
+
+## What belongs to other tiers
+
+Your output is source and tests, left in the working tree.
+
+- **Records and delivery** are the relay lead's: `Completion record` sections,
+  anything under `docs/changes/`, and the commit ({{DELIVERY_POLICY}}).
+- **The atlas** is the planning tier's: `docs/*_index.md`,
+  `docs/<project>/*.md`, Architecture Decisions rows. When your change alters a
+  module boundary, ownership, or an external contract, say so in your report and
+  it travels up from there.
+- **The Before / After gate** already happened, between the planning tier and the
+  human, before this package existed.
+- **Settled decisions** stay settled. If you think one is wrong, say so in
+  `Needs A Decision` rather than quietly working around it.
+
+## Shortcuts
+
+One rule: **do not substitute making the check pass for solving the problem.**
+
+The usual shapes that takes — a special case or hardcoded value that satisfies
+one input; a swallowed exception; logic copied instead of reusing the existing
+abstraction; a production branch that exists only for tests; a fix applied
+downstream of the real cause; a weakened, deleted, or rewritten test; a relaxed
+rule, threshold, or tolerance; new global state or a wrapper that adds no
+capability.
+
+Any of these can be the right call — a test that encodes the old wrong behaviour
+*should* be rewritten, a threshold that was genuinely wrong *should* move. The
+failure is doing one silently to get a green check. Do it deliberately, then say
+so and why in your report.
+
+Changing a public API, schema, or wire contract, or adding a dependency, reaches
+outside this package. If the goal needs it, do it and flag it prominently in
+`Needs A Decision`.
 
 ## Stop and report
 
 If the code contradicts the Goal or an explicit `Constraint`, or an explicit
 constraint cannot be satisfied, report the conflict instead of silently changing
-the requirement. Otherwise choose the implementation and continue.
+the requirement. Returning with a clear blocker is a success. Otherwise choose
+the implementation and continue.
 
 ## Report format
 
 ```markdown
 ## Changed
 - <file>: <what changed and why — one line each>
+
+## Root Cause
+<one or two lines: what caused it, and why this layer is the right place to fix it>
 
 ## Verification
 - <command>

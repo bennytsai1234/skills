@@ -11,9 +11,9 @@ complete.
   alignment.
 - Delivery policy and reporting level are recorded in the index and every adapter.
 - The platform adapter choices are recorded.
-- The worker model decision is resolved into two tiers and written into the lead
-  adapter; where the user named no models, the placeholder-map fallbacks are used
-  rather than invented model names.
+- No model-tier decision was asked or recorded: the execution tiers are fixed at
+  GPT-5.6-Luna, reasoning Max, written literally into the relay and worker
+  adapters.
 - Partial reference output records the selected reference scope; full alignment
   output records that reference functionality is in scope.
 - User-facing confirmation used plain-language questions instead of exposing
@@ -34,12 +34,13 @@ complete.
 - The index carries a build provenance line — build date, source commit, atlas
   format version — directly under the settings line. Without it this atlas can
   only ever be rebuilt, never refreshed.
-- Every selected platform has **both** a lead adapter (`<project-slug>-atlas`)
-  and a worker adapter (`<project-slug>-worker`). A lead adapter without its
-  worker is a failed build, not a partial one.
+- Every selected platform has **all three** adapters: `<project-slug>-atlas`,
+  `<project-slug>-relay`, `<project-slug>-worker`. A partial set is a failed
+  build, not a partial one — without the relay adapter, acceptance and archival
+  strand whenever the human does not return.
 - No stale generic adapter remains when a platform adapter exists — including
-  the pre-split single `docs/<project>_adapter.md` from an earlier atlas
-  version, which must be deleted rather than left in place.
+  the pre-split single `docs/<project>_adapter.md` and the format-3 lead/worker
+  pair, both of which must be deleted rather than left in place.
 - No generated file was compressed, trimmed, or summarized to hit a length
   target. There is no length budget. Check content type instead: search-answerable
   detail (call sites, symbol lists, file inventories) stays out of the map, and
@@ -74,52 +75,69 @@ complete.
 ## Role Separation
 
 - The lead adapter opens by stating that it specifies and reviews but does not
-  implement, and that it never spawns the worker — the package is a file the
-  human carries across.
+  implement, and that it never dispatches — it writes files and the human carries
+  the dispatch plan across.
 - The non-implementing rule is stated as absolute, with **no size exemption and
   no documented escape hatch**. An adapter containing "when the change is
   trivial" or "if the user asks" fails this check. The adapter does state what
   the lead may do: read code, run read-only checks, and re-run a verification
   that decides acceptance — and that a failing check is a gap to return, not
   something to fix.
-- The lead adapter opens with a role check that hands off to
-  `<project-slug>-worker` when invoked with a `ROLE: worker` package header;
-  the worker adapter opens with the mirror check pointing back at
-  `<project-slug>-atlas`.
-- Both descriptions name the sibling skill.
-- The lead adapter states the governance write gate: before writing an atlas
-  doc, anything under `docs/changes/`, or an Architecture Decisions row, confirm
-  the instructions came from a human rather than from a task package.
+- Each adapter opens with a role check naming **both** siblings: the lead hands
+  off to `<slug>-worker` on `ROLE: worker` and `<slug>-relay` on
+  `ROLE: relay-lead`; the relay and worker adapters mirror it.
+- All three descriptions name both sibling skills.
+- The lead adapter states the governance write gate and what is *not* its to
+  write: completion records, `docs/changes/completed/**`, implementation commits.
+- The relay adapter contains none of: the index path, the module list, the tier
+  model, the Before/After gate, the Decision Gate, or package-authoring rules.
 - The worker adapter contains none of: the index path, the module list, the tier
-  model, planning, the Before/After gate, the Decision Gate, or the plan
-  lifecycle.
-- The worker adapter explicitly forbids writing plans, summaries, dated folders,
-  completion docs, atlas docs, and Architecture Decisions rows — and committing
-  or pushing.
+  model, planning, the Before/After gate, the Decision Gate, dispatch mechanics,
+  or the plan lifecycle.
+- The worker adapter states what belongs to other tiers as **ownership rather
+  than prohibition**: records and delivery to the relay lead, the atlas and
+  Architecture Decisions to the lead, the Before/After gate already spent, a
+  settled decision stays settled.
 - The worker adapter grants exploration explicitly: `Starting Points` orient it
-  but do not cap what it may read, and it chooses the implementation across
-  whatever files the change requires.
+  but do not cap what it may read or change, and it chooses the implementation
+  across whatever files the change requires.
 - The worker adapter states that the worker owns the checks needed to establish
-  acceptance and reports their actual output. Neither adapter mentions
-  `deferred-to-lead` or a shared-resource ban.
+  acceptance — including a whole-project build and the full suite — and reports
+  their actual output. No adapter mentions `deferred-to-lead` or a
+  shared-resource ban.
 - The worker adapter requires a direct check against `Goal` and `Acceptance`
-  rather than treating a green suite as sufficient, and has no generic
-  implementation-pattern catalogue.
+  rather than treating a green suite as sufficient. Its shortcut rule is **one
+  principle plus its usual shapes, with deliberate deviation allowed when
+  explained** — a catalogue of absolute bans fails this check.
 - The worker adapter carries a concise report format whose `Verification` section
   demands pasted output rather than a claim.
 - The worker adapter says a returned `## Gaps` list is fixed exactly and nothing
   else is touched.
-- The lead adapter embeds the concise `atlas/v2` task package template inline:
-  Goal, objective Acceptance checks, optional explicit Constraints, optional
-  Starting Points, and Evidence. It does not require Why, Solution Boundary,
-  Scope, Must Preserve, Forbidden, or generic stop conditions.
-- The lead adapter states the acceptance rule: every acceptance item is checkable
-  by someone who was not in the conversation.
-- The lead adapter carries the idle rule inline — while the package is out, do
+- The lead adapter embeds the `atlas/v3` task package template inline: Goal,
+  Background, objective Acceptance checks, optional explicit Constraints, optional
+  Starting Points, Evidence, and an empty `Completion record`. It does not require
+  Why, Solution Boundary, Scope, Must Preserve, Forbidden, Allowed Paths, or
+  generic stop conditions.
+- The lead adapter explains `Background` with no length limit, as the section that
+  makes a package portable to a model with zero conversation history.
+- The lead adapter embeds the dispatch-plan template inline and requires one even
+  for a single package.
+- The lead adapter states the acceptance rules: checkable by a stranger, exact
+  values over existence claims, the negative case, what must not change, and a ban
+  on passing by weakening.
+- The lead adapter carries the idle rule inline — while the batch is out, do
   nothing: no `git status`, no diff inspection, no progress narration, no
-  speculative reading.
-- Neither adapter contains a `MODEL_TIER` field, a scheduling or disjoint-paths
-  rule, a spawn instruction, or any other artifact of automated dispatch.
+  speculative reading — and states that the user may never return.
+- The relay adapter waits with `wait_agent` rather than `sleep`, sets
+  `timeout_ms: 3600000`, treats `timed_out: true` as "still running, wait again",
+  and re-waits on remaining ids when several subagents are in flight.
+- The relay adapter attributes `/goal` to the human, never invoking it for itself
+  or applying it to a subagent.
+- The relay adapter accepts by re-running the decisive checks, never on the
+  subagent's text, and never repairs a specification.
+- Model assignment appears literally as GPT-5.6-Luna, reasoning Max, in the relay
+  adapter, the worker adapter, and both embedded template headers. No adapter
+  contains a `MODEL_TIER` field or any other abstract tier system.
 
 ## Adapter Quality
 
@@ -128,34 +146,39 @@ complete.
   know→investigate / change→change.
 - Investigate is read-only, separates facts from assumptions/unknowns, and hands
   off to change rather than editing itself.
-- Change opens by judging a discipline tier (T0/T1/T2), with the hard floor at T2
-  for irreversible, cross-module, external-API, or migration work. The tier
+- Change opens by judging a discipline tier (T1/T2 only), with the hard floor at
+  T2 for irreversible, cross-module, external-API, or migration work. The tier
   scales how much specification the change needs, not who does the work.
-- Change states a Before / After before the package is written (Before = current
+- Change states explicitly that **there is no trivial tier** — a typo or one-line
+  config change goes straight to an execution model, and the lead neither invents
+  a shortcut path nor edits it itself.
+- Change states a Before / After before packages are written (Before = current
   state and why the change is needed, After = what becomes true and how it will
-  be verified) as the only confirmation interface; T1/T2 wait for explicit
-  confirmation, T0 announces the one-line Before/After and proceeds.
+  be verified) as the only confirmation interface, and waits for explicit
+  confirmation.
 - Change uses a Decision Gate only for choices the repository cannot settle, and
   records a confirmed choice as an explicit package `Constraints` item rather
   than prescribing an implementation.
-- The package is written to `docs/changes/planning/{{DATE}}-{{SLUG}}.md`
-  (`{{DATE}}` = ISO `YYYY-MM-DD`) — the same file serves as plan and handoff
-  artifact — and the lead then tells the user it is ready and where it is. On
-  completion at every tier it moves to
-  `docs/changes/completed/{{DATE}}/{{SLUG}}.md` with an entry appended to that
-  day's summary; no completed package is deleted.
+- Packages are written to `docs/changes/planning/{{DATE}}-{{SLUG}}.md` (`{{DATE}}`
+  = ISO `YYYY-MM-DD`) — the same file serves as plan and handoff artifact — with
+  the dispatch plan alongside them, all committed and pushed before the lead tells
+  the user which single file to hand over.
+- The completion protocol appears in order with the correct owner: the relay lead
+  fills the `Completion record`, moves the package to
+  `docs/changes/completed/{{DATE}}/{{SLUG}}.md`, appends that day's summary line
+  after the move, then commits and pushes code and records together. No completed
+  package is deleted.
 - The Before / After gate is stated as lead-only, happening between the lead and
   the human and never agent-to-agent.
-- Review is specified in order — requirement conformance against pasted evidence
-  (re-running anything whose result decides acceptance), the diff against the Goal
-  and explicit `Constraints`, then whether the reported checks establish the
-  Acceptance items and state remaining risks honestly.
+- Acceptance is specified in order and assigned to the right tier: the relay lead
+  re-runs the decisive checks as the primary gate, and the lead's review is a
+  second pass that may never happen.
 - Returning is specified as gaps only, with the explicit "everything else is
   accepted, change nothing outside these points" line, capped at two returns
-  before the package itself is withdrawn and reissued.
-- Both adapters report per the selected reporting level (plain: no module names,
-  paths, or code; technical: include them); the lead records the delivery policy
-  and the worker records that delivery is the lead's.
+  before the specification itself is the suspect.
+- All three adapters report per the selected reporting level (plain: no module
+  names, paths, or code; technical: include them); the lead records the delivery
+  policy and the worker records that delivery belongs to the relay lead.
 - Atlas update instructions are incremental and lead-only: update only affected
   module docs and index entries, not the full atlas.
 - The lead adapter carries the command-portability rule: `Acceptance` and
@@ -183,8 +206,8 @@ Run this section in place of the Decisions section when the run was a refresh.
 - The Architecture Decisions table is unchanged, and so is everything under
   `docs/changes/`.
 - Adapters were regenerated only because the recorded format version was behind
-  the current one or because a decision changed — and if regenerated, as a full
-  lead + worker pair.
+  the current one or because a decision changed — and if regenerated, as the full
+  set of three.
 - The build provenance line was rewritten to today's date and the current `HEAD`
   only after verification passed, and records the current atlas format version.
 - The cross-file pass ran even though only part of the atlas was written: the
@@ -201,7 +224,7 @@ Run this section in place of the Decisions section when the run was a refresh.
 
 ## Self-Verification Actions
 
-Per the Initialization Workflow, items 1-6 below are first checked by a
+Per the Initialization Workflow, items 1-7 below are first checked by a
 dedicated subagent per file (index / each module doc / each adapter), which
 fixes what it can directly. After all of them return, run this same list
 yourself once more as a centralized pass, focused on cross-file consistency
@@ -213,29 +236,36 @@ centralized pass still runs in full.
 1. Reread the index and confirm every module summary says when future work should
    start there, and that no Decisions block or workflow links remain.
 2. Reread the lead adapter and confirm it states the non-implementing,
-   non-dispatching role; the role check comes first; the entry router reads the
-   index; the change discipline (tiers, Decision Gate, Before/After, package
-   lifecycle) is present inline; the concise `atlas/v2` package template is
-   embedded; the idle rule, the acceptance-is-the-whole-contract rule, the review
-   order, and the gaps-only return are present inline; and reporting respects the
-   selected level.
-3. Reread the worker adapter and confirm it opens with the mirror role check,
+   non-dispatching role; the role check comes first and names both siblings; the
+   entry router reads the index; the change discipline (T1/T2 with no trivial
+   tier, Decision Gate, Before/After) is present inline; the `atlas/v3` package
+   template and the dispatch-plan template are both embedded; the `Background`
+   guidance, acceptance rules, `Starting Points`-is-a-map rule, commit-and-push
+   before handover, idle rule, second-pass review order, and gaps-only return are
+   present inline; and reporting respects the selected level.
+3. Reread the relay adapter and confirm it enters only through a dispatch plan,
+   respects hard ordering while owning parallelism, dispatches with the literal
+   model parameters, waits with `wait_agent` at `timeout_ms: 3600000`, treats a
+   timeout as "still running", re-waits on remaining ids, accepts by re-running
+   checks, never repairs a specification, and carries the completion protocol in
+   order ending in commit and push.
+4. Reread the worker adapter and confirm it opens with the mirror role check,
    grants exploration and implementation choice, makes the worker own the checks
-   needed for acceptance, forbids governance writes and commits, carries the
-   concise evidence-based report format, handles a returned gaps list, and never
-   mentions the index, the module list, the plan lifecycle, or a generic
-   implementation-pattern catalogue.
-4. Confirm platform skill frontmatter names and directories match the contract:
-   Claude Code and Codex both use `<project-slug>-atlas` for the lead and
-   `<project-slug>-worker` for the worker, and both exist for every selected
-   platform.
-5. Confirm `CLAUDE.md` / `AGENTS.md` have no forced skill-invocation mandate.
-6. Confirm every init-time placeholder is replaced per the placeholder map in
+   needed for acceptance including full builds and suites, states other tiers'
+   ownership rather than a prohibition list, carries the shortcut rule as a
+   principle rather than a ban catalogue, carries the evidence-based report
+   format, handles a returned gaps list, and never mentions the index, the module
+   list, the plan lifecycle, or dispatch mechanics.
+5. Confirm platform skill frontmatter names and directories match the contract:
+   Claude Code and Codex both use `<project-slug>-atlas`, `<project-slug>-relay`,
+   and `<project-slug>-worker`, and all three exist for every selected platform.
+6. Confirm `CLAUDE.md` / `AGENTS.md` have no forced skill-invocation mandate.
+7. Confirm every init-time placeholder is replaced per the placeholder map in
    `references/atlas-contract.md` — including `{{BUILD_DATE}}`,
    `{{BUILD_COMMIT}}`, and `{{ATLAS_FORMAT}}` in the index — that
-   `{{INDEX_FILE}}` appears in the lead adapter and not the worker, and that
-   `{{DATE}}` and `{{SLUG}}` remain intact in the lead adapter (filled per
-   change, not at initialization).
+   `{{INDEX_FILE}}` appears in the lead adapter and in neither of the others, and
+   that `{{DATE}}` and `{{SLUG}}` remain intact in the lead and relay adapters
+   (filled per change, not at initialization).
 
 ## Final Report
 

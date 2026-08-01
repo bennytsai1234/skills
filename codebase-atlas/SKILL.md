@@ -6,14 +6,15 @@ description: "Initialize, refresh, or rebuild a repository atlas under docs/ for
 # Codebase Atlas
 
 Codebase Atlas turns a repository into an engineering map, then generates the
-role-split entrypoints for a human-mediated two-agent workflow: a lead that
-specifies and reviews, and an implementation agent the human hands a task package
-to. Use it for atlas initialization, a deliberate full rebuild, or an incremental
-refresh of an existing atlas — not for ordinary follow-up development.
+role-split entrypoints for a human-mediated three-tier workflow: a lead that
+specifies and reviews, a relay lead the human hands one dispatch plan to, and
+implementation agents the relay lead dispatches one package each. Use it for
+atlas initialization, a deliberate full rebuild, or an incremental refresh of an
+existing atlas — not for ordinary follow-up development.
 
-**Do not run this skill while executing a task package.** If your instructions
-arrived as a package (a prompt whose header says `ROLE: worker`), an atlas
-rebuild is out of scope — report that instead.
+**Do not run this skill while executing a task package or a dispatch plan.** If
+your instructions arrived with a `ROLE: worker` or `ROLE: relay-lead` header, an
+atlas rebuild is out of scope — report that instead.
 
 Keep this skill simple:
 
@@ -25,14 +26,14 @@ Keep this skill simple:
   subagents run in parallel (Agent tool). Keep module-boundary judgment, the
   index, and adapter generation centralized.
 
-  This is **build-time** parallelism, and it is the one place this skill spawns
-  anything. The workflow the generated adapters describe has no automated
-  dispatch at all.
-- The atlas this skill generates is built for a **human-mediated two-agent**
-  workflow. It produces **two** entrypoints per platform — a lead adapter for the
-  agent talking to the human, and a worker adapter for the implementation agent
-  the human hands a task package to. Read `references/delegation.md` before
-  generating either.
+  This is **build-time** parallelism, separate from the dispatch the generated
+  relay adapter describes.
+- The atlas this skill generates is built for a **human-mediated three-tier**
+  workflow. It produces **three** entrypoints per platform — a lead adapter for
+  the agent talking to the human, a relay adapter for the agent the human hands
+  the dispatch plan to, and a worker adapter for the implementation agents the
+  relay lead dispatches. The relay and worker tiers run on GPT-5.6-Luna,
+  reasoning Max. Read `references/delegation.md` before generating any of them.
 - Determine the working language before any user-facing output. Prefer an
   explicit repository language rule, then the user's initialization request
   language, then English. Use the selected language for user-facing output and
@@ -85,6 +86,9 @@ Before outputting anything, scan only for old Codebase Atlas artifacts:
      and any `<project-slug>-atlas` skill whose body carries worker-side
      execution rules rather than the lead role check. A single self-contained
      adapter is the design this version replaces; it must not survive a rebuild.
+     The same applies to a format-3 lead/worker pair with no `<slug>-relay`
+     sibling: replace the whole set rather than adding a relay adapter alongside
+     it, since the lead and worker bodies both assume the human returns.
    - Any "run the atlas skill before every operation" mandate that a previous
      atlas wrote into `CLAUDE.md` or `AGENTS.md` (remove only that block, not
      the whole file).
@@ -297,17 +301,21 @@ before asking for configuration decisions:
     How work will run after this is set up:
 
     I understand the request, clarify the desired result and acceptance evidence
-    with you, and write a concise task package to a file. You hand that file to
-    your implementation agent yourself; I do not launch anything. It explores the
-    code, chooses and makes the change, runs the checks needed to prove it, and
-    reports back. Then I review it against the package and either accept or send
-    back a short list of precise gaps.
+    with you, split the work into task packages, and write one dispatch plan.
+    You hand that single plan to your execution manager; I do not launch
+    anything. It reads the packages, decides the order, runs one agent per
+    package, verifies each result itself, records what happened, and commits.
 
-    I never edit the code myself, including for changes that look trivial.
+    You do not need to come back to me afterwards — the records are written for
+    agents to read. If you do come back, I take a second look and update the map.
+
+    I never edit the code myself, including for changes that look trivial. A
+    one-off fix like a typo does not belong in this workflow at all; hand those
+    straight to an execution model.
     ```
 
-    Do not ask a model-tier question. The implementation agent is whichever one
-    the user runs, and the package is written to be model-agnostic.
+    Do not ask a model-tier question. The execution manager and the agents it
+    dispatches run on GPT-5.6-Luna with reasoning Max.
 11. Use this confirmation shape for preserved rules:
 
     ```text
@@ -370,7 +378,7 @@ what it will skip.
      slashes, even on Windows. One subagent writes exactly one file — never
      let two subagents target the same path.
 
-   These prompts are build-time instructions, not the `atlas/v2` task packages
+   These prompts are build-time instructions, not the `atlas/v3` task packages
    the generated workflow uses. Keep them to what the subagent cannot derive, and
    do not paste this conversation into them.
    After all module subagents return, read their brief findings (not the full
@@ -383,41 +391,43 @@ what it will skip.
 7. Read `references/delegation.md`, then generate the adapters yourself
    (centralized) for all platforms selected in Step 3.
 
-   Each platform gets a **pair**, split by role: a lead adapter for the agent
-   talking to the human (entry router, investigate/change discipline, Decision
-   Gate, Before/After gate, task-package authoring, review, governance writes)
-   and a worker adapter for the implementation agent the human hands a package to
-   (execution only). Never generate one without the other.
-   - If Claude Code was selected: create `.claude/skills/<project-slug>-atlas/`
-     and `.claude/skills/<project-slug>-worker/` if needed, then generate
-     `SKILL.md` in each from `assets/templates/lead_adapter.md` and
+   Each platform gets **all three**, split by role: a lead adapter (entry router,
+   investigate/change discipline, Decision Gate, Before/After gate, package and
+   dispatch-plan authoring, review, atlas writes), a relay adapter (ordering,
+   dispatch, waiting, acceptance, completion records, commits), and a worker
+   adapter (implementation only). Never generate a partial set — without the relay
+   adapter, acceptance and archival strand whenever the human does not return.
+   - If Claude Code was selected: create
+     `.claude/skills/<project-slug>-{atlas,relay,worker}/` if needed, then
+     generate `SKILL.md` in each from `assets/templates/lead_adapter.md`,
+     `assets/templates/relay_adapter.md`, and
      `assets/templates/worker_adapter.md`.
    - If Codex was selected: do the same under
-     `.agents/skills/<project-slug>-atlas/` and
-     `.agents/skills/<project-slug>-worker/`. Both platforms use identical
-     adapter bodies; only the destination directory differs.
-   - Generate the generic pair `docs/<project>_lead_adapter.md` and
-     `docs/<project>_worker_adapter.md` (same templates with the frontmatter
-     block dropped) only when no platform adapter exists this run — the user
-     chose "None" in Step 3, or detection was inconclusive and no platform was
-     picked. If a platform pair exists, skip the generic pair (see
-     `references/atlas-contract.md` → Entrypoint Adapters → Generic Adapters).
-     If generic adapter files already exist from a prior run — including the
-     pre-split single `docs/<project>_adapter.md` — and a platform adapter now
-     exists too, delete them now as part of this step, not in a later pass.
+     `.agents/skills/<project-slug>-{atlas,relay,worker}/`. Both platforms use
+     identical adapter bodies; only the destination directory differs.
+   - Generate the generic set `docs/<project>_{lead,relay,worker}_adapter.md`
+     (same templates with the frontmatter block dropped) only when no platform
+     adapter exists this run — the user chose "None" in Step 3, or detection was
+     inconclusive and no platform was picked. If a platform set exists, skip the
+     generic one (see `references/atlas-contract.md` → Entrypoint Adapters →
+     Generic Adapters). If generic adapter files already exist from a prior run —
+     including the pre-split single `docs/<project>_adapter.md` and the format-3
+     lead/worker pair — and a platform adapter now exists too, delete them now as
+     part of this step, not in a later pass.
    - In every adapter set `{{PROJECT_NAME}}`, `{{DELIVERY_POLICY}}`, and
      `{{REPORTING_LEVEL}}`; in platform adapters also set `{{PROJECT_SLUG}}`
-     (lead skill `<slug>-atlas`, worker skill `<slug>-worker`). Set
+     (lead `<slug>-atlas`, relay `<slug>-relay`, worker `<slug>-worker`). Set
      `{{INDEX_FILE}}` in the **lead adapter only**, to the relative path from
      the adapter's location to the index (e.g. from
      `.claude/skills/<project-slug>-atlas/` use
-     `../../../docs/<project>_index.md`) — the worker adapter must not reference
-     the index at all. Leave the runtime tokens `{{DATE}}` and `{{SLUG}}` intact
-     (see the placeholder map in `references/atlas-contract.md`).
-   - Render each adapter's `description` in the Step 0 working language, and
-     keep the cross-reference in it: the lead description points an agent
-     executing a task package at `<project-slug>-worker`, and the worker
-     description points a human-facing agent at `<project-slug>-atlas`.
+     `../../../docs/<project>_index.md`) — neither the relay nor the worker
+     adapter may reference the index. Leave the runtime tokens `{{DATE}}` and
+     `{{SLUG}}` intact (see the placeholder map in
+     `references/atlas-contract.md`). There is no model token: the relay and
+     worker adapters name GPT-5.6-Luna, reasoning Max, literally.
+   - Render each adapter's `description` in the Step 0 working language, and keep
+     the cross-references in it: every description names **both** sibling skills,
+     so an agent that loaded the wrong one self-corrects on the first line.
    - Do **not** write a forced "run the atlas skill before every operation"
      mandate into `CLAUDE.md` or `AGENTS.md`. At most, if the file has no pointer
      to the atlas, add a single plain-language line noting the navigation map
@@ -425,18 +435,18 @@ what it will skip.
    - If a rebuild detects existing adapter files, include them in the
      delete-and-rebuild confirmation (Step 1) before overwriting.
 8. Verify and fix in parallel. Dispatch one subagent per generated file — the
-   index, every module doc, and every adapter (lead and worker), one file per
-   subagent, all dispatches in one message so they run concurrently — to
+   index, every module doc, and every adapter (lead, relay, and worker), one file
+   per subagent, all dispatches in one message so they run concurrently — to
    independently re-check that single file and fix problems directly rather than
    only reporting them (each subagent has Edit access to its own file). Each
    verification subagent's prompt must include, inline:
    - The single file's path, with an explicit instruction to read and edit
      only that path, never any other generated file.
    - The checklist items from `references/quality-checklist.md` relevant to
-     that file's type (index / module / lead adapter / worker adapter) and the
-     matching requirements from `references/atlas-contract.md` (Index
-     Requirements, Module Requirements, Lead Adapter Requirements, or Worker
-     Adapter Requirements as applicable).
+     that file's type (index / module / lead adapter / relay adapter / worker
+     adapter) and the matching requirements from `references/atlas-contract.md`
+     (Index Requirements, Module Requirements, Lead Adapter Requirements, Relay
+     Adapter Requirements, or Worker Adapter Requirements as applicable).
    - An instruction to fix directly whatever it finds wrong — remaining
      init-time placeholders, missing required sections, invented facts not
      grounded in the repository, file inventories instead of routing
@@ -448,8 +458,8 @@ what it will skip.
    centralized pass over `references/quality-checklist.md` for the cross-file
    concerns no single-file subagent can see alone: do local Markdown links
    resolve across files, does the index's module list match the module docs
-   actually on disk, does every platform have both a lead and a worker adapter,
-   and do the frontmatter names follow `<project-slug>-atlas` /
+   actually on disk, does every platform have all three adapters, and do the
+   frontmatter names follow `<project-slug>-atlas` / `<project-slug>-relay` /
    `<project-slug>-worker` consistently across Claude Code and Codex. Report
    completion only after this pass.
 9. Apply the delivery policy resolved in Step 3, per
@@ -505,8 +515,8 @@ drift classification this workflow executes.
 7. Regenerate the adapters only when the index's recorded format version is
    behind the current one in `references/atlas-contract.md`, or when the user
    changed a decision this run. Otherwise leave them alone. If you do regenerate,
-   generate the full pair per Initialization Step 7 — never a lead without its
-   worker.
+   generate the full set of three per Initialization Step 7 — never a partial
+   set.
 8. Verify only what this run wrote: one verification subagent per written file,
    same prompt shape as Initialization Step 8, then the centralized cross-file
    pass from `references/quality-checklist.md` → Refresh. Run that cross-file
@@ -523,22 +533,28 @@ drift classification this workflow executes.
   notes and remove stale boundaries during rebuilds.
 - Generated docs must describe repository-persistent facts, not facts about the
   current agent, model, editor, shell, chat session, or temporary workspace.
-- Code-changing work must state a plain Before / After before the task package is
-  written. It is the user-facing checkpoint; do not replace it with secondary
-  engineering reports, and never run it agent-to-agent. At T1/T2, wait for
-  confirmation before writing the package; at T0, announce the one-line
-  Before / After and proceed, then report:
+- Code-changing work must state a plain Before / After before any task package is
+  written, and wait for explicit confirmation. It is the user-facing checkpoint;
+  do not replace it with secondary engineering reports, and never run it
+  agent-to-agent.
   - **Before**: current state and what is wrong, missing, confusing, or risky.
   - **After**: what the change will make true.
+- There is no trivial tier. A typo, a constant, or a one-line config change goes
+  straight to an execution model, not through this workflow.
+- Governance files have one writer each, split by tier: the lead owns atlas docs
+  and `docs/changes/planning/`; the relay lead owns completion records,
+  `docs/changes/completed/`, and implementation commits. Both tiers push.
 - Split generated entrypoints by role, not by activity. Understanding, deciding,
   specifying, reviewing, and knowledge maintenance ship in the lead adapter;
-  implementation ships separately.
-- The generated workflow has no automated dispatch. The lead writes a task
-  package to a file and stops; a human carries it to the implementation agent and
-  brings the result back. Only one agent is active on the working tree at a time,
-  and whoever holds it runs whatever build or test it needs.
-- The lead never edits source code or tests, at any tier.
-- Exactly one agent writes any governance file: the lead.
+  ordering, dispatch, acceptance, and recording in the relay adapter;
+  implementation in the worker adapter.
+- The human crosses the workflow once: the lead writes files and stops, and the
+  human carries the dispatch plan to the relay lead. Everything after that is
+  agent-to-agent, because the human is not expected to return.
+- One agent implements on the working tree at a time, and whoever holds it runs
+  whatever build or test it needs. Where two packages would contend, the relay
+  lead serializes them.
+- The lead never edits source code or tests, at any size.
 - Before proposing a change, calibrate scope: owning module, boundary modules,
   contracts, shared state, generated artifacts, tests, downstream users, and
   uncertain surfaces. Use this to reason, not as a substitute for the
@@ -555,11 +571,11 @@ drift classification this workflow executes.
 Do not run Codebase Atlas for ordinary daily work after an atlas exists. The
 generated lead adapter handles it: read-only tasks (explanations, investigations,
 reviews, reproductions, profiling, CI failures, risk assessment) follow its
-investigate path, and every code edit follows its change path, ending in a task
-package the user hands over.
+investigate path, and every code change follows its change path, ending in task
+packages and one dispatch plan the user hands over.
 
-Do not run it while executing a task package. A worker that finds the map stale
-reports that; it does not rebuild it.
+Do not run it while executing a task package or a dispatch plan. A worker or
+relay lead that finds the map stale reports that; it does not rebuild it.
 
 Rerun Codebase Atlas only when a human explicitly asks for a rebuild, refresh,
 regenerate, or rescan of the atlas itself. When they do, check which one they
