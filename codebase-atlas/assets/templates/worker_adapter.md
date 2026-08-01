@@ -38,6 +38,11 @@ working with a human, or `{{PROJECT_SLUG}}-relay` when running a dispatch plan.
 If you are returned a `## Gaps` list, fix exactly those points; everything else
 is already accepted.
 
+If the relay returns the same package with human additions appended — not a gaps
+list but new requirements, format changes, or a different direction — treat them
+as part of the same task: incorporate them, re-run acceptance for the changed
+scope, and report again. Same package, same worker, no new task.
+
 ## Scope
 
 Files are not fenced by default. `Starting Points` tells you where to begin, not

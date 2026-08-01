@@ -46,13 +46,14 @@ Three entrypoints, split by role:
   model. Entry router (read the index, confirm the project in one sentence, route
   know→investigate / change→change), change discipline (tiers, Decision Gate,
   Before/After gate), diagnosis, decomposition, package and dispatch-plan
-  authoring, second-pass review, and atlas writes. It does not implement, and it
-  does not dispatch.
+  authoring, spec fixes on escalation, and atlas writes at initialization. It
+  does not implement, and it does not dispatch.
 - **Relay adapter** — for the agent you hand the dispatch plan to, on
   GPT-5.6-Luna with reasoning Max. It orders the batch within the plan's
   dependencies, decides real parallelism, dispatches one agent per package, waits
-  without interfering, accepts by re-running the decisive checks itself, records
-  completion, and commits.
+  without interfering, accepts by re-running the decisive checks itself, relays
+  your mid-course adjustments to the same worker, records completion, commits,
+  and refreshes the map at batch end.
 - **Worker adapter** — for the implementation agent the relay lead dispatches. It
   explores the code freely, designs and makes the change across whatever files are
   needed, writes and runs tests including full builds and suites, fixes failures
@@ -64,10 +65,12 @@ exists.
 
 ## The Handoff
 
-**The human crosses the workflow once.** The lead writes the packages and one
+**The human hands over one dispatch plan.** The lead writes the packages and one
 dispatch plan, commits and pushes them, and stops. You hand that single plan to
-the relay lead. Everything after that is agent-to-agent — because you are not
-expected to come back, and the workflow has to be complete without you.
+the relay lead, who becomes your window during the batch: you can review
+completed packages, ask for status, and inject adjustments that the relay relays
+to the same worker. If you inject nothing, the batch runs on its own, and the
+relay refreshes the map when it is done.
 
 **The lead never edits code.** No size exemption: small fixes like a typo go
 straight to an execution model rather than becoming task packages. It reads, runs
@@ -90,10 +93,13 @@ Worker    8. explore, implement across files as needed
 Relay    11. accept by re-running the decisive checks — or return precise gaps
          12. record completion, archive, summarize, commit and push
          13. run the batch verification, report
-Lead     14. (if you return) second-pass review, and atlas updates
+         14. refresh the map from the completion records
+You      (optional, any time) → review a package or ask for status; your
+         adjustments go to the relay, which relays them to the same worker
 ```
 
-Step 14 may never happen. That is expected, not a failure.
+Mid-batch input may never come. That is expected, not a failure — the batch runs
+to completion without it.
 
 The **task package** (`atlas/v3`) carries the desired result and objective
 acceptance checks. It may include optional starting points and `Constraints`, but
@@ -117,9 +123,9 @@ Four rules hold the loop together:
   report.
 - **Governance files are split by tier.** The lead owns atlas docs and
   `docs/changes/planning/`; the relay lead owns completion records,
-  `docs/changes/completed/`, and implementation commits. Workers write neither.
-  Both tiers push — the lead before handover, since the relay lead reads the
-  packages out of the repository.
+  `docs/changes/completed/`, implementation commits, and the batch-end atlas
+  refresh. Workers write neither. Both tiers push — the lead before handover,
+  since the relay lead reads the packages out of the repository.
 - **Waiting is passive, and blocking.** The relay lead waits with the platform's
   blocking wait (on Codex, `wait_agent`, one hour per call), never a `sleep`,
   which a completion event cannot preempt. While a subagent is in flight it runs

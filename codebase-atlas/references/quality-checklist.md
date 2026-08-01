@@ -136,6 +136,9 @@ complete.
   or applying it to a subagent.
 - The relay adapter accepts by re-running the decisive checks, never on the
   subagent's text, and leaves specification defects to the planning tier.
+- The relay adapter states it is the human's window during the batch: mid-course
+  additions are relayed to the same worker as an appended package (no new task
+  package), and the relay runs the atlas refresh at batch end.
 - Model assignment appears literally as GPT-5.6-Luna, reasoning Max, in the relay
   adapter, the worker adapter, and both embedded template headers. No adapter
   contains a `MODEL_TIER` field or any other abstract tier system.
@@ -244,22 +247,24 @@ centralized pass still runs in full.
    tier, Decision Gate, Before/After) is present inline; the `atlas/v3` package
    template and the dispatch-plan template are both embedded; the `Background`
    guidance, acceptance rules, `Starting Points`-is-a-map rule, commit-and-push
-   before handover, idle rule, second-pass review order, and gaps-only return are
-   present inline; and reporting respects the selected level.
+   before handover, idle rule, escalated second-pass review order, and gaps-only
+   return are present inline; and reporting respects the selected level.
 3. Reread the relay adapter and confirm it enters only through a dispatch plan,
    respects hard ordering while owning parallelism, dispatches with the literal
    model parameters, waits with `wait_agent` at `timeout_ms: 3600000`, treats a
    timeout as "still running", re-waits on remaining ids, accepts by re-running
-   checks, never repairs a specification, archives the dispatch plan with the
-   batch, and carries the completion protocol in order ending in commit and
-   push.
+   checks, never repairs a specification, relays human mid-course additions to
+   the same worker, archives the dispatch plan with the batch, runs the atlas
+   refresh at batch end, and carries the completion protocol in order ending in
+   commit and push.
 4. Reread the worker adapter and confirm it opens with the mirror role check,
    grants exploration and implementation choice, makes the worker own the checks
    needed for acceptance including full builds and suites, states other tiers'
    ownership rather than a prohibition list, carries the shortcut rule as a
    principle rather than a ban catalogue, carries the evidence-based report
-   format, handles a returned gaps list, and never mentions the index, the module
-   list, the plan lifecycle, or dispatch mechanics.
+   format, handles a returned gaps list, treats appended human additions as part
+   of the same package, and never mentions the index, the module list, the plan
+   lifecycle, or dispatch mechanics.
 5. Confirm platform skill frontmatter names and directories match the contract:
    Claude Code and Codex both use `<project-slug>-atlas`, `<project-slug>-relay`,
    and `<project-slug>-worker`, and all three exist for every selected platform.

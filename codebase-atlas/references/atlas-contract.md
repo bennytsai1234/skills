@@ -27,7 +27,8 @@ generated, split by **role**:
 
 The lead never spawns anything — it writes files and the human carries **one** of
 them, the dispatch plan, across to the relay lead. Everything after that crossing
-is agent-to-agent, because the human is not expected to come back. Read
+is agent-to-agent, with the relay as the human's window; if the human injects
+nothing, the batch completes on its own. Read
 `references/delegation.md` before generating any adapter.
 
 ## Atlas Format Version
@@ -320,17 +321,19 @@ section.
 Full doctrine in `references/delegation.md`. The parts every generated adapter
 must enforce:
 
-- **Lead** — the only agent in direct contact with a human. Owns understanding
-  the need, choices the repository cannot settle, the Decision Gate, the
-  Before/After gate, diagnosis, decomposition, every task package and the dispatch
-  plan, atlas writes, and a second-pass review of whatever the human brings back.
-  It does not implement and it does not dispatch — it writes files, commits and
-  pushes them, and the human carries the dispatch plan across.
+- **Lead** — the agent that turns the human's need into a dispatch plan. Owns
+  understanding the need, choices the repository cannot settle, the Decision
+  Gate, the Before/After gate, diagnosis, decomposition, every task package and
+  the dispatch plan, atlas writes at initialization, and spec fixes when the
+  relay escalates a defect. It does not implement and it does not dispatch — it
+  writes files, commits and pushes them, and the human carries the dispatch plan
+  across. After handoff, the human's window is the relay.
 - **Relay lead** — the execution manager, started by the human with the dispatch
-  plan. Owns ordering within the plan's dependencies, the real parallelism
-  decision, dispatch, waiting, acceptance by re-running the decisive checks,
-  completion records, the completed folder, the daily summary, and the commit and
-  push.
+  plan, and the human's window during the batch. Owns ordering within the plan's
+  dependencies, the real parallelism decision, dispatch, waiting, acceptance by
+  re-running the decisive checks, relaying the human's mid-course additions to
+  the same worker, completion records, the completed folder, the daily summary,
+  the commit and push, and the atlas refresh at batch end.
 - **Worker** — a strong implementation agent, dispatched against one task package.
   Owns exploration, implementation decisions, the change across whatever files it
   needs, the checks needed to prove acceptance, and one evidenced report.
@@ -345,8 +348,8 @@ not, reports the needed change instead of writing it.
 
 | File | Written by | Committed and pushed by |
 |---|---|---|
-| `docs/*_index.md`, `docs/<project>/*.md` | Lead | Lead |
-| Architecture Decisions rows | Lead | Lead |
+| `docs/*_index.md`, `docs/<project>/*.md` | Lead at init; Relay at batch end | Lead; Relay at batch end |
+| Architecture Decisions rows | Lead at init; Relay at batch end | Lead; Relay at batch end |
 | `docs/changes/planning/**` | Lead | Lead, before handover |
 | `Completion record` inside a package | Relay lead | Relay lead |
 | `docs/changes/completed/**` | Relay lead | Relay lead |
@@ -401,11 +404,10 @@ and reviews; it does not implement and it does not dispatch. It must:
   one-line config change does not enter this workflow at all and goes straight to
   an execution model — and that the lead neither invents a shortcut path nor edits
   it itself.
-- **Atlas update** when a returned `Completion record` reports that the change
-  altered a module's boundary, ownership, or an external API/contract: update the
-  affected module doc, index entry, and Architecture Decisions row, and only
-  those. State that this is the one governance step that survives the human not
-  returning, so it happens whenever results come back, however late.
+- **Atlas update** is the relay's at batch end. The lead updates atlas docs for
+  work it planned itself, or when the relay escalates a boundary or contract
+  question; only the affected module doc, index entry, and Architecture
+  Decisions row change — never a rescan.
 - **Before / After gate** as the only confirmation interface, and lead-only — it
   happens between the lead and the human, never agent-to-agent: Before states the
   current state and why the change is needed (the diagnosed root cause for a
@@ -470,15 +472,15 @@ and reviews; it does not implement and it does not dispatch. It must:
   loaded at runtime, so the adapter carries this itself. State that the user may
   never return to the conversation, and that this is expected rather than a
   failure.
-- **Review as a second pass**, when and if the human brings results back — the
-  relay lead already accepted each package and is the primary gate. Read in
-  order: requirement conformance (against the `Completion record`, re-running
-  anything whose result decides acceptance — a claim of a passing check is not a
-  passing check); the diff against the Goal and explicit `Constraints`; and
-  whether the completion records state limits and residual risk honestly. State
-  that everything found is a gap, including a check that fails on re-run, and that
-  the lead does not fix it — but that a wrong specification is the lead's to
-  withdraw, fix, and reissue.
+- **Review as a second pass**, reached when the relay escalates a spec defect or
+  the human asks for one — the relay lead already accepted each package and ran
+  the refresh. Read in order: requirement conformance (against the
+  `Completion record`, re-running anything whose result decides acceptance — a
+  claim of a passing check is not a passing check); the diff against the Goal
+  and explicit `Constraints`; and whether the completion records state limits
+  and residual risk honestly. State that everything found is a gap, including a
+  check that fails on re-run, and that the lead does not fix it — but that a
+  wrong specification is the lead's to withdraw, fix, and reissue.
 - **Return gaps**: a numbered list of what is wrong and what fixed looks like,
   ending with the required line "everything else is accepted, change nothing
   outside these points".
@@ -549,6 +551,12 @@ plan to. It never plans and never implements. It must:
   completion record → move → summary → commit and push, code and records together.
 - **Run the plan's `Shared Verification`** after the last package, then report the
   batch.
+- **Be the human's window during the batch**: answer status questions, and relay
+  the human's mid-course additions to the same worker as an appended package —
+  no new package, no new dispatch plan. Additions for a running worker are
+  queued; additions for an undispatched package are folded in before dispatch.
+- **Run the atlas refresh at batch end** from the completion records: update the
+  affected module doc, index entry, and Architecture Decisions row.
 - Record the reporting level and the delivery policy.
 
 The relay adapter must not contain: the index path, the module list, the tier

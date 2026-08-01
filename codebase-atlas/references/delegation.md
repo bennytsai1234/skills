@@ -5,8 +5,9 @@ when generating adapters, and when deciding what belongs in each one.
 
 The handoff from planning to execution is human-mediated: the lead writes files
 and stops, and the human carries one file across. Everything after that — order,
-dispatch, acceptance, records — belongs to the relay lead, because the human is
-not expected to come back.
+dispatch, acceptance, records — belongs to the relay lead, who is also the
+human's window during the batch: mid-course additions are relayed to the same
+worker.
 
 ## 1. The Loop
 
@@ -26,12 +27,17 @@ Worker     8. explore, implement across files as needed
 Relay     11. accept by re-running the decisive checks — or return precise gaps
           12. fill the completion record, archive, summarize, commit and push
           13. run the batch verification, report
-Lead      14. (if the human returns) second-pass review, and atlas updates
+          14. run the atlas refresh from the completion records
+Human     (optional, any time) → reviews a package or asks the relay for status;
+          injects mid-course additions → the relay relays them to the same worker
 ```
 
 Step 4→5 crosses a human, once. Steps 7→8 and 10→11 do not — the relay lead
-dispatches and accepts on its own. Step 14 may never happen, and the workflow
-must be complete without it.
+dispatches and accepts on its own. The relay is the human's window during the
+batch: the human may review completed packages, ask for status, and inject
+mid-course additions, which the relay relays to the same worker. If the human
+injects nothing, the batch runs to completion on its own — the workflow must be
+complete without mid-course input.
 
 ## 2. Roles
 
@@ -47,8 +53,8 @@ available model. It owns:
 - Decomposition: cutting the work into packages.
 - Writing every task package and the dispatch plan, then committing and pushing
   them.
-- Atlas docs and Architecture Decisions rows.
-- Second-pass review of whatever the human brings back.
+- Atlas docs and Architecture Decisions rows at initialization.
+- Reissuing a specification when the relay escalates a spec defect.
 
 **The lead never edits source code or tests.** No size exemption: small fixes
 like a typo go straight to an execution model rather than through this workflow.
@@ -72,6 +78,9 @@ plan. Runs on **GPT-5.6-Luna, reasoning Max**. It owns:
 - Acceptance, by re-running the decisive checks (§9).
 - Completion records, the completed folder, the daily summary, and the commit and
   push (§10).
+- Being the human's window during the batch: status questions and mid-course
+  additions are relayed to the same worker (§6).
+- The atlas refresh at batch end, from the completion records (§10).
 
 **Worker** — a strong implementation agent, dispatched against one task package.
 Runs on **GPT-5.6-Luna, reasoning Max**. It owns:
@@ -264,6 +273,10 @@ A package carries only what a worker with zero conversation history needs: goal,
 background, acceptance, and constraints. Implementation the worker can determine
 from the goal and the code is left to it.
 
+Mid-course additions from the human are appended to the package and re-sent to
+the same worker; they are extensions of one task, not new packages or a new
+dispatch plan.
+
 ## 6. Concurrency And Waiting
 
 ### Deciding what runs in parallel
@@ -326,6 +339,28 @@ failure or error signal means it did not complete.
 Free to do meanwhile: read undispatched packages, plan the schedule, and dispatch
 the next package under the plan's permitted parallelism — scheduling, not
 interference.
+
+### Human additions mid-batch
+
+The relay is the human's window during the batch. The human may review a
+completed package, ask for status, or inject additions — a new requirement, a
+format change, a different direction for a package that is done or still
+running.
+
+- An addition for a **finished** package: append it to that package and
+  re-dispatch the **same worker** with the appended package — an extension of
+  the same task, not a new package or dispatch plan.
+- An addition for a **running** package: queue it; the worker gets it when it
+  reports, as the same appended package. The tree and the running worker stay
+  untouched.
+- An addition for a **not-yet-dispatched** package: fold it in before dispatch.
+- An addition that changes the batch's shared format, constraints, or shared
+  verification: record it batch-wide and apply it to the packages it affects.
+
+Human additions are human decisions, not relay inventions: relay them organized,
+not reinterpreted, and update the package so the worker has one source of truth.
+If an addition makes the spec self-contradictory, flag it upward rather than
+resolving it yourself.
 
 ## 7. Shortcut Patterns
 
@@ -419,10 +454,10 @@ The final line is required. Return at most twice; on a third round the
 specification is the suspect, and that is the lead's to fix — stop the package
 and record why.
 
-**Lead review is a second pass**, when and if the human brings results back. It
-reads the same way, against the `Completion record` and the diff, and re-runs
-whatever decides acceptance. A wrong specification is the lead's to withdraw,
-fix, and reissue.
+**Lead review is a second pass**, reached when the relay escalates a spec defect
+or the human asks for one. It reads the same way, against the `Completion
+record` and the diff, and re-runs whatever decides acceptance. A wrong
+specification is the lead's to withdraw, fix, and reissue.
 
 ## 10. Completion Protocol
 
@@ -447,16 +482,18 @@ After the last package: move the dispatch plan to
 completed folder holds the whole batch and `planning/` keeps only pending
 batches. A dispatch plan that must stay in `planning/` says so in its own
 Completion Protocol. Then run the plan's `Shared Verification` over the merged
-tree, and report the batch. The lead updates atlas docs afterward, from the
-`Completion record` entries that flagged a boundary, ownership, or contract
-change.
+tree, run the atlas refresh from the `Completion record` entries that flagged a
+boundary, ownership, or contract change (update the affected module doc, index
+entry, and Architecture Decisions row), and report the batch. The relay owns
+this refresh; the lead is involved only when a spec defect needs reissuing.
 
 ## 11. Cost And Context Discipline
 
 - **While work is out, leave it to the execution tier.** Waiting is scheduling:
-  read undispatched packages, plan the order. No `git status`, no diff
-  inspection, no speculative reading, no progress narration — for the lead across
-  the whole batch, and for the relay lead while a subagent is in flight.
+  read undispatched packages, plan the order, and answer the human's status
+  questions. No `git status`, no diff inspection, no speculative reading, no
+  progress narration — for the lead across the whole batch, and for the relay
+  lead while a subagent is in flight.
 - **Specify once, completely.** Spend the effort on `Background` and on making
   `Acceptance` checkable, before the handoff. A thin package makes the worker pay
   to rediscover what the lead already knew.

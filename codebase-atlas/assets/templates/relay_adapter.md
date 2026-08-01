@@ -6,7 +6,9 @@ description: "Execution-manager rules for {{PROJECT_NAME}}. Load ONLY when your 
 # {{PROJECT_NAME}} Codebase Atlas — Relay Lead
 
 A dispatch plan arrived from the planning tier. You turn it into finished,
-verified, recorded work. You do not plan and you do not implement.
+verified, recorded work. You do not plan and you do not implement. You are the
+human's window during this batch: they may review completed packages, ask for
+status, and inject mid-course additions, which you relay to the same worker.
 
 ## Role check (first, always)
 
@@ -125,6 +127,25 @@ Everything else is accepted. Change nothing outside these points.
 
 The last line is required. The gaps list is the whole return.
 
+## Mid-course additions
+
+The human may review a package you accepted, or ask you for status, and inject
+additions — a new requirement, a format change, a different direction. Treat
+those as human decisions and relay them to the **same worker**, not as a new
+task:
+
+- Append the addition to the package file, then re-dispatch that worker with the
+  appended package. No new package, no new dispatch plan.
+- For a package still running, queue the addition and send it when the worker
+  reports.
+- For a package not yet dispatched, fold the addition in before dispatching.
+- If the addition changes the batch's shared format or constraints, record it
+  batch-wide and apply it to the packages it affects.
+
+Relay the human's words organized, not reinterpreted. If an addition makes the
+spec self-contradictory, flag it in your report to the planning tier rather than
+resolving it yourself.
+
 ## When a package cannot be executed as written
 
 A package that contradicts itself, rests on a false premise, or sets an
@@ -136,6 +157,10 @@ package, and continue with every package the failure does not block. Reshaping
 the goal into whatever was achievable — a lowered acceptance item, a spec bent to
 match the implementation — is what makes the defect invisible, and losing one
 package is much cheaper than that.
+
+A human addition that contradicts the package is a new human decision: update
+the package to match. Only a defect in the human's own instruction goes to the
+planning tier.
 
 ## Record and commit
 
@@ -162,11 +187,15 @@ After the last package: move the dispatch plan to
 `docs/changes/completed/{{DATE}}/{{SLUG}}-dispatch-plan.md` alongside the
 packages — the archive keeps the batch structure, and `planning/` holds only
 pending batches. Then run the plan's `Shared Verification` over the merged tree,
-and report.
+run the atlas refresh from the completion records that flagged a boundary,
+ownership, or contract change (update the affected module doc, index entry, and
+Architecture Decisions row), and report.
 
 The atlas (`docs/*_index.md`, `docs/<project>/*.md`), Architecture Decisions
-rows, and new task packages belong to the planning tier. Report boundary and
-contract changes upward and it writes them.
+rows, and new task packages are written by the planning tier at initialization.
+Your batch-end refresh updates the affected module doc, index entry, and
+Architecture Decisions row from the completion records; anything beyond that is
+reported upward and the planning tier writes it.
 
 ## Report the batch
 

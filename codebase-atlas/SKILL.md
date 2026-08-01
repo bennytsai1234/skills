@@ -311,7 +311,9 @@ before asking for configuration decisions:
     package, verifies each result itself, records what happened, and commits.
 
     You do not need to come back to me afterwards — the records are written for
-    agents to read. If you do come back, I take a second look and update the map.
+    agents to read. During the batch, your window is the execution manager
+    (relay): tell it what to adjust, and it relays that to the same worker and
+    refreshes the map when the batch is done.
 
     I never edit the code myself, including for changes that look trivial. A
     one-off fix like a typo does not belong in this workflow at all; hand those
@@ -546,14 +548,16 @@ drift classification this workflow executes.
   straight to an execution model, not through this workflow.
 - Governance files have one writer each, split by tier: the lead owns atlas docs
   and `docs/changes/planning/`; the relay lead owns completion records,
-  `docs/changes/completed/`, and implementation commits. Both tiers push.
+  `docs/changes/completed/`, implementation commits, and the batch-end atlas
+  refresh. Both tiers push.
 - Split generated entrypoints by role, not by activity. Understanding, deciding,
   specifying, reviewing, and knowledge maintenance ship in the lead adapter;
   ordering, dispatch, acceptance, and recording in the relay adapter;
   implementation in the worker adapter.
-- The human crosses the workflow once: the lead writes files and stops, and the
-  human carries the dispatch plan to the relay lead. Everything after that is
-  agent-to-agent, because the human is not expected to return.
+- The human crosses the workflow once at handoff: the lead writes files and
+  stops, and the human carries the dispatch plan to the relay lead. During the
+  batch the relay is the human's window — mid-course additions are relayed to
+  the same worker — and if none come, everything after handoff is agent-to-agent.
 - One agent implements on the working tree at a time, and whoever holds it runs
   whatever build or test it needs. Where two packages would contend, the relay
   lead serializes them.

@@ -260,17 +260,19 @@ while running" locally) — their action, not any agent's.
 
 ## While the batch is out
 
-The work belongs to the execution tier. No `git status`, no diff inspection, no
+The work belongs to the execution tier. During the batch the user talks to the
+relay lead; your conversation resumes when a spec defect is escalated or the
+user asks you for a fresh plan. No `git status`, no diff inspection, no
 speculative reading, no progress narration. The work is on another platform and
 another timeline. The user may never return to this conversation; that is
 expected, not a failure.
 
-## Review (when results come back)
+## Review (when the relay escalates)
 
-The relay lead already accepted each package, archived the batch — packages and
-the dispatch plan together in `docs/changes/completed/{{DATE}}/` — and recorded
-the outcome. Your review is a second pass, not the primary gate. Check in this
-order:
+The relay lead already accepted each package, archived the batch, ran the atlas
+refresh, and handled the user's mid-batch feedback. Your review is a second
+pass, reached when the relay escalates a spec defect or the user asks you for
+one. Check in this order:
 
 1. **Requirement conformance.** Does the change do what `Goal` asked, and does
    every `Acceptance` item hold? Verify against the `Completion record`, and
@@ -305,13 +307,11 @@ it, and reissue.
 
 ## Atlas updates
 
-When a `Completion record` reports that a change altered a module's boundary,
-ownership, or an external API/contract, update the affected module doc, index
-entry, and Architecture Decisions row — only those; do not rescan unrelated
-modules.
-
-This is the one governance step that survives the user not returning to this
-conversation. Do it whenever results come back, however late.
+The relay lead runs the atlas refresh at batch end, from the `Completion record`
+entries that flagged a boundary, ownership, or contract change — updating the
+affected module doc, index entry, and Architecture Decisions row. You do not
+redo it. You update the atlas only for work you planned yourself, or when the
+relay escalates a boundary or contract question to you.
 
 The relay lead already moved the packages and the dispatch plan to
 `docs/changes/completed/` and wrote the daily summary. Do not redo either.
