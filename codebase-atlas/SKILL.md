@@ -122,8 +122,9 @@ Before we start, here is what this skill will create for your project.
 
 **What it creates:**
 A durable engineering map under `docs/` — your project's module structure and
-boundaries — plus two entrypoint skills: one for the agent you talk to, and one
-for the agent that implements changes.
+boundaries — plus three entrypoint skills: one for the agent you talk to, one
+for the agent that manages the work, and one for the agent that implements
+changes.
 
 **How to use it later:**
 You do not run this skill again. Future requests load the first entrypoint

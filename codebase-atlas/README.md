@@ -69,10 +69,10 @@ dispatch plan, commits and pushes them, and stops. You hand that single plan to
 the relay lead. Everything after that is agent-to-agent — because you are not
 expected to come back, and the workflow has to be complete without you.
 
-**The lead never edits code.** No size exemption: a typo leaves as a task package
-like everything else. It reads, runs read-only checks, and re-runs a verification
-that decides acceptance; a failure there is a gap to return, not something to
-fix.
+**The lead never edits code.** No size exemption: small fixes like a typo go
+straight to an execution model rather than becoming task packages. It reads, runs
+read-only checks, and re-runs a verification that decides acceptance; a failure
+there is a gap to return, not something to fix.
 
 ```text
 You       → state the need

@@ -50,9 +50,9 @@ available model. It owns:
 - Atlas docs and Architecture Decisions rows.
 - Second-pass review of whatever the human brings back.
 
-**The lead never edits source code or tests.** No size exemption: a typo leaves
-as a task package like everything else. It never dispatches a subagent. Its
-output is specification.
+**The lead never edits source code or tests.** No size exemption: small fixes
+like a typo go straight to an execution model rather than through this workflow.
+It never dispatches a subagent. Its output is specification.
 
 The lead may read code, run read-only checks, and re-run a verification whose
 result decides acceptance. When one of those fails, it is a gap to return, not
@@ -115,7 +115,7 @@ belongs to your tier:
 | Architecture Decisions rows | Lead | Lead |
 | `docs/changes/planning/**` — packages, dispatch plans | Lead | Lead, before handover |
 | `Completion record` inside a package | Relay lead | Relay lead |
-| `docs/changes/completed/**` — archived packages, `summary.md` | Relay lead | Relay lead |
+| `docs/changes/completed/**` — archived packages, dispatch plans, `summary.md` | Relay lead | Relay lead |
 | Source and tests | Worker (working tree only) | Relay lead |
 
 A worker writes no governance file. A boundary, ownership, or contract change
