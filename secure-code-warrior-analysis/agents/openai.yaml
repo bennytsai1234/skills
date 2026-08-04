@@ -1,4 +1,0 @@
-interface:
-  display_name: "Secure Code Warrior 快速分析"
-  short_description: "快速定位 Secure Code Warrior 安全漏洞訓練題的正確程式碼區塊"
-  default_prompt: "Use $secure-code-warrior-analysis to inspect this Secure Code Warrior challenge and identify the exact vulnerable code blocks with concise evidence."
