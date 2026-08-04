@@ -18,6 +18,12 @@ This repository is the canonical home for reusable Codex and agent skills.
 ## Current Skills
 
 - `codebase-atlas`
+- `codebase-memory`
+- `codex-update`
 - `hermes-ops`
+- `mmx-cli`
 - `openclaw-ops`
 - `project-genius`
+- `summarize-project-work`
+- `video-to-text`
+- `windows-cjk-font-substitution`

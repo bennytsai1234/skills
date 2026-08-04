@@ -1,0 +1,4 @@
+interface:
+  display_name: "專案工作會報總結"
+  short_description: "依原始碼與 Git 證據整理專案實際完成工作的會報摘要"
+  default_prompt: "Use $summarize-project-work to group the project's verified work into a concise Traditional Chinese meeting report."
