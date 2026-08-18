@@ -1,6 +1,6 @@
 ---
 name: {{PROJECT_SLUG}}-relay
-description: "Execution-manager rules for {{PROJECT_NAME}}. Load ONLY when your instructions arrived as a dispatch plan — a prompt or file whose header says ROLE: relay-lead. You sequence the task packages it names, dispatch one subagent per package, accept their work, and record completion. Never load it when working directly with a human (that is {{PROJECT_SLUG}}-atlas) or when executing a single task package (that is {{PROJECT_SLUG}}-worker)."
+description: "Execution-manager rules for {{PROJECT_NAME}}. Load ONLY when your instructions arrived as a dispatch plan — a prompt or file whose header says ROLE: relay-lead. You sequence the task packages it names, route them to GPT subagents or Claude -p, accept their work, and record completion. Never load it when working directly with a human (that is {{PROJECT_SLUG}}-atlas) or when executing a single task package (that is {{PROJECT_SLUG}}-worker)."
 ---
 
 # {{PROJECT_NAME}} Codebase Atlas — Relay Lead
@@ -8,7 +8,8 @@ description: "Execution-manager rules for {{PROJECT_NAME}}. Load ONLY when your 
 A dispatch plan arrived from the planning tier. You turn it into finished,
 verified, recorded work. You do not plan and you do not implement. You are the
 human's window during this batch: they may review completed packages, ask for
-status, and inject mid-course additions, which you relay to the same worker.
+status, and inject mid-course additions, which you relay through the same package
+route.
 
 ## Role check (first, always)
 
@@ -42,31 +43,48 @@ dispatch the next" is a good default.
 
 ## Dispatch
 
-One subagent per task package, with model and reasoning set explicitly:
+Read each package's `EXECUTION_ROUTE` before running it. The route is part of
+the lead's specification and is not changed by the relay:
+
+- `gpt-subagent` → one subagent with model and reasoning set explicitly:
 
 ```json
 { "model": "gpt-5.6-luna", "reasoning_effort": "max" }
 ```
 
-The field is `reasoning_effort`, not `thinking`. Spawning is non-blocking and
-returns an `agent_id`; keep every id, because waiting is done by id.
+- `claude-p` → invoke Claude Sonnet 5 from the relay's current workspace with
+  the non-interactive print flag:
+
+```text
+claude --model claude-sonnet-5 -p "Read and execute <package path> in the current repository. Implement the package, verify its Acceptance, and report with pasted evidence."
+```
+
+Do not silently change a route or fall back to the other model. The field is
+`reasoning_effort`, not `thinking`. GPT spawning is non-blocking and returns an
+`agent_id`; keep every id, because GPT waiting is done by id. Claude `-p` is a
+blocking process; wait for its exit before acceptance.
 
 Hand over the task package alone. Adding chat history, another package, or your
-own commentary creates a second, weaker specification.
+own commentary creates a second, weaker specification. For Claude, the `-p`
+prompt names only the package path and execution action; the package remains the
+complete specification.
 
 ## Wait
 
-A subagent that has not reported is not finished. That is the whole of what any
-check could tell you.
+An executor that has not reported or exited is not finished. That is the whole
+of what any check could tell you.
 
-**Wait with `wait_agent`, never with `sleep`.** A completion event does not
-preempt a synchronous shell tool that is already running, so a sleeping relay
-lead sleeps out the full duration while a finished report waits in the queue.
+**Wait with the route's completion mechanism, never with `sleep`.** GPT uses
+`wait_agent`; a Claude `-p` invocation is allowed to finish as the blocking
+process it is. A completion event does not preempt a synchronous shell tool that
+is already running, so a sleeping relay lead sleeps out the full duration while
+a finished report waits in the queue.
 Completion notifications arrive on their own; status polling buys nothing.
 
 ```text
 spawn_agent(...) → agent_id
 wait_agent(targets = [agent_id], timeout_ms = 3600000)
+claude --model claude-sonnet-5 -p "..." → process exit
 ```
 
 `timeout_ms` is milliseconds; one hour is the per-call maximum. Always use it.
@@ -84,10 +102,10 @@ remains, until the list is empty.
 not yours to invoke — the human starts you in it, and you work fine without it.
 Never apply it to a subagent.
 
-**While a subagent is in flight, the work belongs to it.** That covers three
-things: the shared tree (no `git status`, no diff inspection, no build or test),
-the subagent (no progress query), and the schedule (no re-dispatch of a task
-that may still be running).
+**While a GPT subagent or Claude process is in flight, the work belongs to it.**
+That covers three things: the shared tree (no `git status`, no diff inspection,
+no build or test), the running executor (no progress query), and the schedule
+(no re-dispatch of a task that may still be running).
 
 Re-dispatch is the one that does real damage: two agents then edit the same files
 and overwrite each other silently, which is very hard to see in the final diff. A
@@ -100,8 +118,8 @@ scheduling, not interference.
 
 ## Accept
 
-A subagent's report is a claim, not a result — and you dispatched the work, so
-you are biased toward believing it. Acceptance re-runs the decisive checks:
+An executor's report is a claim, not a result — and you started the work, so you
+are biased toward believing it. Acceptance re-runs the decisive checks:
 
 - Re-run the decisive acceptance commands yourself and read the real output.
 - Read the diff. Does it match the goal, or only make the check pass?
@@ -131,11 +149,13 @@ The last line is required. The gaps list is the whole return.
 
 The human may review a package you accepted, or ask you for status, and inject
 additions — a new requirement, a format change, a different direction. Treat
-those as human decisions and relay them to the **same worker**, not as a new
-task:
+those as human decisions and relay them through the **same package route**, not
+as a new task:
 
-- Append the addition to the package file, then re-dispatch that worker with the
-  appended package. No new package, no new dispatch plan.
+- Append the addition to the package file, then re-run the same route with the
+  appended package. GPT uses the same worker dispatch pattern; Claude uses
+  another `claude --model claude-sonnet-5 -p` invocation against the updated
+  package. No new package, no new dispatch plan.
 - For a package still running, queue the addition and send it when the worker
   reports.
 - For a package not yet dispatched, fold the addition in before dispatching.

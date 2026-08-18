@@ -34,9 +34,11 @@ Keep this skill simple:
 - The atlas this skill generates is built for a **human-mediated three-tier**
   workflow. It produces **three** entrypoints per platform — a lead adapter for
   the agent talking to the human, a relay adapter for the agent the human hands
-  the dispatch plan to, and a worker adapter for the implementation agents the
-  relay lead dispatches. The relay and worker tiers run on GPT-5.6-Luna,
-  reasoning Max. Read `references/delegation.md` before generating any of them.
+  the dispatch plan to, and a worker adapter for the implementation routes the
+  relay lead manages. The relay lead runs on GPT-5.6-Luna, reasoning Max. It
+  sends non-frontend packages to GPT-5.6-Luna subagents and runs frontend
+  packages through Claude Sonnet 5 with `claude -p`. Read
+  `references/delegation.md` before generating any of them.
 - Determine the working language before any user-facing output. Prefer an
   explicit repository language rule, then the user's initialization request
   language, then English. Use the selected language for user-facing output and
@@ -307,21 +309,26 @@ before asking for configuration decisions:
     I understand the request, clarify the desired result and acceptance evidence
     with you, split the work into task packages, and write one dispatch plan.
     You hand that single plan to your execution manager; I do not launch
-    anything. It reads the packages, decides the order, runs one agent per
-    package, verifies each result itself, records what happened, and commits.
+    anything. It reads the packages, decides the order, sends non-frontend
+    packages to GPT subagents, runs frontend packages through Claude Sonnet 5
+    with `claude -p`, verifies each result itself, records what happened, and
+    commits.
 
     You do not need to come back to me afterwards — the records are written for
     agents to read. During the batch, your window is the execution manager
-    (relay): tell it what to adjust, and it relays that to the same worker and
-    refreshes the map when the batch is done.
+    (relay): tell it what to adjust, and it relays that through the same package
+    route and refreshes the map when the batch is done.
 
     I never edit the code myself, including for changes that look trivial. A
     one-off fix like a typo does not belong in this workflow at all; hand those
     straight to an execution model.
     ```
 
-    Do not ask a model-tier question. The execution manager and the agents it
-    dispatches run on GPT-5.6-Luna with reasoning Max.
+    Do not ask a model-tier question. The execution manager runs on GPT-5.6-Luna
+    with reasoning Max; package routing is determined by the task surface:
+    frontend packages use `EXECUTION_ROUTE: claude-p` and Claude Sonnet 5
+    through `claude -p`; all other packages use
+    `EXECUTION_ROUTE: gpt-subagent` and GPT-5.6-Luna subagents.
 11. Use this confirmation shape for preserved rules:
 
     ```text
@@ -430,8 +437,10 @@ what it will skip.
      `../../../docs/<project>_index.md`) — neither the relay nor the worker
      adapter may reference the index. Leave the runtime tokens `{{DATE}}` and
      `{{SLUG}}` intact (see the placeholder map in
-     `references/atlas-contract.md`). There is no model token: the relay and
-     worker adapters name GPT-5.6-Luna, reasoning Max, literally.
+     `references/atlas-contract.md`). The relay adapter names GPT-5.6-Luna,
+     reasoning Max, as its own model and carries both package routes literally:
+     GPT subagents for non-frontend work and `claude --model claude-sonnet-5 -p`
+     for frontend work.
    - Render each adapter's `description` in the Step 0 working language, and keep
      the cross-references in it: every description names **both** sibling skills,
      so an agent that loaded the wrong one self-corrects on the first line.
@@ -556,8 +565,9 @@ drift classification this workflow executes.
   implementation in the worker adapter.
 - The human crosses the workflow once at handoff: the lead writes files and
   stops, and the human carries the dispatch plan to the relay lead. During the
-  batch the relay is the human's window — mid-course additions are relayed to
-  the same worker — and if none come, everything after handoff is agent-to-agent.
+  batch the relay is the human's window — mid-course additions are relayed
+  through the same package route — and if none come, everything after handoff is
+  agent-to-agent.
 - One agent implements on the working tree at a time, and whoever holds it runs
   whatever build or test it needs. Where two packages would contend, the relay
   lead serializes them.

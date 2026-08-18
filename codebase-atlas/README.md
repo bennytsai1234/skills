@@ -50,15 +50,18 @@ Three entrypoints, split by role:
   does not implement, and it does not dispatch.
 - **Relay adapter** — for the agent you hand the dispatch plan to, on
   GPT-5.6-Luna with reasoning Max. It orders the batch within the plan's
-  dependencies, decides real parallelism, dispatches one agent per package, waits
-  without interfering, accepts by re-running the decisive checks itself, relays
-  your mid-course adjustments to the same worker, records completion, commits,
-  and refreshes the map at batch end.
-- **Worker adapter** — for the implementation agent the relay lead dispatches. It
-  explores the code freely, designs and makes the change across whatever files are
-  needed, writes and runs tests including full builds and suites, fixes failures
-  until they pass, and reports with pasted evidence. It never runs the
-  Before/After gate, never writes plans or atlas docs, and never commits.
+  dependencies, decides real parallelism, sends non-frontend packages to GPT
+  subagents, runs frontend packages through Claude Sonnet 5 with `claude -p`,
+  waits without interfering, accepts by re-running the decisive checks itself,
+  relays your mid-course adjustments to the same package route, records
+  completion, commits, and refreshes the map at batch end.
+- **Worker adapter** — for either implementation route the relay lead manages.
+  Non-frontend packages run on GPT-5.6-Luna subagents; frontend packages run on
+  Claude Sonnet 5 through `claude -p`. The implementation agent explores the
+  code freely, designs and makes the change across whatever files are needed,
+  writes and runs tests including full builds and suites, fixes failures until
+  they pass, and reports with pasted evidence. It never runs the Before/After
+  gate, never writes plans or atlas docs, and never commits.
 
 Generic `docs/*_adapter.md` copies are generated only when no platform adapter
 exists.
@@ -69,8 +72,8 @@ exists.
 dispatch plan, commits and pushes them, and stops. You hand that single plan to
 the relay lead, who becomes your window during the batch: you can review
 completed packages, ask for status, and inject adjustments that the relay relays
-to the same worker. If you inject nothing, the batch runs on its own, and the
-relay refreshes the map when it is done.
+through the same package route. If you inject nothing, the batch runs on its own,
+and the relay refreshes the map when it is done.
 
 **The lead never edits code.** No size exemption: small fixes like a typo go
 straight to an execution model rather than becoming task packages. It reads, runs
@@ -86,7 +89,7 @@ Lead      1. understand the project and the need
 You       → give the dispatch plan to the relay lead
 Relay     5. read the plan and every package it names
           6. order the work; decide real parallelism
-          7. dispatch one agent per package
+          7. route each package to a GPT subagent or Claude `-p`
 Worker    8. explore, implement across files as needed
           9. run the checks that prove acceptance
          10. report with evidence and risks
@@ -95,7 +98,7 @@ Relay    11. accept by re-running the decisive checks — or return precise gaps
          13. run the batch verification, report
          14. refresh the map from the completion records
 You      (optional, any time) → review a package or ask for status; your
-         adjustments go to the relay, which relays them to the same worker
+         adjustments go to the relay, which relays them through the same route
 ```
 
 Mid-batch input may never come. That is expected, not a failure — the batch runs
@@ -113,6 +116,13 @@ that never saw the conversation it came from, possibly on another platform, so t
 diagnosis has to travel with it — the wrong code quoted, real input against real
 wrong output, any inventory already done. There is no length limit on it.
 
+The lead routes packages by surface. Frontend/UI work — pages, components,
+layout, styling, responsive behavior, visual states, and interactions — is
+marked for Claude Sonnet 5 and executed by the relay with `claude -p`. Backend,
+API, data, infrastructure, and other non-frontend work is marked for GPT-5.6-Luna
+and executed through a GPT subagent. A mixed request is split along that
+boundary, with dependencies recorded in the dispatch plan.
+
 Four rules hold the loop together:
 
 - **Acceptance is the whole contract.** Every acceptance item must be checkable
@@ -126,10 +136,10 @@ Four rules hold the loop together:
   `docs/changes/completed/`, implementation commits, and the batch-end atlas
   refresh. Workers write neither. Both tiers push — the lead before handover,
   since the relay lead reads the packages out of the repository.
-- **Waiting is passive, and blocking.** The relay lead waits with the platform's
+- **Waiting is passive, and blocking.** The relay lead waits with the route's
   blocking wait (on Codex, `wait_agent`, one hour per call), never a `sleep`,
-  which a completion event cannot preempt. While a subagent is in flight it runs
-  no git command, no build, no test, and no progress query — and never
+  which a completion event cannot preempt. While a GPT subagent or Claude process
+  is in flight it runs no git command, no build, no test, and no progress query — and never
   re-dispatches a task that may still be running, since two agents editing the
   same files overwrite each other invisibly. A wait that times out means the
   window closed, not that the task failed.

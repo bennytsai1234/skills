@@ -23,7 +23,7 @@ generated, split by **role**:
 |---|---|---|---|
 | Planning & review | `<slug>-atlas` | strongest available | alignment, diagnosis, decomposition, packages, dispatch plan, atlas writes |
 | Execution management | `<slug>-relay` | GPT-5.6-Luna, reasoning Max | ordering, dispatch, waiting, acceptance, completion records, commits |
-| Implementation | `<slug>-worker` | GPT-5.6-Luna, reasoning Max | one task package, end to end |
+| Implementation | `<slug>-worker` | GPT-5.6-Luna for non-frontend; Claude Sonnet 5 for frontend via `claude -p` | one task package, end to end |
 
 The lead never spawns anything — it writes files and the human carries **one** of
 them, the dispatch plan, across to the relay lead. Everything after that crossing
@@ -35,10 +35,11 @@ nothing, the batch completes on its own. Read
 
 **Current atlas format: `4`.** Format 4 is the human-mediated three-tier split:
 the lead specifies and reviews but never implements or dispatches; a relay lead
-receives one dispatch plan, orders the batch, dispatches implementation agents,
-accepts their work by re-running checks, and records completion; the worker is a
-strong agent that explores, designs across files, and owns its own tests and
-build. Format 3 was the same human-mediated split without the relay tier, which
+receives one dispatch plan, orders the batch, routes implementation packages to
+GPT subagents or Claude `-p`, accepts their work by re-running checks, and records
+completion; the worker is a strong agent that explores, designs across files, and
+owns its own tests and build. Format 3 was the same human-mediated split without
+the relay tier, which
 left archival and acceptance stranded whenever the human did not return. Format 2
 was the lead-dispatches-cheap-subagents split. Format 1 was the single
 self-contained adapter with separate workflow docs.
@@ -247,11 +248,12 @@ Init-time tokens (replace with concrete values):
 | `{{ARCHITECTURE_DECISIONS}}` | Empty-table marker at initialization | index |
 | `{{INDEX_FILE}}` | Relative path from the adapter to the index | lead adapter only — neither the relay nor the worker adapter reads the index |
 
-There is no model-tier token. The execution tiers are fixed: the relay lead and
-every worker it dispatches run on **GPT-5.6-Luna, reasoning Max**, written
-literally into the relay and worker adapters and into the package and
-dispatch-plan headers. A user running a different execution model edits the
-adapters; the skill does not abstract this into a tier system.
+There is no model-tier decision. The relay lead is fixed at **GPT-5.6-Luna,
+reasoning Max**. Each task package records an `EXECUTION_ROUTE`: non-frontend
+packages use `gpt-subagent` and run on GPT-5.6-Luna subagents; frontend/UI
+packages use `claude-p` and run on Claude Sonnet 5 through
+`claude --model claude-sonnet-5 -p`. The relay does not change a package's
+route or silently fall back to the other model.
 | `{{MODULE_LINKS}}` / `{{MODULE_SUMMARIES}}` | Generated module links and routing summaries | index |
 | `{{MODULE_TITLE}}` | Module name | each module doc |
 
@@ -330,13 +332,16 @@ must enforce:
   across. After handoff, the human's window is the relay.
 - **Relay lead** — the execution manager, started by the human with the dispatch
   plan, and the human's window during the batch. Owns ordering within the plan's
-  dependencies, the real parallelism decision, dispatch, waiting, acceptance by
-  re-running the decisive checks, relaying the human's mid-course additions to
-  the same worker, completion records, the completed folder, the daily summary,
-  the commit and push, and the atlas refresh at batch end.
-- **Worker** — a strong implementation agent, dispatched against one task package.
-  Owns exploration, implementation decisions, the change across whatever files it
-  needs, the checks needed to prove acceptance, and one evidenced report.
+  dependencies, the real parallelism decision, routing each package, GPT
+  subagent dispatch, Claude frontend execution through `claude -p`, waiting,
+  acceptance by re-running the decisive checks, relaying the human's mid-course
+  additions through the same route, completion records, the completed folder, the
+  daily summary, the commit and push, and the atlas refresh at batch end.
+- **Worker** — the implementation route selected by one task package. Non-
+  frontend packages run on GPT-5.6-Luna subagents; frontend/UI packages run on
+  Claude Sonnet 5 through the relay's `claude -p` invocation. The selected route
+  owns exploration, implementation decisions, the change across whatever files
+  it needs, the checks needed to prove acceptance, and one evidenced report.
 
 **Role resolution.** Do not sniff the environment. Resolve from the prompt
 header: `ROLE: worker` → worker; `ROLE: relay-lead` → relay lead; no header →
@@ -404,6 +409,13 @@ and reviews; it does not implement and it does not dispatch. It must:
   one-line config change does not enter this workflow at all and goes straight to
   an execution model — and that the lead neither invents a shortcut path nor edits
   it itself.
+- **Route packages by surface**: frontend/UI work — pages, components, layout,
+  styling, responsive behavior, visual states, and interactions — uses
+  `MODEL: Claude Sonnet 5` and `EXECUTION_ROUTE: claude-p`. Backend, API, data,
+  infrastructure, and other non-frontend work uses `MODEL: GPT-5.6-Luna` and
+  `EXECUTION_ROUTE: gpt-subagent`, with `REASONING: Max`. A mixed request is
+  split along that boundary and its dependency order is recorded in the dispatch
+  plan. The relay runs both routes; it does not change a package's route.
 - **Atlas update** is the relay's at batch end. The lead updates atlas docs for
   work it planned itself, or when the relay escalates a boundary or contract
   question; only the affected module doc, index entry, and Architecture
@@ -428,9 +440,10 @@ and reviews; it does not implement and it does not dispatch. It must:
   `references/delegation.md` §5, embedded inline in the lead adapter so the lead
   needs no extra file read. It carries the Goal, Background, objective Acceptance
   checks, explicit Constraints only when needed, optional Starting Points,
-  Evidence, and an empty `Completion record` the relay lead fills in. The package
-  carries only what a worker with zero conversation history needs — not chat
-  history, the index, or a prescribed implementation.
+  Evidence, an empty `Completion record` the relay lead fills in, and explicit
+  `MODEL` / `EXECUTION_ROUTE` metadata. The package carries only what a worker
+  with zero conversation history needs — not chat history, the index, or a
+  prescribed implementation.
 - **Explain `Background` with no length limit**: it makes a package portable to a
   model with zero conversation history, on another platform. No length limit;
   quote the wrong code; show real input against real wrong output; carry forward
@@ -446,7 +459,9 @@ and reviews; it does not implement and it does not dispatch. It must:
   accepted, the relay lead moves it to
   `completed/{{DATE}}/{{SLUG}}-dispatch-plan.md`, so `planning/` holds only
   pending batches. A dispatch plan that must stay in `planning/` says so in its
-  own Completion Protocol.
+  own Completion Protocol. Its package table includes each package's
+  `EXECUTION_ROUTE`, so the relay can send GPT work to a subagent and run Claude
+  frontend work with `claude -p` without inferring the route from filenames.
 - **Commit and push the packages and the dispatch plan before handover**, then
   tell the user which single file to hand over. Do not spawn anything.
 - **State the acceptance rules**: every item checkable by someone who was not in
@@ -513,13 +528,16 @@ plan to. It never plans and never implements. It must:
   one build directory, CPU/memory/disk exhaustion, or tests observing another
   agent's half-written files. "Dispatch one, accept it, dispatch the next" is a
   good default, and parallelism is never a goal in itself.
-- **Name the dispatch parameters literally**:
-  `{"model": "gpt-5.6-luna", "reasoning_effort": "max"}`, the field being
-  `reasoning_effort` rather than `thinking`, set explicitly rather than
-  inherited. Hand over the package alone.
-- **Wait with the platform's blocking wait, never a sleep** (`wait_agent` on
-  Codex), because a completion event does not preempt a synchronous shell tool
-  already running.
+- **Route from package metadata literally**: `gpt-subagent` dispatches with
+  `{"model": "gpt-5.6-luna", "reasoning_effort": "max"}`, while `claude-p`
+  invokes `claude --model claude-sonnet-5 -p` from the relay workspace. The
+  field is `reasoning_effort` rather than `thinking`, set explicitly rather than
+  inherited. Hand over the package alone and never silently change or fall back
+  from its route.
+- **Wait with the route's completion mechanism, never a sleep**: GPT uses the
+  platform's blocking `wait_agent`; Claude `-p` runs as the blocking process it
+  is and must exit before acceptance. A completion event does not preempt a
+  synchronous shell tool already running.
 - **Fix the wait timeout at one hour** (`timeout_ms: 3600000` — milliseconds, and
   the per-call maximum).
 - **State that a wait timeout is not a failure**: the subagent is still running;
@@ -530,12 +548,12 @@ plan to. It never plans and never implements. It must:
 - **State that staying alive is the wait loop's job**, and that the long-running
   work mode (`/goal` on Codex) belongs to the human — the relay lead never invokes
   it for itself, never applies it to a subagent, and works without it.
-- **Wait passively**: while a subagent is in flight, the shared tree, the
-  subagent, and the schedule belong to it — no `git status`, no diff inspection,
-  no build or test, no progress query, no declaring failure from a closed window,
-  and no re-dispatch of a task that may still be running. Meanwhile: read
-  undispatched packages, plan the schedule, and dispatch the next package under
-  the plan's permitted parallelism.
+- **Wait passively**: while a GPT subagent or Claude process is in flight, the
+  shared tree, the running executor, and the schedule belong to it — no `git
+  status`, no diff inspection, no build or test, no progress query, no declaring
+  failure from a closed window, and no re-dispatch of a task that may still be
+  running. Meanwhile: read undispatched packages, plan the schedule, and run the
+  next package only under the plan's permitted parallelism.
 - **Accept by re-running**: a report is a claim, and the relay lead is biased
   toward believing work it dispatched. Re-run the decisive commands, read the
   diff against the goal, check nothing outside the goal broke, and check the
@@ -552,9 +570,11 @@ plan to. It never plans and never implements. It must:
 - **Run the plan's `Shared Verification`** after the last package, then report the
   batch.
 - **Be the human's window during the batch**: answer status questions, and relay
-  the human's mid-course additions to the same worker as an appended package —
-  no new package, no new dispatch plan. Additions for a running worker are
-  queued; additions for an undispatched package are folded in before dispatch.
+  the human's mid-course additions through the same package route as an appended
+  package — no new package, no new dispatch plan. Additions for a running GPT
+  worker are queued; additions for a running Claude package are applied by a new
+  `claude --model claude-sonnet-5 -p` invocation after the package is updated;
+  additions for an undispatched package are folded in before dispatch.
 - **Run the atlas refresh at batch end** from the completion records: update the
   affected module doc, index entry, and Architecture Decisions row.
 - Record the reporting level and the delivery policy.
@@ -581,6 +601,10 @@ against one task package. It must:
 - **Scope itself** to prompts carrying a `ROLE: worker` package header, and point
   anything else at `<slug>-atlas` (human conversation) or `<slug>-relay` (dispatch
   plan).
+- **Honor `EXECUTION_ROUTE`** from the package: `gpt-subagent` is GPT-5.6-Luna;
+  `claude-p` is Claude Sonnet 5 through the relay's `claude -p` invocation. A
+  worker does not switch the route when execution fails or when it prefers a
+  different model.
 - **Order the work**: read the package; use `Starting Points` when present;
   explore whatever the change requires; run the root-cause preflight; decide and
   implement the solution across the files it needs; run the checks needed to
@@ -780,9 +804,9 @@ English shown here):
 - Relay — `name: <project-slug>-relay`, `description`: `Execution-manager rules
   for <PROJECT_NAME>. Load ONLY when your instructions arrived as a dispatch plan
   — a prompt or file whose header says ROLE: relay-lead. You order the task
-  packages it names, dispatch one agent per package, accept their work, and
-  record completion. Never load it when working directly with a human (that is
-  <project-slug>-atlas) or when executing a single task package (that is
+  packages it names, route them to GPT subagents or Claude `-p`, accept their
+  work, and record completion. Never load it when working directly with a human
+  (that is <project-slug>-atlas) or when executing a single task package (that is
   <project-slug>-worker).`
 - Worker — `name: <project-slug>-worker`, `description`: `Execution rules for an
   agent implementing an atlas task package on <PROJECT_NAME>. Load ONLY when your
@@ -802,8 +826,9 @@ Set `{{PROJECT_NAME}}`, `{{PROJECT_SLUG}}`, `{{DELIVERY_POLICY}}`, and
 `{{REPORTING_LEVEL}}` in all three. Set `{{INDEX_FILE}}` in the lead adapter only,
 to the relative path from its directory to the index (e.g.
 `../../../docs/<project>_index.md`) — neither the relay nor the worker adapter
-reads the index. There is no model token: the relay and worker adapters name
-GPT-5.6-Luna, reasoning Max, literally.
+reads the index. The relay adapter names GPT-5.6-Luna, reasoning Max, as its own
+model and carries both package routes literally: GPT subagents for non-frontend
+work and `claude --model claude-sonnet-5 -p` for frontend work.
 
 ### Generic Adapters (only when no platform adapter exists)
 

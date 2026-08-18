@@ -11,9 +11,10 @@ complete.
   alignment.
 - Delivery policy and reporting level are recorded in the index and every adapter.
 - The platform adapter choices are recorded.
-- No model-tier decision was asked or recorded: the execution tiers are fixed at
-  GPT-5.6-Luna, reasoning Max, written literally into the relay and worker
-  adapters.
+- No model-tier decision was asked or recorded: the relay is fixed at
+  GPT-5.6-Luna, reasoning Max; package routes are fixed by surface, with
+  frontend/UI packages using Claude Sonnet 5 through `claude -p` and all other
+  packages using GPT-5.6-Luna subagents.
 - Partial reference output records the selected reference scope; full alignment
   output records that reference functionality is in scope.
 - User-facing confirmation used plain-language questions instead of exposing
@@ -115,7 +116,8 @@ complete.
   everything else is already accepted.
 - The lead adapter embeds the `atlas/v3` task package template inline: Goal,
   Background, objective Acceptance checks, optional explicit Constraints, optional
-  Starting Points, Evidence, and an empty `Completion record`. It does not require
+  Starting Points, Evidence, an empty `Completion record`, and explicit
+  `MODEL` / `EXECUTION_ROUTE` metadata for GPT or Claude routing. It does not require
   Why, Solution Boundary, Scope, Must Preserve, Forbidden, Allowed Paths, or
   generic stop conditions.
 - The lead adapter explains `Background` with no length limit, as the section that
@@ -129,19 +131,24 @@ complete.
   work belongs to the execution tier: no `git status`, no diff inspection, no
   progress narration, no speculative reading — and states that the user may never
   return.
-- The relay adapter waits with `wait_agent` rather than `sleep`, sets
-  `timeout_ms: 3600000`, treats `timed_out: true` as "still running, wait again",
-  and re-waits on remaining ids when several subagents are in flight.
+- The relay adapter routes `gpt-subagent` to GPT subagents and `claude-p` to
+  `claude --model claude-sonnet-5 -p`; it waits with `wait_agent` for GPT rather
+  than `sleep`, sets `timeout_ms: 3600000`, treats `timed_out: true` as "still
+  running, wait again", and waits for Claude's process exit before acceptance.
 - The relay adapter attributes `/goal` to the human, never invoking it for itself
   or applying it to a subagent.
-- The relay adapter accepts by re-running the decisive checks, never on the
-  subagent's text, and leaves specification defects to the planning tier.
+- The relay adapter accepts either route by re-running the decisive checks,
+  never on the executor's text, and leaves specification defects to the
+  planning tier.
 - The relay adapter states it is the human's window during the batch: mid-course
-  additions are relayed to the same worker as an appended package (no new task
-  package), and the relay runs the atlas refresh at batch end.
-- Model assignment appears literally as GPT-5.6-Luna, reasoning Max, in the relay
-  adapter, the worker adapter, and both embedded template headers. No adapter
-  contains a `MODEL_TIER` field or any other abstract tier system.
+  additions are relayed through the same route as an appended package (no new
+  task package), and the relay runs the atlas refresh at batch end.
+- The relay adapter contains both literal execution routes: GPT packages use
+  `{"model": "gpt-5.6-luna", "reasoning_effort": "max"}` and frontend packages
+  use `claude --model claude-sonnet-5 -p`; no silent model fallback exists.
+  Embedded package templates contain `MODEL` and `EXECUTION_ROUTE`, with
+  `REASONING: Max` only on GPT packages. No adapter contains a `MODEL_TIER` field
+  or any other abstract tier system.
 
 ## Adapter Quality
 
@@ -250,13 +257,15 @@ centralized pass still runs in full.
    before handover, idle rule, escalated second-pass review order, and gaps-only
    return are present inline; and reporting respects the selected level.
 3. Reread the relay adapter and confirm it enters only through a dispatch plan,
-   respects hard ordering while owning parallelism, dispatches with the literal
-   model parameters, waits with `wait_agent` at `timeout_ms: 3600000`, treats a
-   timeout as "still running", re-waits on remaining ids, accepts by re-running
-   checks, never repairs a specification, relays human mid-course additions to
-   the same worker, archives the dispatch plan with the batch, runs the atlas
-   refresh at batch end, and carries the completion protocol in order ending in
-   commit and push.
+   respects hard ordering while owning parallelism, routes `gpt-subagent` with
+   the literal GPT model parameters and `claude-p` with
+   `claude --model claude-sonnet-5 -p`, waits with `wait_agent` at
+   `timeout_ms: 3600000` for GPT and for process exit for Claude, treats a GPT
+   timeout as "still running", re-waits on remaining ids, accepts either route
+   by re-running checks, never repairs a specification, relays human mid-course
+   additions through the same route, archives the dispatch plan with the batch,
+   runs the atlas refresh at batch end, and carries the completion protocol in
+   order ending in commit and push.
 4. Reread the worker adapter and confirm it opens with the mirror role check,
    grants exploration and implementation choice, makes the worker own the checks
    needed for acceptance including full builds and suites, states other tiers'

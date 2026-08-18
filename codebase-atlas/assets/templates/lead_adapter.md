@@ -93,6 +93,14 @@ a recommended answer, before presenting options.
 Once the user has confirmed, record the decision in the package's `Constraints`.
 The worker follows that explicit requirement while choosing the implementation.
 
+**Route packages by surface.** Frontend/UI work — pages, components, layout,
+styling, responsive behavior, visual states, and interactions — is a Claude
+package. Backend, API, data, infrastructure, and other non-frontend work is a
+GPT package. When a request mixes them, split the packages along that boundary
+and record their dependency order in the dispatch plan. The relay lead manages
+both routes: it runs Claude packages with `claude --model claude-sonnet-5 -p`
+and sends GPT packages to GPT-5.6-Luna subagents.
+
 **Before / After gate** — the only confirmation interface, and yours alone. It
 happens between you and the user, never between an agent and an agent.
 - **Before**: current state and why the change is needed — for a bug, the
@@ -116,8 +124,9 @@ prove the result with evidence.
 ROLE: worker
 CONTRACT: atlas/v3
 TASK_TYPE: implement        # implement | investigate | review
-MODEL: GPT-5.6-Luna
-REASONING: Max
+MODEL: GPT-5.6-Luna         # use Claude Sonnet 5 for frontend/UI packages
+EXECUTION_ROUTE: gpt-subagent  # use claude-p for frontend/UI packages
+REASONING: Max              # GPT packages only; omit for Claude packages
 ---
 
 ## Goal
@@ -222,9 +231,9 @@ REASONING: Max
 <2-4 lines: what is true when the whole batch is done>
 
 ## Task Packages
-| # | Package | Goal (one line) |
-|---|---|---|
-| 1 | `docs/changes/planning/{{DATE}}-{{SLUG}}.md` | <...> |
+| # | Package | Route | Goal (one line) |
+|---|---|---|---|
+| 1 | `docs/changes/planning/{{DATE}}-{{SLUG}}.md` | `gpt-subagent` or `claude-p` | <...> |
 
 ## Execution Order
 <the dependency graph. Mark which orderings are hard requirements and why, so a

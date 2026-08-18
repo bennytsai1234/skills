@@ -6,8 +6,8 @@ when generating adapters, and when deciding what belongs in each one.
 The handoff from planning to execution is human-mediated: the lead writes files
 and stops, and the human carries one file across. Everything after that — order,
 dispatch, acceptance, records — belongs to the relay lead, who is also the
-human's window during the batch: mid-course additions are relayed to the same
-worker.
+human's window during the batch: mid-course additions are relayed through the
+same package route.
 
 ## 1. The Loop
 
@@ -20,7 +20,7 @@ Lead       1. understand the project and the need
 Human      → gives the dispatch plan to the relay lead
 Relay      5. read the plan and every package it names
            6. order the work; decide real parallelism
-           7. dispatch one subagent per package
+           7. route each package to a GPT subagent or Claude `-p`
 Worker     8. explore, implement across files as needed
            9. run the checks that prove acceptance
           10. report with evidence and risks
@@ -29,13 +29,13 @@ Relay     11. accept by re-running the decisive checks — or return precise gap
           13. run the batch verification, report
           14. run the atlas refresh from the completion records
 Human     (optional, any time) → reviews a package or asks the relay for status;
-          injects mid-course additions → the relay relays them to the same worker
+          injects mid-course additions → the relay relays them through the same route
 ```
 
 Step 4→5 crosses a human, once. Steps 7→8 and 10→11 do not — the relay lead
 dispatches and accepts on its own. The relay is the human's window during the
 batch: the human may review completed packages, ask for status, and inject
-mid-course additions, which the relay relays to the same worker. If the human
+mid-course additions, which the relay relays through the same route. If the human
 injects nothing, the batch runs to completion on its own — the workflow must be
 complete without mid-course input.
 
@@ -70,20 +70,25 @@ plan. Runs on **GPT-5.6-Luna, reasoning Max**. It owns:
 - Reading the dispatch plan and every package it names.
 - Execution order within the plan's dependencies, and the real parallelism
   decision.
-- Dispatch, passed explicitly as
+- GPT dispatch, passed explicitly as
   `{"model": "gpt-5.6-luna", "reasoning_effort": "max"}` — never inherited. The
   field is `reasoning_effort`, not `thinking`; `max` is the top of this model's
   scale (`low` / `medium` / `high` / `xhigh` / `max`).
+- Claude frontend execution through `claude --model claude-sonnet-5 -p` from the
+  relay's current workspace. A Claude package is run directly by the relay, not
+  as a GPT subagent.
 - Waiting without interfering (§6).
 - Acceptance, by re-running the decisive checks (§9).
 - Completion records, the completed folder, the daily summary, and the commit and
   push (§10).
 - Being the human's window during the batch: status questions and mid-course
-  additions are relayed to the same worker (§6).
+  additions are relayed through the same package route (§6).
 - The atlas refresh at batch end, from the completion records (§10).
 
-**Worker** — a strong implementation agent, dispatched against one task package.
-Runs on **GPT-5.6-Luna, reasoning Max**. It owns:
+**Worker** — an implementation route selected by one task package. Non-frontend
+packages run on **GPT-5.6-Luna, reasoning Max** as GPT subagents. Frontend/UI
+packages run on **Claude Sonnet 5** through the relay's `claude -p` invocation.
+The selected worker route owns:
 
 - Exploring the codebase to find what the change requires. The package names
   starting points; it does not cap what may be read.
@@ -157,9 +162,9 @@ REASONING: Max
 <2-4 lines: what is true when the whole batch is done>
 
 ## Task Packages
-| # | Package | Goal (one line) |
-|---|---|---|
-| 1 | `docs/changes/planning/{{DATE}}-{{SLUG}}.md` | <...> |
+| # | Package | Route | Goal (one line) |
+|---|---|---|---|
+| 1 | `docs/changes/planning/{{DATE}}-{{SLUG}}.md` | `gpt-subagent` or `claude-p` | <...> |
 
 ## Execution Order
 <the dependency graph. Mark which orderings are hard requirements and why.>
@@ -192,8 +197,9 @@ and prove the result with evidence.
 ROLE: worker
 CONTRACT: atlas/v3
 TASK_TYPE: implement        # implement | investigate | review
-MODEL: GPT-5.6-Luna
-REASONING: Max
+MODEL: GPT-5.6-Luna         # use Claude Sonnet 5 for frontend/UI packages
+EXECUTION_ROUTE: gpt-subagent  # use claude-p for frontend/UI packages
+REASONING: Max              # GPT packages only; omit for Claude packages
 ---
 
 ## Goal
@@ -225,6 +231,17 @@ REASONING: Max
 ## Completion record
 <left empty by the lead; filled in by the relay lead on acceptance — see §10>
 ```
+
+For a frontend/UI package, use this route metadata instead:
+
+```yaml
+MODEL: Claude Sonnet 5
+EXECUTION_ROUTE: claude-p
+```
+
+Do not add `REASONING` to a Claude package. The relay uses the route metadata to
+choose between a GPT subagent and `claude --model claude-sonnet-5 -p`; it does
+not change the route after the package is written.
 
 **Background** is what makes the package portable to a model with zero
 conversation history, on another platform. No length limit. Include, when they
@@ -273,9 +290,10 @@ A package carries only what a worker with zero conversation history needs: goal,
 background, acceptance, and constraints. Implementation the worker can determine
 from the goal and the code is left to it.
 
-Mid-course additions from the human are appended to the package and re-sent to
-the same worker; they are extensions of one task, not new packages or a new
-dispatch plan.
+Mid-course additions from the human are appended to the package and re-sent
+through the same route; GPT uses the same worker dispatch pattern and Claude
+uses another `claude -p` invocation. They are extensions of one task, not new
+packages or a new dispatch plan.
 
 ## 6. Concurrency And Waiting
 
@@ -299,13 +317,15 @@ package says why, so the worker does not switch back to the global check.
 After the batch, the relay lead runs the plan's `Shared Verification` once over
 the merged tree.
 
-### Waiting for a subagent
+### Waiting for an executor
 
-Use `wait_agent`, never `sleep`. A completion event does **not** preempt a
-synchronous shell tool already running, so a sleeping relay lead sleeps out the
-full duration while a finished report waits in the queue. Completion
-notifications arrive on their own; status polling buys nothing. Spawning is
-non-blocking and returns an `agent_id`; waiting is done by id.
+Use the route's completion mechanism, never `sleep`. GPT uses `wait_agent`; a
+Claude `-p` invocation is allowed to finish as the blocking process it is. A
+completion event does **not** preempt a synchronous shell tool already running,
+so a sleeping relay lead sleeps out the full duration while a finished report
+waits in the queue. Completion notifications arrive on their own; status
+polling buys nothing. GPT spawning is non-blocking and returns an `agent_id`;
+waiting is done by id.
 
 ```text
 spawn_agent(...) → agent_id
@@ -327,9 +347,10 @@ Codex) belongs to the **human**, who starts the relay lead in it; the relay lead
 never invokes it for itself and never applies it to a subagent. A relay lead
 started without it still works.
 
-**While a subagent is in flight, the work belongs to it** — the shared tree (no
-`git status`, no diff inspection, no build or test), the subagent (no progress
-query), and the schedule (no re-dispatch of a task that may still be running).
+**While a GPT subagent or Claude process is in flight, the work belongs to it** —
+the shared tree (no `git status`, no diff inspection, no build or test), the
+running executor (no progress query), and the schedule (no re-dispatch of a
+task that may still be running).
 
 Re-dispatch does the real damage: two agents then edit the same files and
 overwrite each other silently, which is very hard to see in the final diff. A
@@ -347,9 +368,11 @@ completed package, ask for status, or inject additions — a new requirement, a
 format change, a different direction for a package that is done or still
 running.
 
-- An addition for a **finished** package: append it to that package and
-  re-dispatch the **same worker** with the appended package — an extension of
-  the same task, not a new package or dispatch plan.
+- An addition for a **finished** package: append it to that package and re-run
+  the **same route** with the appended package — GPT uses the same worker
+  dispatch pattern; Claude uses another `claude --model claude-sonnet-5 -p`
+  invocation — an extension of the same task, not a new package or dispatch
+  plan.
 - An addition for a **running** package: queue it; the worker gets it when it
   reports, as the same appended package. The tree and the running worker stay
   untouched.
@@ -427,7 +450,7 @@ returns. A specification defect belongs to the planning tier.
 ## 9. Acceptance
 
 **Relay acceptance is the primary gate**, and the only one guaranteed to happen.
-A subagent's report is a claim, not a result — and the relay lead dispatched the
+An executor's report is a claim, not a result — and the relay lead started the
 work, so it is biased toward believing it. Scale depth to what the package
 matters; acceptance re-runs the decisive checks.
 
