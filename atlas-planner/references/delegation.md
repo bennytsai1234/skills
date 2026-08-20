@@ -1,13 +1,17 @@
 # Delegation
 
-The doctrine the generated lead, relay, and worker adapters must carry. Read this
-when generating adapters, and when deciding what belongs in each one.
+The doctrine `atlas-planner`, `atlas-relay`, and `atlas-worker` carry between
+them. This is the single source of truth for the three-tier loop; the other two
+skills point here rather than duplicating it.
 
 The handoff from planning to execution is human-mediated: the lead writes files
 and stops, and the human carries one file across. Everything after that — order,
 dispatch, acceptance, records — belongs to the relay lead, who is also the
 human's window during the batch: mid-course additions are relayed through the
 same package route.
+
+A request the human flags as wanting immediate results, with no plan or
+acceptance step, does not enter this loop at all — see `atlas-fast`.
 
 ## 1. The Loop
 
@@ -41,8 +45,8 @@ complete without mid-course input.
 
 ## 2. Roles
 
-**Lead** — the only agent in contact with the human. Runs on the strongest
-available model. It owns:
+**Lead (`atlas-planner`)** — the only agent in contact with the human. Runs on
+the strongest available model. It owns:
 
 - Understanding vague requests and aligning on intent.
 - Reading the atlas and deciding what the change touches.
@@ -53,19 +57,20 @@ available model. It owns:
 - Decomposition: cutting the work into packages.
 - Writing every task package and the dispatch plan, then committing and pushing
   them.
-- Atlas docs and Architecture Decisions rows at initialization.
+- Atlas docs and Architecture Decisions rows for work it planned itself.
 - Reissuing a specification when the relay escalates a spec defect.
 
 **The lead never edits source code or tests.** No size exemption: small fixes
-like a typo go straight to an execution model rather than through this workflow.
-It never dispatches a subagent. Its output is specification.
+like a typo go straight to an execution model rather than through this workflow
+— or to `atlas-fast` when the human explicitly wants to skip ceremony. It never
+dispatches a subagent. Its output is specification.
 
 The lead may read code, run read-only checks, and re-run a verification whose
 result decides acceptance. When one of those fails, it is a gap to return, not
 something to fix.
 
-**Relay lead** — the execution manager, started by the human with the dispatch
-plan. Runs on **GPT-5.6-Luna, reasoning Max**. It owns:
+**Relay lead (`atlas-relay`)** — the execution manager, started by the human with
+the dispatch plan. Runs on **GPT-5.6-Luna, reasoning Max**. It owns:
 
 - Reading the dispatch plan and every package it names.
 - Execution order within the plan's dependencies, and the real parallelism
@@ -85,10 +90,10 @@ plan. Runs on **GPT-5.6-Luna, reasoning Max**. It owns:
   additions are relayed through the same package route (§6).
 - The atlas refresh at batch end, from the completion records (§10).
 
-**Worker** — an implementation route selected by one task package. Non-frontend
-packages run on **GPT-5.6-Luna, reasoning Max** as GPT subagents. Frontend/UI
-packages run on **Claude Sonnet 5** through the relay's `claude -p` invocation.
-The selected worker route owns:
+**Worker (`atlas-worker`)** — an implementation route selected by one task
+package. Non-frontend packages run on **GPT-5.6-Luna, reasoning Max** as GPT
+subagents. Frontend/UI packages run on **Claude Sonnet 5** through the relay's
+`claude -p` invocation. The selected worker route owns:
 
 - Exploring the codebase to find what the change requires. The package names
   starting points; it does not cap what may be read.
@@ -107,7 +112,8 @@ settled — a worker that thinks one is wrong says so in `Needs A Decision`.
 
 **What this workflow is for.** Work that needs analysis, a plan, several
 implementation steps, and acceptance. A typo, a constant, a one-line config
-change never enters it — those go straight to an execution model. Do not build a
+change never enters it — those go straight to an execution model, or to
+`atlas-fast` when the human explicitly asks to skip the ceremony. Do not build a
 trivial tier to accommodate them.
 
 ## 3. Role Resolution
@@ -116,17 +122,17 @@ Resolve the role from the instructions, not from the environment:
 
 | Header | Role |
 |---|---|
-| `ROLE: worker` | Worker |
-| `ROLE: relay-lead` | Relay lead |
-| no header | Lead — so the human-alignment gate is never silently skipped |
+| `ROLE: worker` | Worker — use `atlas-worker` |
+| `ROLE: relay-lead`, or handed a dispatch plan | Relay lead — use `atlas-relay` |
+| no header, talking to a human | Lead — use `atlas-planner`, so the human-alignment gate is never silently skipped |
 
 **Governance writes** are split by tier. Before writing one, confirm the file
 belongs to your tier:
 
 | File | Written by | Committed and pushed by |
 |---|---|---|
-| Atlas docs (`docs/*_index.md`, `docs/<project>/*.md`) | Lead | Lead |
-| Architecture Decisions rows | Lead | Lead |
+| Atlas docs (`docs/*_index.md`, `docs/<project>/*.md`) | Lead at init; Relay at batch end | Lead; Relay at batch end |
+| Architecture Decisions rows | Lead at init; Relay at batch end | Lead; Relay at batch end |
 | `docs/changes/planning/**` — packages, dispatch plans | Lead | Lead, before handover |
 | `Completion record` inside a package | Relay lead | Relay lead |
 | `docs/changes/completed/**` — archived packages, dispatch plans, `summary.md` | Relay lead | Relay lead |
@@ -154,6 +160,8 @@ ROLE: relay-lead
 CONTRACT: atlas/v3
 MODEL: GPT-5.6-Luna
 REASONING: Max
+DELIVERY_POLICY: <no commit | commit only | commit and push>
+REPORTING_LEVEL: <plain | technical>
 ---
 
 # <what this batch achieves>
@@ -200,6 +208,8 @@ TASK_TYPE: implement        # implement | investigate | review
 MODEL: GPT-5.6-Luna         # use Claude Sonnet 5 for frontend/UI packages
 EXECUTION_ROUTE: gpt-subagent  # use claude-p for frontend/UI packages
 REASONING: Max              # GPT packages only; omit for Claude packages
+REPORTING_LEVEL: plain      # plain | technical — from the index, for anything
+                             # in the report that surfaces to the human directly
 ---
 
 ## Goal

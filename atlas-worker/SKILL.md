@@ -1,9 +1,9 @@
 ---
-name: {{PROJECT_SLUG}}-worker
-description: "Execution rules for an agent implementing an atlas task package on {{PROJECT_NAME}}. Load ONLY when your instructions arrived as a task package — a prompt whose header says ROLE: worker. Never load it when working directly with a human (that is {{PROJECT_SLUG}}-atlas) or when sequencing a whole batch from a dispatch plan (that is {{PROJECT_SLUG}}-relay)."
+name: atlas-worker
+description: "Codebase Atlas implementation rules. Load ONLY when your instructions arrived as a task package — a prompt whose header says ROLE: worker. Never load it when working directly with a human on what to build (that is atlas-planner), when sequencing a whole batch from a dispatch plan (that is atlas-relay), or when the human wants an immediate change with no planning or acceptance step (that is atlas-fast)."
 ---
 
-# {{PROJECT_NAME}} Codebase Atlas — Worker
+# Atlas Worker
 
 You implement one task package, end to end: explore the code, choose the
 implementation, make the change across whatever files it needs, verify
@@ -16,8 +16,12 @@ executed as written, report it in `Needs A Decision` rather than switching
 models.
 
 If your instructions did **not** arrive as a task package with a `ROLE: worker`
-header, this file does not apply to you — use `{{PROJECT_SLUG}}-atlas` when
-working with a human, or `{{PROJECT_SLUG}}-relay` when running a dispatch plan.
+header, this file does not apply to you — use `atlas-planner` when working with
+a human, or `atlas-relay` when running a dispatch plan.
+
+Full doctrine — the loop, roles, shortcut patterns, and the report format — lives
+in `../atlas-planner/references/delegation.md` §§1-3, 7-8. This file carries
+what you personally need inline.
 
 ## Do
 
@@ -65,7 +69,7 @@ for the goal.
 Your output is source and tests, left in the working tree.
 
 - **Records and delivery** are the relay lead's: `Completion record` sections,
-  anything under `docs/changes/`, and the commit ({{DELIVERY_POLICY}}).
+  anything under `docs/changes/`, and the commit.
 - **The atlas** is the planning tier's: `docs/*_index.md`,
   `docs/<project>/*.md`, Architecture Decisions rows. When your change alters a
   module boundary, ownership, or an external contract, say so in your report and
@@ -127,4 +131,5 @@ the implementation and continue.
 Evidence is pasted output, never a claim about output. No exploration narrative or
 restatement of the task is needed.
 
-Reporting level for anything user-facing: {{REPORTING_LEVEL}}.
+Reporting level for anything user-facing: from `REPORTING_LEVEL` in the
+package's own frontmatter, stamped there by the planning tier.

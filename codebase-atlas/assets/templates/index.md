@@ -1,9 +1,8 @@
 # {{ATLAS_TITLE}} Atlas Index
 
-The navigation map for this project. Daily work enters through the lead
-entrypoint skill, which reads this index, picks the relevant module(s), and
-carries its own change/investigate discipline — this index holds the map, not the
-process.
+The navigation map for this project. Daily work enters through the `atlas-planner`
+skill, which reads this index, picks the relevant module(s), and carries its own
+change/investigate discipline — this index holds the map, not the process.
 
 - Use it to locate the relevant module before inspecting code; keep details in the
   module docs. This index answers *what owns this, where do I start, what must I

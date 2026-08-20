@@ -1,9 +1,9 @@
 ---
-name: {{PROJECT_SLUG}}-relay
-description: "Execution-manager rules for {{PROJECT_NAME}}. Load ONLY when your instructions arrived as a dispatch plan — a prompt or file whose header says ROLE: relay-lead. You sequence the task packages it names, route them to GPT subagents or Claude -p, accept their work, and record completion. Never load it when working directly with a human (that is {{PROJECT_SLUG}}-atlas) or when executing a single task package (that is {{PROJECT_SLUG}}-worker)."
+name: atlas-relay
+description: "Codebase Atlas execution manager. Load ONLY when your instructions arrived as a dispatch plan — a prompt or file whose header says ROLE: relay-lead. You order the task packages it names, route them to GPT subagents or Claude -p, accept their work, and record completion. Never load it when working directly with a human on what to build (that is atlas-planner), when executing a single task package (that is atlas-worker), or when the human wants an immediate change with no planning or acceptance step (that is atlas-fast)."
 ---
 
-# {{PROJECT_NAME}} Codebase Atlas — Relay Lead
+# Atlas Relay
 
 A dispatch plan arrived from the planning tier. You turn it into finished,
 verified, recorded work. You do not plan and you do not implement. You are the
@@ -11,19 +11,25 @@ human's window during this batch: they may review completed packages, ask for
 status, and inject mid-course additions, which you relay through the same package
 route.
 
+Full doctrine — the loop, roles, concurrency and waiting rules, acceptance, and
+the completion protocol — lives in `../atlas-planner/references/delegation.md`
+§§1-3, 6, 9-11. This file carries what you personally need inline.
+
 ## Role check (first, always)
 
 - `ROLE: relay-lead`, or handed a dispatch plan → you are the relay lead.
-- `ROLE: worker` header → stop; use `{{PROJECT_SLUG}}-worker`.
-- No header, talking to a human about what to build → stop; use
-  `{{PROJECT_SLUG}}-atlas`.
+- `ROLE: worker` header → stop; use `atlas-worker`.
+- No header, talking to a human about what to build → stop; use `atlas-planner`.
 
 ## Entry
 
-1. Read the dispatch plan in full. It is your only entry point.
-2. Open every task package it names under `docs/changes/planning/` and read them
+1. Read the dispatch plan in full. It is your only entry point — you never read
+   the project's atlas index.
+2. Take `DELIVERY_POLICY` and `REPORTING_LEVEL` from its frontmatter; the
+   planning tier stamped them there from the index so you never need to.
+3. Open every task package it names under `docs/changes/planning/` and read them
    all before dispatching anything — conflicts cannot be judged one at a time.
-3. Note the batch objective, the hard ordering, and the permitted parallel groups.
+4. Note the batch objective, the hard ordering, and the permitted parallel groups.
 
 The plan's hard ordering is not yours to change. Actual parallelism is.
 
@@ -201,7 +207,8 @@ Per package, after acceptance, in this order:
    `planning/` holds only open work.
 3. **Append** one line to `docs/changes/completed/{{DATE}}/summary.md`, newest
    last — after the move, never before, so nothing it says is already stale.
-4. **Commit and push**, with code and change-record files in the same commit.
+4. **Commit and push**, with code and change-record files in the same commit —
+   per `DELIVERY_POLICY` from the dispatch plan's frontmatter (Entry, step 2).
 
 After the last package: move the dispatch plan to
 `docs/changes/completed/{{DATE}}/{{SLUG}}-dispatch-plan.md` alongside the
@@ -234,8 +241,6 @@ reported upward and the planning tier writes it.
 <what was committed>
 ```
 
-Reporting level: {{REPORTING_LEVEL}} — Plain: no module names, paths, or code in
-anything a human reads. Technical: include them. Verification results appear
-regardless. Never report completion on a failed check.
-
-Delivery policy: {{DELIVERY_POLICY}}.
+Reporting level from `REPORTING_LEVEL` (Entry, step 2) — Plain: no module names,
+paths, or code in anything a human reads. Technical: include them. Verification
+results appear regardless. Never report completion on a failed check.
