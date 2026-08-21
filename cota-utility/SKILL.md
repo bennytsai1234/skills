@@ -14,6 +14,12 @@ BrHoliday、BrPILog 等)——那是另一套完全不同的三層式架構規�
 跟這裡的通用模組是兩回事。偵測到專案是 Br 前綴 / 有中台路由架構時,提醒使用者那是另一個
 體系,不要套用本 skill 的規則。
 
+## Confluence 文件存取(更新本 skill 時用)
+
+各套件的原始文件在 Confluence「系統開發專區 > WEB開發工具相關」下。存取帳號密碼、
+pageId 對照表與 REST API 用法在 `references/confluence-access.md`(**該檔含憑證,
+刻意不進 git 版控**;若該檔不存在,請使用者提供 Confluence 存取方式,不要猜)。
+
 ## 前置檢查
 
 1. **讀 .csproj 確認 TargetFramework** —— 決定哪些模組能裝(見下方模組對照表的
