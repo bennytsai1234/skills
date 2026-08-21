@@ -94,7 +94,9 @@ await pubSub.PublishAsync("demo", message, CancellationToken.None).ConfigureAwai
 
 ## 前置作業(套用前必須做)
 
-需要先在 Tracko 專案上線申請單跟系統組申請 Redis Server 使用者(帳號=專案名稱轉大寫,
+1. **使用的主機上要安裝 Microsoft Visual C++ Redistributable**(文件列明的前置條件,
+   部署機/開發機都要有)。
+2. 需要先在 Tracko 專案上線申請單跟系統組申請 Redis Server 使用者(帳號=專案名稱轉大寫,
 不能有冒號;需指定專案區域:內部/DMZ/核心系統)。這不是程式碼層面能自己解決的,回報時
 要提醒使用者這個前置作業。
 
