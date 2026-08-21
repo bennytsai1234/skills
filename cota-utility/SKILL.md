@@ -1,6 +1,6 @@
 ---
 name: cota-utility
-description: "在 .NET (Framework/Core) 專案套用或掃描公司內部 CotaUtility 框架——資料庫存取(MSSQL/MySQL)、Redis Cache/Session、結構化Log、健康檢查、IP/簽章驗證、呼叫COBOL/Java主機、統一編號遮罩、集中權限查詢、HTML轉PDF報表、AD/OTP/生物辨識驗證等。新專案開發時用來決定該裝哪些套件;既有專案維護、或使用者要求「健檢」「找出該替換成 CotaUtility 的地方」時,用來掃描程式碼。"
+description: "在 .NET (Framework/Core) 專案套用或掃描公司內部 CotaUtility 框架——資料庫存取(MSSQL/MySQL)、Redis Cache/Session、結構化Log、健康檢查、IP/簽章驗證、呼叫COBOL/Java主機、統一編號遮罩、集中權限查詢、HTML轉PDF報表、AD/OTP/生物辨識驗證、Keycloak OIDC登入/JWT授權等。新專案開發時用來決定該裝哪些套件;既有專案維護、或使用者要求「健檢」「找出該替換成 CotaUtility 的地方」時,用來掃描程式碼。"
 ---
 
 # CotaUtility 導入與健檢
@@ -72,6 +72,7 @@ CotaWebAuth 解決的是「怎麼驗證這個人的身分」),再判斷專案裡
 | CotaInfo 內部通知訊息 | CotaUtility.CotaNotification | netstandard2.0 | `references/notification.md` |
 | 專案監控資訊 / ASP.NET Core 健康檢查端點 | CotaUtility.CotaPerformanceCounter / CotaHealthCheckCore | netstandard2.0 / netcoreapp3.1+ (HealthCheckCore 僅限 .NET Core Web) | `references/performance-counter-healthcheck.md` |
 | AD / OTP / FIDO2 生物辨識驗證 | CotaUtility.CotaWebAuth | v1.0.0=.NET5,v2.0.0+=.NET8 | `references/web-auth.md` |
+| Keycloak OIDC 登入 / JWT 授權 / 下游 Token 轉拋 | CotaUtility.KeycloakAdapter | .NET 6/7/8 | `references/keycloak-adapter.md` |
 | 客戶統一編號遮罩 / 亂數化 | CotaUtility.Customer | .NET Framework 4.7.2+ / .NET Core | `references/customer.md` |
 | 集中權限/角色查詢 | CotaUtility.PermProvider | .NET Framework 4.6.1+ / .NET Core 2.0+ | `references/perm-provider.md` |
 | 網頁轉 PDF 報表 | CotaUtility.Reporting | 未特別限制,依 wkhtmltopdf/puppeteer 執行環境 | `references/reporting.md` |
