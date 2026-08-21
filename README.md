@@ -20,9 +20,11 @@ This repository is the canonical home for reusable Codex and agent skills.
 - `codebase-atlas`
 - `codebase-memory`
 - `codex-update`
+- `discussion-calibrator`
 - `hermes-ops`
 - `mmx-cli`
 - `openclaw-ops`
+- `plan-compiler`
 - `project-genius`
 - `summarize-project-work`
 - `video-to-text`
