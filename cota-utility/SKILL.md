@@ -76,7 +76,7 @@ CotaWebAuth 解決的是「怎麼驗證這個人的身分」),再判斷專案裡
 | 來源 IP 檢查 / COBOL↔Web 簽章驗證 | CotaUtility.Network | netstandard2.1 | `references/network.md` |
 | 呼叫 COBOL/Java 主機(含 Big5 轉碼) | CotaUtility.JavaCall | netstandard2.0 | `references/java-call.md` |
 | CotaInfo 內部通知訊息 | CotaUtility.CotaNotification | netstandard2.0 | `references/notification.md` |
-| 專案監控資訊 / ASP.NET Core 健康檢查端點 | CotaUtility.CotaPerformanceCounter / CotaHealthCheckCore | netstandard2.0 / netcoreapp3.1+ (HealthCheckCore 僅限 .NET Core Web) | `references/performance-counter-healthcheck.md` |
+| 專案監控資訊 / ASP.NET Core 健康檢查端點 / 接入資訊看板[專案監控]警告系統(推播+語音告警) | CotaUtility.CotaPerformanceCounter / CotaHealthCheckCore | netstandard2.0 / netcoreapp3.1+ (HealthCheckCore 僅限 .NET Core Web) | `references/performance-counter-healthcheck.md` |
 | AD / OTP / FIDO2 生物辨識驗證 | CotaUtility.CotaWebAuth | v1.0.0=.NET5,v2.0.0+=.NET8 | `references/web-auth.md` |
 | Keycloak OIDC 登入 / JWT 授權 / 下游 Token 轉拋 | CotaUtility.KeycloakAdapter | .NET 6/7/8 | `references/keycloak-adapter.md` |
 | 客戶統一編號遮罩 / 亂數化 | CotaUtility.Customer | .NET Framework 4.7.2+ / .NET Core | `references/customer.md` |
