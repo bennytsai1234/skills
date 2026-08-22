@@ -1,0 +1,4 @@
+interface:
+  display_name: "Compass"
+  short_description: "把偏掉的對話拉回正確方向並保留必要語義"
+  default_prompt: "使用 $compass 把目前對話拉回正確方向，保留必要語義。"

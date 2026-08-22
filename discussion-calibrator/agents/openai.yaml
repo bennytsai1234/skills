@@ -1,3 +1,0 @@
-interface:
-  display_name: "Discussion Calibrator"
-  short_description: "校正被模型帶歪的討論狀態"

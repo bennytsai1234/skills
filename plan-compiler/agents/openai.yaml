@@ -1,3 +1,0 @@
-interface:
-  display_name: "Plan Compiler"
-  short_description: "把討論編譯成最小充分的最終方案"

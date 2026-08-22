@@ -1,0 +1,4 @@
+interface:
+  display_name: "Blueprint"
+  short_description: "把已確認內容整理成可執行且不失真的方案"
+  default_prompt: "使用 $blueprint 把已確認內容整理成可執行的最小充分方案。"
