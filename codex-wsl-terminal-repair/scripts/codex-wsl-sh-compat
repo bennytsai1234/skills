@@ -1,0 +1,14 @@
+#!/usr/bin/dash
+
+if [ "$1" = "-c" ]; then
+    case ${2-} in
+        'git="$(command -v git)" || exit 127; git_dir='*'exec "$git" --version')
+            exec /usr/bin/git --version
+            ;;
+        'git="/'*'git_dir="" || exit 127; git="/";'*'exec "" --version')
+            exec /usr/bin/git --version
+            ;;
+    esac
+fi
+
+exec /usr/bin/dash "$@"

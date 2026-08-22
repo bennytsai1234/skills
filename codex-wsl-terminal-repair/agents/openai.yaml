@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex WSL Terminal Repair"
+  short_description: "修復 Windows Codex 的 WSL 或 PowerShell 終端設定"
+  default_prompt: "Use $codex-wsl-terminal-repair to configure and verify the selected Codex Desktop terminal mode."
