@@ -1,0 +1,3 @@
+interface:
+  display_name: "Codebase Atlas"
+  short_description: "建立與更新 repo 架構地圖"

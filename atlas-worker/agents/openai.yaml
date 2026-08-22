@@ -1,0 +1,3 @@
+interface:
+  display_name: "Atlas Worker"
+  short_description: "單一任務包的端到端實作（Worker 層）"

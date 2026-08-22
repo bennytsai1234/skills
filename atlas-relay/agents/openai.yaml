@@ -1,0 +1,3 @@
+interface:
+  display_name: "Atlas Relay"
+  short_description: "任務分派、驗收與批次管理（Relay 層）"
