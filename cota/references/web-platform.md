@@ -67,9 +67,37 @@ IIS 安裝:「程式和功能 → 開啟或關閉 Windows 功能」勾選 IIS �
 - 專案監控:上線專案需接 CotaPerformanceCounter + 資訊看板(見
   `references/performance-counter-healthcheck.md`)。
 
+## HSTS 標準
+
+正式環境 HSTS 表頭(`Strict-Transport-Security`)要求:**max-age 至少一年**、
+**要設 includeSubDomains**——缺任一項都會被資安掃描列為風險(中間人攻擊)。
+.NET 8 寫法見 `references/mobile-web.md` 的 HSTS 設定(內部專案通用,不只行動專案)。
+
+## 開發環境模擬 HAProxy
+
+要在本機把 `http://localhost:1338` 轉為 `https://prjchartsserver.cotabank.com/`
+(模擬正式環境的 proxy 行為)時:IIS 安裝 **ARR + URL Rewrite**
+(iis.net 下載)→ 開 ARR proxy → 設站台 → 設 URL Rewrite 規則。
+
+## 資安掃描常見項目
+
+公司資安簡報系列(OWASP Top Ten 2023、CSP、HSTS、Heuristic_Parameter_Tampering
+等)對應到 WEB 專案的實際檢查點:HSTS 設定(見上)、Content-Security-Policy
+header、直接物件參考(參數未經權限驗證直接拼進查詢)的輸入驗證與過濾。
+
+## 版本控制 / 抄送 / 異動單
+
+Git 分支與環境對應、避免漏選檔案、原始碼檢測、風險評估表與測試報告、緊急抄送——
+見 `references/git-workflow.md`。
+
 ## 參考
 
 - .Net下的System.Web 設定: https://svrconf.cotabank.com/pages/viewpage.action?pageId=118620211
+- HAProxy應用(命名規則/環境 IP): https://svrconf.cotabank.com/pages/viewpage.action?pageId=67342647
+- IIS模擬HA PROXY 轉網址: https://svrconf.cotabank.com/pages/viewpage.action?pageId=117276931
+- WEB專案上線申請流程: https://svrconf.cotabank.com/pages/viewpage.action?pageId=82510181
+- HSTS 設定不足風險與解決方案: https://svrconf.cotabank.com/pages/viewpage.action?pageId=120062615
+- 資安相關(簡報系列索引): https://svrconf.cotabank.com/pages/viewpage.action?pageId=120062612
 - WEB專案開發/上線申請: https://svrconf.cotabank.com/pages/viewpage.action?pageId=82511273
 - Web應用程式部署流程: https://svrconf.cotabank.com/pages/viewpage.action?pageId=119177262(頁面目前無文字內容,僅圖/附件,需要時直接開啟)
 - 開發環境準備工作: https://svrconf.cotabank.com/pages/viewpage.action?pageId=82510920

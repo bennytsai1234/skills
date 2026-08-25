@@ -60,6 +60,24 @@ Web 應用程式**(HealthCheckCore)。
 - **`CheckItem` 的 `ProjectName` 是 protected**,子類別裡要用字串常數,不能引用自己的
   `ProjectName` 屬性。
 
+## 輔助 DLL 版(舊 .NET Framework 專案)的 Q&A 重點
+
+舊專案用輔助 DLL + 自己寫 Controller 接監控時(ashx 泛型處理常式版 / MVC
+controller 版 / Web API controller 版),官方 Q&A 的幾個要點:
+
+- **監控 API URL 格式**:WebForm 架構帶 `.ashx`
+  (`/api/MonitorInfos/GetProjectInfo.ashx`、`/api/CheckItems/GetExtraServices.ashx`);
+  MVC / Web API 架構**不帶副檔名**。測試時直接打 URL 看 JSON(用 Chrome,IE 會
+  變成下載)。
+- **URL 跳出身分認證框**:要把自己的 IP 加進 AllowIP。
+- **群組加權限的帳號規則**:有連 DB 的用 `cotabank\XXXXXX`(連線 DB 用的帳號,
+  測試環境是 DBUser,正式環境每專案不同);沒連 DB 的用
+  `IIS AppPool\應用程式集區名稱`。
+- **CheckProvider timeout**:偵測 WebService 的固定 10 秒、不開放調整(開放的話
+  每次檢查都建一次 SOCKET 連線);偵測 DB 連線的看連線字串的 Timeout 設定。
+  有特殊需求自行實作 `ICheckProvider` 介面。
+- DLL 放 `App_Data/dlls`(資料夾名要一模一樣才享有 ASP.NET 隱身機制)。
+
 ## 未用時的替換建議
 
 `CotaPerformanceCounter` 類別方法都是**靜態呼叫**:

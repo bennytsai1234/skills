@@ -27,8 +27,19 @@
 |---|---|---|
 | `EmployeeModel` | `GetByEmpNo(string empNo)` | 透過員編取得員工資料 |
 | `AuthorityLevelModel` | `GetByEmpNo(string empNo)` | 透過員編取得 svremp 中員工權限等級清單 |
+| `EmpCardModel` | `GetByCryptUtil(string hiseed, string hisignedhash)` | 驗證入口網簽章並取得員工晶片卡資訊(失敗拋 Exception) |
 | `DepartmentModel` | — | 單位資訊(員工資料內嵌) |
 | `RankModel` | — | 職稱資訊(員工資料內嵌) |
+
+`EmpCardModel` 欄位:`EmpNo`、`EmpName`、`LoadTime`(上個網頁 load 時間)、`CardNo`
+(晶片卡卡號)、`CardReaderNo`(讀卡機序號)、`LoginTime`(入口網登入時間)、
+`CardSerialNo`(晶片卡製卡序號)。使用前提:先註冊相關 COM 元件及匯入相關機碼
+(見 Confluence 頁)。這跟 `references/network.md` 的 hiseed 驗證是同一套機制的
+封裝版——需要「驗證簽章 + 拿晶片卡資料」時用這個,只需要驗證時用 network.md 的
+手刻流程。
+
+另有 `DateTimeConverter`(命名空間 `CotaUtility`,日期時間格式轉換)與
+`DateDivider`(日期分隔線類型)兩個小工具模組,同屬舊版單體時期文件。
 
 `EmployeeModel` 欄位:`EmpNo`(員編)、`Name`(姓名)、`Id`(統一編號)、`Account`
 (員存帳號)、`Work`(擔任工作代號)、`HasLicense`(證照)、`Level`(職等)、`Rank`

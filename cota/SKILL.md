@@ -1,6 +1,6 @@
 ---
 name: cota
-description: "三信商業銀行(Cota Bank)內部 .NET 開發標準與流程——CotaUtility 各 NuGet 模組(資料庫/Redis/Log/健康檢查/簽章驗證/主機呼叫/權限/報表/驗證登入)、內部平台標準(svrdb+SSPI 連線、入口網簽章、Session Timeout、HAProxy ClientIP)、開發環境準備、開發/上線申請流程、資訊看板監控。新專案開發時決定該裝哪些套件與該走哪些標準;既有專案維護、或使用者要求「健檢」「找出該替換成 CotaUtility 的地方」時,用來掃描程式碼;使用者問開發環境、上線流程、監控告警時查對應 reference。"
+description: "三信商業銀行(Cota Bank)內部 .NET 開發標準與流程——CotaUtility 各 NuGet 模組(資料庫/Redis/Log/健康檢查/簽章驗證/主機呼叫/權限/報表/驗證登入)、內部平台標準(svrdb+SSPI 連線、入口網簽章、Session Timeout、HAProxy、HSTS)、行動入口網專案標準、開發環境準備、開發/上線申請流程、Git 版本控制與程式抄送/異動單、資訊看板監控。新專案開發時決定該裝哪些套件與該走哪些標準;既有專案維護、或使用者要求「健檢」「找出該替換成 CotaUtility 的地方」時,用來掃描程式碼;使用者問開發環境、上線流程、抄送/分支、監控告警時查對應 reference。"
 ---
 
 # Cota 內部開發標準與流程
@@ -59,9 +59,11 @@ CotaUtility 原本是單一套件,已於 2023.12.01 停止更新(EOS),拆成多�
 | 主題 | 內容 | 詳細規則 |
 |---|---|---|
 | 內部 MSSQL 連線標準 | svrdb + SSPI 整合驗證是標準;SQL 帳號連線字串列為偏離 | `references/cota-db.md` |
-| 入口網簽章 / Session Timeout | hiseed/hisignedhash 驗證、20 分鐘 timeout、6 秒倒數 | `references/network.md` |
-| .NET 8 平台設定 / 開發環境 / 上線申請 | Web.config 等效寫法、NAS 工具包、Checkmarx、IIS 憑證、開發與上線分開申請 | `references/web-platform.md` |
-| NuGet 私有來源 | CotaNuGet 設定(`\\192.168.251.238\data\CotaNuGet`) | `references/nuget-setup.md` |
+| 入口網簽章 / Session Timeout / HAProxy | hiseed/hisignedhash 驗證、20 分鐘 timeout、6 秒倒數、HAProxy 命名與環境 IP | `references/network.md` |
+| 行動入口網專案標準 | SvrMobile 主機群、zta hostname、RWD、覆核生物辨識、CotaRedisSession Cookie.Name、HSTS、回入口網 RSASign | `references/mobile-web.md` |
+| .NET 8 平台設定 / 開發環境 / 上線申請 | Web.config 等效寫法、NAS 工具包、Checkmarx、IIS 憑證、開發與上線分開申請、HSTS 標準 | `references/web-platform.md` |
+| 版本控制 / 抄送 / 異動單 | Gogs 倉庫、master=正式/dev=測試抄送、避免漏選檔案、風險評估表與測試報告、緊急抄送 | `references/git-workflow.md` |
+| NuGet 私有來源 | CotaNuGet 設定(`\\192.168.251.238\data\CotaNuGet`)、開發環境 proxy | `references/nuget-setup.md` |
 
 ### 舊版 / 未拆分模組(掃描時遇到要特別處理)
 

@@ -83,10 +83,22 @@ host 的 IP 清單)。
 - Session timeout 的標準處理:彈出倒數(統一 **6 秒**)後回登入頁;若專案可從
   「WEB 版員工入口網」及「行動裝置入口網」兩個入口登入,要用
   `HttpContext.Request.Host.Host` 判斷 timeout 後該回哪一個入口網。
+- **反向:專案要「回入口網」時也要自己產生簽章**——組好 hiseed 後透過
+  `CryptUtilLib.IRSAHandler` 執行 RSASign,把 `hiseed` + `hisignedhash` 回傳給
+  入口網驗證(入口網網址 `https://zta.cotabank.com.tw/Cota2024/Home/MenuBoard`)。
+  行動入口網專案的完整標準見 `references/mobile-web.md`。
 
 驗證範例程式在 Confluence(另見 pageId 106561628 的連結)。
 
 ## 掛 HAProxy 時的整合寫法
+
+**命名與環境規則**(找系統組設定):
+
+- Proxy Server 命名規則見 Confluence 命名規則頁;站台名稱 = `prj` + 自定義名稱
+  (建議用專案名稱),例如專案 eLoan → hostname `prjeLoan.cotabank.com`。
+- **開發階段**:請系統組設定開發環境 host,IP 指到 `192.168.251.112`(HAProxy)。
+- **上線階段**:請系統組設定正式環境 host,IP 指到 `10.1.103.140`(HAProxy)。
+- HAProxy 負載平衡器管理、Client IP 檢查各有專門頁面(見下方參考)。
 
 專案部署在 HAProxy(或其他反向代理)後面時,`HttpContext.Connection.RemoteIpAddress`
 拿到的會是代理伺服器的 IP,不是真實用戶端 IP——這會連帶影響任何以來源 IP 為依據的邏輯

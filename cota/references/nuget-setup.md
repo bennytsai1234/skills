@@ -16,6 +16,11 @@ CotaUtility 系列套件不在 nuget.org,是透過內部私有 NuGet 來源(UNC 
 3. 確定後,在專案按右鍵「管理 NuGet 套件」,套件來源切換成 `CotaNuGet`,即可看到
    目前提供的套件清單並安裝。
 
+## 開發環境 proxy
+
+開發環境的 NuGet 若走 proxy,proxy 位址 `http://192.168.251.253:3128`,直接修改
+`C:\Users\{username}\AppData\Roaming\NuGet\NuGet.Config` 加入 proxy 設定即可。
+
 ## 版本管理提醒
 
 CotaUtility 套件版本更新頻繁(例如 CotaDB 在觀察期間內就有 1.0.0→1.0.3 的功能異動),
