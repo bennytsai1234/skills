@@ -113,4 +113,5 @@ string realIp = CotaNetwork.GetClientIP(httpContext, new[] { "ha_svrmix.cotabank
 
 ## 參考
 
-https://svrconf.cotabank.com/pages/viewpage.action?pageId=82511008
+- CotaUtility.Network: https://svrconf.cotabank.com/pages/viewpage.action?pageId=82511008
+- 採用 HAProxy 的專案取 Client IP / 驗證允許來源(官方說明): https://svrconf.cotabank.com/pages/viewpage.action?pageId=82511273(「WEB專案開發/上線申請」頁內連結)

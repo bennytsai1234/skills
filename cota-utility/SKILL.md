@@ -113,6 +113,14 @@ CotaWebAuth 解決的是「怎麼驗證這個人的身分」),再判斷專案裡
 - **CoraRedisLog.Core**(pageId 98763065):CotaRedisLog 的核心功能套件,
   一般專案不直接引用,由 `.Serilog`/`.NLog` 套件帶入。
 
+## 平台層參考(非 NuGet 模組)
+
+`references/web-platform.md`:Web.config `system.web` 節在 .NET 8 的等效寫法
+(Kestrel Limits、ExceptionHandler、CookiePolicy)、開發環境準備(VS/Git/SSMS 的
+NAS 路徑、Checkmarx SCA、IIS 與開發憑證)、開發/上線申請流程(開發與正式上線
+分開申請、網域名稱、主機呼叫備註)。健檢 .NET 8 專案的 `Program.cs` 設定、或
+使用者問開發環境/上線流程時查這裡。
+
 ## 新專案導入模式
 
 使用者開新專案、或問「這個新專案該裝哪些 CotaUtility」時:
