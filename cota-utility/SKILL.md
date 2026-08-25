@@ -14,6 +14,24 @@ BrHoliday、BrPILog 等)——那是另一套完全不同的三層式架構規�
 跟這裡的通用模組是兩回事。偵測到專案是 Br 前綴 / 有中台路由架構時,提醒使用者那是另一個
 體系,不要套用本 skill 的規則。
 
+## 基本立場:內部專案預設符合 CotaUtility 標準
+
+使用者在公司內部。對**內部專案**而言,CotaUtility 各模組就是公司標準做法——
+**預設要用,偏離才需要理由**。掃描既有專案時,視角是「找出偏離標準的地方」,
+不是「評估要不要導入」。
+
+- **內部專案**(預設):對照表裡每個功能領域,專案有這個功能卻沒走 CotaUtility 的,
+  列為「偏離標準,應修正」;專案沒有這個功能的,依「適用情境」判斷是否需要,
+  需要才建議導入。
+- **DMZ / 對外專案**:部分模組有對外版本或限制(例如 CotaRedis 的
+  `RedisEnvironment.Dmz`),仍預設走 CotaUtility,但注意各 reference 檔標示的
+  環境差異。
+- **例外**:某功能用 CotaUtility 確實不適用(Framework 裝不了、套件文件標示未完成、
+  或專案性質上沒有該需求)時,才維持現狀,並說明理由。
+
+**不要**用「這是業界標準做法,是否統一改用屬公司政策決定」這類外部評估者的措辭——
+在公司內部,這些就是公司標準,不是待商議的政策選項。
+
 ## Confluence 文件存取(更新本 skill 時用)
 
 各套件的原始文件在 Confluence「系統開發專區 > WEB開發工具相關」下。存取帳號密碼、
@@ -25,12 +43,12 @@ pageId 對照表與 REST API 用法在 `references/confluence-access.md`(**該�
 1. **讀 .csproj 確認 TargetFramework** —— 決定哪些模組能裝(見下方模組對照表的
    Framework 限制欄)。舊 .NET Framework 專案裝不了只支援 .NET Core/5+/8 的模組
    (CotaDapper、CotaWebAuth 2.0+、SecureMySql、部分 HealthCheckCore)。
-2. **確認是否為分行系統專案**(專案名 Br 前綴、或架構明顯走中台/AIX 路由)—— 是的話
-   不適用本 skill,提醒使用者查分行系統專用規範。
+2. **確認專案類型** —— 內部 / DMZ(對外)/ 分行系統。分行系統(Br 前綴、中台/AIX
+   路由架構)不適用本 skill,提醒使用者查分行系統專用規範。
 3. **確認專案是否已設定 CotaNuGet 私有來源** —— 沒有的話參考
-   `references/nuget-setup.md`。**注意**:目前找到兩個不同時期文件記載的 UNC 路徑
-   (`\\192.168.251.238\data\CotaNuGet` 與較舊文件的 `\\192.168.233.237\data\CotaNuGet`),
-   哪個才是目前有效的路徑待確認,提醒使用者跟系統組核對,不要自己猜。
+   `references/nuget-setup.md`。目前有效路徑以 `\\192.168.251.238\data\CotaNuGet`
+   為準(較新文件);舊文件另有 `\\192.168.233.237\data\CotaNuGet`,若 restore 失敗
+   再找系統組核對。
 
 ## 掃描流程(既有專案健檢 / 使用者要求找替換點時)
 
@@ -43,26 +61,19 @@ pageId 對照表與 REST API 用法在 `references/confluence-access.md`(**該�
    - **已經在用** → 對照 reference 檔的「正確用法檢查清單」逐項檢查。用法沒問題就
      不用回報;有問題(參數沒指定型別、用了已淘汰的舊版單體 `CotaUtility` 套件、
      設定方式跟建議不符等)才提醒。
-   - **沒在用** → 分兩種情況,**不要混為一談**:
-     - **自己刻的**(手工實作,通常是明顯的重複造輪子)→ 列為候選替換點,附
-       reference 檔裡的遷移範例跟 Confluence 連結。
-     - **用了其他非 CotaUtility 的合法標準做法**(例如框架內建機制、業界標準協定、
-       第三方成熟套件——不是隨手刻的)→ **不要**直接判「不適用」略過,也**不要**
-       直接判「該替換」強推。列為「待確認」,說明現況跟為什麼沒用 CotaUtility 的
-       可能理由,是否要統一改用 CotaUtility 通常涉及公司內部政策(稽核、加密、
-       日誌格式等要求),不是單純的程式碼品質問題,不是靠讀程式碼就能斷定的事。
-       (例如:專案用 ASP.NET Core 內建的 Windows Negotiate 做 AD 身分驗證,而不是
-       呼叫 CotaWebAuth.VerifyAD——這不是自己刻的,是標準做法,但也不是 CotaUtility,
-       應該標待確認而不是因為找不到「自刻」關鍵字特徵就當作沒有這個功能)
+   - **沒在用** → 列為「偏離標準,應修正」,附 reference 檔裡的遷移範例跟 Confluence
+     連結。即使現況是框架內建機制或第三方成熟套件(例如 EF Core、ASP.NET Core 內建
+     Windows Negotiate、Serilog 檔案 sink),也一樣列為偏離——是否維持現狀要由使用者
+     基於公司規範決定,不是掃描者以「這是標準做法」為由略過。
 3. **沒找到這個功能** → 對照 reference 檔的「適用情境」段落,評估這個專案性質上是否
-   用得到,給輕量建議(不是強推、不是自動加)。看不出專案是否需要(例如是否要跨機
+   用得到,需要才建議導入(不是強推、不是自動加)。看不出專案是否需要(例如是否要跨機
    共享 Session)就標「待確認」,交給使用者判斷。
 4. 套用前置檢查第 1 點的 Framework 過濾,裝不了的模組不用建議。
 
 **判斷「找到功能」時要看目的,不要只比對字面關鍵字。** 每個 reference 檔的「偵測特徵」
 列的是常見寫法,不是完整清單——掃描時先想清楚這個模組解決的實際問題是什麼(例如
 CotaWebAuth 解決的是「怎麼驗證這個人的身分」),再判斷專案裡有沒有東西在解決同一個
-問題,即使寫法不在清單上。字面比對抓不到的,才是最容易漏判成「不適用」的地方。
+問題,即使寫法不在清單上。字面比對抓不到的,才是最容易漏判成「沒有這個功能」的地方。
 
 ## 模組對照表
 
@@ -81,7 +92,26 @@ CotaWebAuth 解決的是「怎麼驗證這個人的身分」),再判斷專案裡
 | Keycloak OIDC 登入 / JWT 授權 / 下游 Token 轉拋 | CotaUtility.KeycloakAdapter | .NET 6/7/8 | `references/keycloak-adapter.md` |
 | 客戶統一編號遮罩 / 亂數化 | CotaUtility.Customer | .NET Framework 4.7.2+ / .NET Core | `references/customer.md` |
 | 集中權限/角色查詢 | CotaUtility.PermProvider | .NET Framework 4.6.1+ / .NET Core 2.0+ | `references/perm-provider.md` |
+| 員工人事資料 / svremp 權限等級查詢 | CotaEmployee(命名空間 CotaUtility.Models) | .NET Framework 4.8 / .NET Core(套件拆分狀態待確認) | `references/cota-employee.md` |
+| 網頁呼叫本機 32-bit DLL / 啟動桌面程式(用戶端服務) | CotaXMaster(用戶端 Windows 服務,非 NuGet) | 用戶端 Windows | `references/cota-xmaster.md` |
 | 網頁轉 PDF 報表 | CotaUtility.Reporting | 未特別限制,依 wkhtmltopdf/puppeteer 執行環境 | `references/reporting.md` |
+
+## 舊版 / 未拆分模組(掃描時遇到要特別處理)
+
+以下模組出自舊版單體 `CotaUtility`(2023.12.01 EOS)時期,沒有拆分後獨立維護的
+套件文件。掃描到專案在用時,**不要**直接建議「升級到拆分後套件」(沒有拆分後套件),
+也不要因為找不到對應 reference 就漏報:
+
+- **CotaJWT**(pageId 64127126):JWT 簽發/驗證,只提供 HS256。1.0.0.6 起
+  Encrypt/Decrypt 回傳 `(bool, string)`。新專案需要 JWT 時優先評估
+  `CotaUtility.KeycloakAdapter`(見 `references/keycloak-adapter.md`)或框架內建
+  `AddJwtBearer`,CotaJWT 僅供既有專案維護參考。
+- **CotaNLog**(pageId 64127047):舊版 NLog 整合,已被
+  `CotaUtility.CotaRedisLog.NLog` 取代(見 `references/cota-redis-log.md`)。
+- **CotaNetwork(已過時)**(pageId 64127130):已被 `CotaUtility.Network` 取代
+  (見 `references/network.md`)。
+- **CoraRedisLog.Core**(pageId 98763065):CotaRedisLog 的核心功能套件,
+  一般專案不直接引用,由 `.Serilog`/`.NLog` 套件帶入。
 
 ## 新專案導入模式
 
@@ -98,12 +128,11 @@ CotaWebAuth 解決的是「怎麼驗證這個人的身分」),再判斷專案裡
 掃描完成後,依下列優先級整理,不要混在一起丟一大串:
 
 1. **現在用錯了**(已用 CotaUtility 但用法有問題,或還在用已 EOS 的舊版單體套件)
-2. **該替換但目前是自己刻的**(功能存在、沒用 CotaUtility、明顯是重複造輪子)
-3. **功能存在,但用了其他非 CotaUtility 的標準做法,待確認是否要統一改用**(不是自刻,
-   是否要換屬於公司政策決定——這一類**必須獨立列出**,不要因為「不是自刻」就併進第
-   2 類強推替換,也不要因為「找不到自刻特徵」就直接漏掉不報)
-4. **目前沒有這功能、可考慮導入**(輕量建議,非強制)
+2. **偏離標準,應修正**(功能存在、沒用 CotaUtility——包含自己刻的,以及用了框架內建
+   機制/第三方套件的;附現況、建議寫法、Confluence 連結。使用者可基於公司規範決定
+   是否維持現狀,但掃描者要列出來,不要以「這是標準做法」略過)
+3. **目前沒有這功能、可考慮導入**(輕量建議,非強制)
+4. **待確認**(看不出專案是否需要該功能,例如是否要跨機共享 Session——交給使用者判斷)
 
 每一項附:檔案位置、現況(簡述,不用整段貼程式碼)、建議寫法、對應 Confluence 連結。
-判斷不出來是否適用的(例如看不出這個 Session 是否需要跨機共享),標「待確認」,不要
-自己腦補專案需求。
+判斷不出來是否適用的,標「待確認」,不要自己腦補專案需求。

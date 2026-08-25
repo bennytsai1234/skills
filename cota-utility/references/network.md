@@ -65,6 +65,27 @@ request.Headers.Add("X-Cota-Authentication", encString);
 其餘方法:`IsValidIP`(合法 IP 格式驗證)、`GetIpAddressListFromDNS`(由 DNS 取得
 host 的 IP 清單)。
 
+## 員工入口網 / 行動裝置入口網簽章驗證(hiseed / hisignedhash)
+
+另一套簽章機制:從**員工入口網/行動裝置入口網**過來的 request 會帶上 `hiseed`
+及 `hisignedhash` 兩項資訊,各系統接收到後需驗證簽章正確性,**驗證失敗需導回入口網**。
+這跟上面的 `X-Cota-Authentication`(系統間呼叫簽章)是兩套不同的機制,不要混用。
+
+- `hiseed` 由以下參數以 `$` 串接而成:員工編號、員工姓名、上個網頁 load 的時間、
+  讀卡機讀取到的卡片號碼、讀卡機名稱、入口網站登入時間、晶片卡序號、行動裝置
+  (1=是行動裝置,0=不是)。
+- **行動裝置版**各網頁系統除驗證簽章外,需加驗三項:
+  1. 「行動裝置」是否為 1
+  2. 「入口網站登入時間」是否為空值(驗證員工入口網有登入過)
+  3. 「上個網頁 load 的時間」與網頁所在主機目前時間比較,是否超過 **30 秒**
+- 驗證通過後,可將登入資訊寫入 session 供後續作業判斷;**session timeout 時間
+  統一為 20 分鐘**。
+- Session timeout 的標準處理:彈出倒數(統一 **6 秒**)後回登入頁;若專案可從
+  「WEB 版員工入口網」及「行動裝置入口網」兩個入口登入,要用
+  `HttpContext.Request.Host.Host` 判斷 timeout 後該回哪一個入口網。
+
+驗證範例程式在 Confluence(另見 pageId 106561628 的連結)。
+
 ## 掛 HAProxy 時的整合寫法
 
 專案部署在 HAProxy(或其他反向代理)後面時,`HttpContext.Connection.RemoteIpAddress`

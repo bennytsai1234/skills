@@ -4,7 +4,13 @@
 
 需要把網頁內容轉成 PDF 報表的專案——取代 Crystal Report / Reporting Service 的方案,
 改成用網頁畫報表再轉 PDF。v1.0.0 用 wkhtmltopdf 實作(`PdfGenerator`),v1.0.1 新增
-puppeteer-html-pdf 實作(`PuppeteerHtmlToPdf`)。
+puppeteer-html-pdf 實作(`PuppeteerHtmlToPdf`),v1.0.2(2025.09)新增 PDF 加浮水印
+(文件資訊、加密)。
+
+**v1.0.2 浮水印**:`Reporting.WaterMarkGeneratorAsync(WaterMarkGeneratorRequest, byte[] pdf, timeout)`
+回傳 `ResultModel`(`Success`/`Pdf`/`Message`)。`WaterMarkGeneratorRequest` 含
+`SystemName`/`RptName`/`User`、`DocInfo`(Author/Title/Subject/UserPwd)、`Watermark`
+(Text1/FontSize1/Repeat/Text2/FontSize2)。**PDF 請勿設定權限**,避免檔案無法開啟。
 
 ## 偵測特徵
 

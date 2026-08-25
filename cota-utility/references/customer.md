@@ -109,6 +109,16 @@ BatchResultModel batch = await rngService.GetCustomerBatchRandomID(new List<stri
 硬套。COBOL 端也有對應呼叫方式(透過 `web_access`),不在此 skill 涵蓋範圍內,遇到再
 連結 Confluence 頁面即可。
 
+## 統編/證號驗證演算法參考文件
+
+需要自己驗證統編/證號格式(而非亂數化)時,Confluence 有標準演算法文件,不要自己
+憑印象寫檢查碼邏輯:
+
+- **營利事業統一編號**(8 碼,權重 1,2,1,2,1,2,4,1,加總後個位數進位再 mod 5,
+  含第 7 碼為 7 的特例):pageId 121734791
+- **新式統一證號驗證**(身分證):pageId 121734827
+- **舊式外來人口統一證號編碼原則**:pageId 121734847
+
 ## 參考
 
 https://svrconf.cotabank.com/pages/viewpage.action?pageId=119177439

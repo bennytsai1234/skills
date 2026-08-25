@@ -58,6 +58,19 @@ JavaCallByteOutputModel output2 = CotaJavaCall.CallServerByByte(
 `Big5ToWideChar` 套件,且核心需求就是主機呼叫,可以評估整併成只用 JavaCall,減少一個
 套件依賴。
 
+## 參數模組(命名空間 CotaUtility.Models / CotaUtility.Const)
+
+| 模組 | 欄位 | 說明 |
+|---|---|---|
+| `JavaCallStringInputModel` | `ServerName`、`InputData` | 字串輸入(有無參數與 `(string, string)` 兩個建構子) |
+| `JavaCallStringOutputModel` | — | 字串輸出 |
+| `JavaCallByteInputModel` | — | 位元輸入(呼叫 COBOL 用這個搭配 Big5 轉碼) |
+| `JavaCallByteOutputModel` | `ErrorCode`、`ErrorMessage`、`OutputData` | 位元輸出 |
+| `JavaCallServerType`(CotaUtility.Const) | `COBOL` / `JAVA` | 呼叫 COBOL 主機 / JAVA 主機 |
+
+各模組的完整欄位/方法說明在 Confluence 子頁(pageId 65700014/65700028/65700063/
+65700080/65700089)。
+
 **非 txdo server 的 COBOL server**(較少見的情境)要用更底層的 `CJavaCall` 類別
 (`tpinit`/`tpcall`/`close`/`get_error_str`),不是 `CotaJavaCall`,遇到這種情境對照
 Confluence 頁面上的獨立範例。

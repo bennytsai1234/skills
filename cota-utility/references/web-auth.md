@@ -18,20 +18,19 @@ AD/OTP 的加解密採用 `DataEnc`。
   `AddAuthentication(NegotiateDefaults.AuthenticationScheme)`,或 IIS 設定裡開啟
   Windows Authentication)——這也是在做 AD 身分驗證,只是不是「自己刻的」,也不是
   CotaUtility。**不要因為找不到手刻特徵就判定 CotaWebAuth 不適用/略過**,這種情況要
-  歸類到「有這個功能、但沒用 CotaUtility」,標「待確認」並列出現況,原因見下方
+  歸類到「有這個功能、但沒用 CotaUtility」,列為偏離標準並列出現況,原因見下方
   「Windows Negotiate 的判斷方式」
 
 ## Windows Negotiate 的判斷方式
 
-Windows 整合驗證(Negotiate/Kerberos)本身是業界標準做法,不是自刻程式碼,合不合適不是
-單純的程式碼品質問題,而是**這間銀行內部政策**——是否要求所有系統統一走 CotaWebAuth
-(例如為了統一的稽核/加密/日誌格式)不是能從程式碼判斷出來的事。掃描到這種情況時:
+Windows 整合驗證(Negotiate/Kerberos)是框架內建機制,不是自刻程式碼,但對內部專案
+而言,CotaUtility 各模組就是公司標準——用 Windows Negotiate 做 AD 身分驗證屬於
+**偏離標準**,掃描時要列出來(附現況:用 Windows Negotiate 做身分驗證,搭配
+PermProvider 做權限查詢),由使用者基於公司規範決定是否維持現狀。
 
 - **不要**直接判「不適用」略過(找不到自刻特徵不等於沒有 AD 驗證需求)
-- **不要**直接判「該替換」強推(Windows Negotiate 是合法的標準做法,不是明顯的壞寫法)
-- 列為「待確認」,說明現況(用 Windows Negotiate 做身分驗證,搭配 PermProvider 做權限
-  查詢),並附上為什麼沒用 CotaWebAuth.VerifyAD 的可能原因(SSO 免密碼輸入的使用者體驗、
-  不用自己處理加密傳輸),讓使用者自行判斷是否符合公司規範
+- 列為「偏離標準,應修正」,並附上現況與 CotaWebAuth.VerifyAD 的對照,讓使用者
+  判斷是否修正
 
 ## 是否已用 CotaUtility
 

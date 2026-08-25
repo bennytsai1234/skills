@@ -5,6 +5,21 @@
 原生 ADO.NET 風格(不透過 Dapper/EF,直接下 SQL 字串)存取 **MSSQL** 資料庫的專案。
 Target netstandard2.0,.NET Framework 跟 .NET Core 專案都能用。上線日 2023.11.28。
 
+## 內部 MSSQL 連線標準
+
+內部專案接 MSSQL 的標準連線方式是 **svrdb + SSPI 整合驗證**——也就是
+`CotaDB(string dbName)` 建構子組出的連線字串(`data source=svrdb;...Integrated
+Security=SSPI;...`)。這代表:
+
+- 內部專案的連線字串**不該有 SQL 帳號密碼欄位**(`User Id=`/`Password=`)。
+  掃描到設定檔/程式碼裡有 SQL 帳號認證的 MSSQL 連線字串(含佔位符格式),
+  列為「偏離標準,應修正」——改成 svrdb + SSPI,執行帳號用 IIS 應用程式集區
+  或服務帳號的 Windows 身分。
+- 用 EF Core 等 ORM 的專案,連線字串一樣要符合這個標準(連線字串標準跟 ORM
+  選擇是兩件事:ORM 用什麼不強求,但認證方式與來源要對)。
+- 需要自訂來源時用 `CotaDB(dataSource, settings, dbName)` 建構子,但 `settings`
+  仍應維持 SSPI 整合驗證,不要帶入 SQL 帳號。
+
 v1.0.3 新增:備用資料來源(Failover Partner,支援 AlwaysOn 容錯移轉)、連線池使用率
 分級設定、連線生命週期統一設為 30 秒(避免拿到過期連線)。附有 GitHub Copilot 指引檔
 (`CotaUtiity.CotaDB.usage.instructions.md`),可用來輔助升級到 1.0.3。
