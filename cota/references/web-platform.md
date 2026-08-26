@@ -67,6 +67,19 @@ IIS 安裝:「程式和功能 → 開啟或關閉 Windows 功能」勾選 IIS �
 - 專案監控:上線專案需接 CotaPerformanceCounter + 資訊看板(見
   `references/performance-counter-healthcheck.md`)。
 
+### 頁面提供的相關作業入口
+
+以下連結均來自 Confluence「WEB專案開發/上線申請」第 7 版(最後編輯
+2024-03-07)。頁面本身列出的申請範例、開發機更新、監控、HAProxy 與 Client IP
+說明，依實際作業需要開啟原頁確認最新內容:
+
+- 申請表填寫範例: [WEB專案上線申請單-範例.pdf](https://svrconf.cotabank.com/download/attachments/82511127/WEB%E5%B0%88%E6%A1%88%E4%B8%8A%E7%B7%9A%E7%94%B3%E8%AB%8B%E5%96%AE-%E7%AF%84%E4%BE%8B.pdf?version=1&modificationDate=1679963289950&api=v2)
+- 開發機 WEB 專案更新: <https://svrconf.cotabank.com/x/JoDSAw>
+- 專案監控: <https://svrconf.cotabank.com/x/DgBeAg>
+- `CotaPerformanceCounter`: <https://svrconf.cotabank.com/x/noDSAw>
+- HAProxy 負載平衡器管理: <https://svrconf.cotabank.com/x/F4wDB>
+- HAProxy Client IP / 允許來源: <https://svrconf.cotabank.com/x/oATrB>
+
 ### Web 專案上線申請單欄位
 
 依實際畫面順序還原。**★＝必填(畫面有紅色星號);「條件」＝有使用該功能才填。**
@@ -143,6 +156,16 @@ IIS 安裝:「程式和功能 → 開啟或關閉 Windows 功能」勾選 IIS �
 **備註**
 
 - 其他說明(最多 1000 字)
+
+### 頁面評論中的欄位格式補充
+
+頁面上的欄位說明評論補充了以下填寫格式；這是申請單的實務填寫提示，不是另一組
+套件或執行環境規範:
+
+- **程式開發版本控制路徑**:專案檔與方案檔同一層填 `#/專案名稱`;不同層填
+  `#/專案名稱/專案名稱`。
+- **Packages 路徑**:若是 .NET Framework 專案且使用 NuGet,專案檔與方案檔同一層填
+  `packages`;不同層填 `../packages`。
 
 ## HSTS 標準
 
