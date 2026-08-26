@@ -1,6 +1,6 @@
 ---
 name: cota
-description: "三信商業銀行(Cota Bank)內部 .NET 開發標準與流程——CotaUtility 各 NuGet 模組(資料庫/Redis/Log/健康檢查/簽章驗證/主機呼叫/權限/報表/驗證登入)、內部平台標準(svrdb+SSPI 連線、入口網簽章、Session Timeout、HAProxy、HSTS)、行動入口網專案標準、開發環境準備、開發/上線申請流程、Git 版本控制與程式抄送/異動單、資訊看板監控。新專案開發時決定該裝哪些套件與該走哪些標準;既有專案維護、或使用者要求「健檢」「找出該替換成 CotaUtility 的地方」時,用來掃描程式碼;使用者問開發環境、上線流程、抄送/分支、監控告警時查對應 reference。"
+description: "三信商業銀行(Cota Bank)內部 .NET 開發標準與流程——CotaUtility 各 NuGet 模組(資料庫/Redis/Log/健康檢查/簽章驗證/主機呼叫/權限/報表/驗證登入/員工入口網串接)、內部平台標準(svrdb+SSPI 連線、入口網簽章、Session Timeout、HAProxy、HSTS)、行動入口網專案標準、開發環境準備、開發/上線申請流程、Git 版本控制與程式抄送/異動單、資訊看板監控。新專案開發時決定該裝哪些套件與該走哪些標準;既有專案維護、或使用者要求「健檢」「找出該替換成 CotaUtility 的地方」時,用來掃描程式碼;使用者問開發環境、上線流程、抄送/分支、監控告警時查對應 reference。"
 ---
 
 # Cota 內部開發標準與流程
@@ -48,6 +48,7 @@ CotaUtility 原本是單一套件,已於 2023.12.01 停止更新(EOS),拆成多�
 | 專案監控資訊 / 健康檢查端點 / 資訊看板[專案監控]警告(推播+語音) | CotaUtility.CotaPerformanceCounter / CotaHealthCheckCore | netstandard2.0 / netcoreapp3.1+ (HealthCheckCore 僅限 .NET Core Web) | `references/performance-counter-healthcheck.md` |
 | AD / OTP / FIDO2 生物辨識驗證 | CotaUtility.CotaWebAuth | v1.0.0=.NET5,v2.0.0+=.NET8 | `references/web-auth.md` |
 | Keycloak OIDC 登入 / JWT 授權 / 下游 Token 轉拋 | CotaUtility.KeycloakAdapter | .NET 6/7/8 | `references/keycloak-adapter.md` |
+| 員工入口網串接(進站驗證 / 回入口網,JWT 版) | CotaUtility.CotaPortal | net8.0 | `references/cota-portal.md` |
 | 客戶統一編號遮罩 / 亂數化 / 統編證號驗證演算法 | CotaUtility.Customer | .NET Framework 4.7.2+ / .NET Core | `references/customer.md` |
 | 集中權限/角色查詢 | CotaUtility.PermProvider | .NET Framework 4.6.1+ / .NET Core 2.0+ | `references/perm-provider.md` |
 | 員工人事資料 / svremp 權限等級查詢 | CotaEmployee(命名空間 CotaUtility.Models) | .NET Framework 4.8 / .NET Core(套件拆分狀態待確認) | `references/cota-employee.md` |
@@ -58,9 +59,10 @@ CotaUtility 原本是單一套件,已於 2023.12.01 停止更新(EOS),拆成多�
 
 | 主題 | 內容 | 詳細規則 |
 |---|---|---|
+| 新專案標準開發流程(端到端) | 雙環境抄送(dev=測試/master=正式)、開發+上線兩次申請、前台雙機高可用為預設(AA 與 AP 主備皆為公司支援的擺法,由專案選,非硬性規定)→多機時 Redis 變標配、背景服務不可無腦雙跑、抄送/異動單、監控看板、開案檢查清單 | `references/new-project-flow.md` |
 | 內部 MSSQL 連線標準 | svrdb + SSPI 整合驗證是標準;SQL 帳號連線字串列為偏離 | `references/cota-db.md` |
-| 入口網簽章 / Session Timeout / HAProxy | hiseed/hisignedhash 驗證、20 分鐘 timeout、6 秒倒數、HAProxy 命名與環境 IP | `references/network.md` |
-| 行動入口網專案標準 | SvrMobile 主機群、zta hostname、RWD、覆核生物辨識、CotaRedisSession Cookie.Name、HSTS、回入口網 RSASign | `references/mobile-web.md` |
+| 入口網簽章 / Session Timeout / HAProxy | hiseed/hisignedhash 驗證(舊機制;新專案優先用 CotaPortal,見 `references/cota-portal.md`)、20 分鐘 timeout、6 秒倒數、HAProxy 命名與環境 IP | `references/network.md` |
+| 行動入口網專案標準 | SvrMobile 主機群、zta hostname、RWD、覆核生物辨識、CotaRedisSession Cookie.Name、HSTS、回入口網(RSASign 舊機制 / CotaPortal JWT 新機制) | `references/mobile-web.md` |
 | .NET 8 平台設定 / 開發環境 / 上線申請 | Web.config 等效寫法、NAS 工具包、Checkmarx、IIS 憑證、開發與上線分開申請、上線申請單完整欄位(逐欄填寫)、HSTS 標準 | `references/web-platform.md` |
 | 版本控制 / 抄送 / 異動單 | Gogs 倉庫、master=正式/dev=測試抄送、避免漏選檔案、風險評估表與測試報告、緊急抄送 | `references/git-workflow.md` |
 | NuGet 私有來源 | CotaNuGet 設定(`\\192.168.251.238\data\CotaNuGet`)、開發環境 proxy | `references/nuget-setup.md` |
@@ -88,9 +90,21 @@ CotaUtility 原本是單一套件,已於 2023.12.01 停止更新(EOS),拆成多�
 
 使用者開新專案、或問「這個新專案該裝哪些套件 / 該走哪些標準」時:
 
-1. 問清楚專案性質:內部專案 / DMZ(對外)/ 分行系統?需不需要多機部署或 HA(影響
-   Session/Cache 要不要用 Redis)?目標 Framework?
-2. 依模組對照表 + Framework 相容性,給出**建議清單**(挑用得到的,不是全裝)。
+0. **先給端到端骨架**:內部新專案**預設走完整流程**——雙環境抄送(dev=測試/
+   master=正式)、開發+上線兩次申請、**前台雙機高可用為預設**、因而多機時
+   Redis(Session/Cache)成為標配、接監控看板。這是預設姿態,不是逐項問「要不要導入」;
+   要精簡(單機、不接看板)才需要理由。**雙機擺法有 AA(Active/Active)與 AP(主備)
+   兩種,公司都支援、由專案選(非硬性規定,skill 與 Confluence 都沒有明訂該選哪個)**
+   ——AA 要把所有跨機即時狀態搬上 Redis(改動大),AP 一台服務一台待命、多數即時分裂
+   問題不發生(改動小),兩者都要把本機檔案產物移到共享儲存;開案時把這取捨攤給使用者選,
+   別替他勾 AA。完整流程與開案檢查清單見 `references/new-project-flow.md`。
+1. 問清楚專案性質:內部專案 / DMZ(對外)/ 分行系統?目標 Framework?
+   (雙機高可用為預設,不必反問要不要多機;但 **AA 還是 AP 要跟使用者確認**,並盤點
+   **背景服務能否跟著雙跑**——有 in-memory 佇列/單進程復原假設/DPAPI 綁機金鑰的,
+   不能無腦雙跑,見 `references/new-project-flow.md` 第三節。)
+2. 依模組對照表 + Framework 相容性,給出**建議清單**(挑用得到的,不是全裝;
+   多機標配項—Session/Cache 走 CotaRedis、脫離 DPAPI 的金鑰圈—依 AA/AP 取用
+   (AA 全需、AP 較輕);CotaNetwork ClientIP 僅在專案真的用來源 IP 做白名單/限流時才納入)。
 3. 給對應的 NuGet 設定步驟(`references/nuget-setup.md`)跟各模組的 DI 註冊片段
    (每個 reference 檔都有範例)。
 4. 提醒平台層標準:MSSQL 連線字串走 svrdb+SSPI、上線前需填開發/上線申請表
