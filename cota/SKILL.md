@@ -61,7 +61,7 @@ CotaUtility 原本是單一套件,已於 2023.12.01 停止更新(EOS),拆成多�
 | 內部 MSSQL 連線標準 | svrdb + SSPI 整合驗證是標準;SQL 帳號連線字串列為偏離 | `references/cota-db.md` |
 | 入口網簽章 / Session Timeout / HAProxy | hiseed/hisignedhash 驗證、20 分鐘 timeout、6 秒倒數、HAProxy 命名與環境 IP | `references/network.md` |
 | 行動入口網專案標準 | SvrMobile 主機群、zta hostname、RWD、覆核生物辨識、CotaRedisSession Cookie.Name、HSTS、回入口網 RSASign | `references/mobile-web.md` |
-| .NET 8 平台設定 / 開發環境 / 上線申請 | Web.config 等效寫法、NAS 工具包、Checkmarx、IIS 憑證、開發與上線分開申請、HSTS 標準 | `references/web-platform.md` |
+| .NET 8 平台設定 / 開發環境 / 上線申請 | Web.config 等效寫法、NAS 工具包、Checkmarx、IIS 憑證、開發與上線分開申請、上線申請單完整欄位(逐欄填寫)、HSTS 標準 | `references/web-platform.md` |
 | 版本控制 / 抄送 / 異動單 | Gogs 倉庫、master=正式/dev=測試抄送、避免漏選檔案、風險評估表與測試報告、緊急抄送 | `references/git-workflow.md` |
 | NuGet 私有來源 | CotaNuGet 設定(`\\192.168.251.238\data\CotaNuGet`)、開發環境 proxy | `references/nuget-setup.md` |
 
@@ -94,7 +94,8 @@ CotaUtility 原本是單一套件,已於 2023.12.01 停止更新(EOS),拆成多�
 3. 給對應的 NuGet 設定步驟(`references/nuget-setup.md`)跟各模組的 DI 註冊片段
    (每個 reference 檔都有範例)。
 4. 提醒平台層標準:MSSQL 連線字串走 svrdb+SSPI、上線前需填開發/上線申請表
-   (見 `references/web-platform.md`)。
+   (見 `references/web-platform.md`)。使用者要實際填表時,該檔有上線申請單的
+   完整欄位清單(依畫面順序、標註必填與條件欄),可逐欄代填。
 
 ### 情境 B:既有專案健檢 / 找替換點
 
