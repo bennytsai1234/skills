@@ -1,6 +1,6 @@
 ---
 name: dev-flow
-description: 依專案證據規劃本地先行開發、Cota 分階段接入與正式 AA + Redis 驗證，區分本機單 Web、雙 Web 整合和公司資源驗收；狀態混亂時先回復本地基線，再逐層接回 Cota；只做唯讀分析，不修改、部署或送申請。
+description: 依專案證據規劃本地先行開發與正式 AA + Redis 驗證；新專案先建立本地基線，既有專案若 Cota 半接入、未按 AA + Redis 開發或公司帳號尚未到位，先隔離／移除 Cota 回到本地，再逐層接回；只做唯讀分析，不修改、部署或送申請。
 ---
 
 # Dev Flow
@@ -19,26 +19,47 @@ description: 依專案證據規劃本地先行開發、Cota 分階段接入與�
 - 申請單等外部流程有等待成本，能提早準備就提早準備；但申請狀態不等於資源已可用或架構已驗證。
 - 跳步不禁止，但說明少了哪個驗證、可能留下什麼風險，由使用者決定。
 
-## 本地先行邊界
+## 先選擇開發路徑
 
-本地先行代表先用可重建的本地資源完成業務流程、資料契約、設定邊界與測試基線，不代表延後盤點 Cota 依賴。Cota 資源申請、套件來源、目標 framework、帳號與網路需求可以並行準備；實際接入則等本機基線可驗收後分層進行。
+先依證據判斷專案屬於哪種狀態，不要把所有專案直接帶進 Cota 整合：
+
+1. **新專案或尚未接 Cota**：先走本地基線，完成業務流程、資料契約、設定邊界與核心測試。
+2. **既有專案 Cota 半接入、AA／Redis 未建立或狀態混亂**：停止繼續整合，走「回到本地」路徑；不因為已經安裝套件就繼續堆設定。
+3. **本地基線已驗收且公司資源已可用**：依 DB、Redis、身分／權限、外部服務、監控／HA 的順序逐層接回，每一層獨立驗證。
+
+本地先行不代表不準備 Cota。套件來源、目標 framework、DB／Redis／帳號、網路、憑證與申請需求可以並行盤點或申請；但是等待中的公司資源不能阻塞本機開發，也不能被未完成的申請當成已可用。
+
+## 本地基線
+
+本地基線是日常開發的預設起點：
 
 - 本機日常開發：單一 Web process + 本地 DB／LocalDB + Docker Redis；依功能使用 fake identity、seed permission、local file、Console／File log 或 simulator。
 - Cota 公司整合：依專案實際功能逐層替換本地替代物；涉及 `svrdb + SSPI`、CotaRedis、公司入口／權限、內部外部服務或監控的結果，才可作為 Cota 驗證證據。
 - 本機替代物與 Cota adapter 要有清楚邊界。公司專用 endpoint、帳號、憑證與套件不可成為本機啟動的無條件前置；本機 profile 應能在沒有公司網路時建置、啟動與測試。
+- 業務程式依賴介面或抽象邊界，例如員工資料、權限、通知與 cache；本機使用 local implementation，Cota 環境再替換 implementation，不為了切換環境重寫業務流程。
 - 「本機通過」「Cota 接入通過」「測試環境 AA 通過」「正式 AA + Redis 通過」是四種不同結論，不可合併回報。
 
-## 狀態混亂時的回復路徑
+## 既有專案半接入或狀態混亂
 
-若出現本機與公司設定混用、Cota 套件版本／API 不明、啟動時強制連公司資源、無法判斷錯誤來源，或目前無法說明哪些功能依賴 Cota，先停止繼續接套件與環境設定，將工作拉回本地基線：
+若既有專案已接 Cota 到一半，卻發現沒有按照 AA + Redis 設計，或出現本機與公司設定混用、Cota 套件版本／API 不明、啟動時強制連公司資源、DB／Redis 帳號密碼尚未申請、無法判斷錯誤來源等情況，先停止繼續接套件與環境設定，將工作拉回本地基線：
 
 1. **保留現況證據**：記錄目前 commit、套件清單、啟動錯誤、設定 profile、Cota 註冊點與已知可用狀態；先建立可回復點，不刪除使用者既有的無關修改。
-2. **移除或隔離 Cota 依賴**：從本機啟動路徑移除 Cota package reference、DI registration、middleware、公司 endpoint 與強制初始化；保留業務介面、資料契約與可供日後接回的 adapter boundary。若直接移除會破壞編譯，先隔離成可選的 infrastructure project／profile，再恢復本機建置。
+2. **先移除或隔離 Cota 依賴**：從本機啟動路徑移除 Cota package reference、DI registration、middleware、公司 endpoint 與強制初始化；保留業務介面、資料契約與可供日後接回的 adapter boundary。若直接移除會破壞編譯，先隔離成可選的 infrastructure project／profile，再恢復本機建置。
 3. **恢復本地可執行基線**：回到單 Web + 本地 DB／LocalDB + Docker Redis，使用本地 auth／permission／external service substitute，先通過 build、啟動、核心測試與必要 migration。
 4. **重新建立分散式基線**：本地單 Web 穩定後，才用 Web A + Web B 共用本地 Redis／DB 驗證跨 process、lock／lease、共享狀態與 worker 唯一性。
 5. **逐層接回 Cota**：依「套件／邊界 → DB／Redis → 身分／權限 → 外部服務 → 監控／HA」順序，一次只引入一層並記錄通過條件；任何一層讓本機或測試失去可驗證性，就回到上一個通過點，不把多層變更混在一起。
 
-這條路徑是整理依賴與恢復可驗證性，不是刪除業務功能，也不是把正式目標改成單機；正式目標仍維持 AA + Redis。
+這條路徑是整理依賴與恢復可驗證性，不是刪除業務功能或全面重寫；優先重整的是狀態存放位置、背景工作執行責任與 infrastructure adapter。也不是把正式目標改成單機，正式目標仍維持 AA + Redis。
+
+## 公司資源尚未到位
+
+若 DB、Redis、入口網、權限、服務帳號、憑證或網路尚未申請完成：
+
+- 本地開發照常停留在本地基線；資源申請與依賴盤點並行，不等待帳號密碼才開始寫業務功能。
+- 將未取得的資源標為「待申請／待接入」，不可把 fake、LocalDB 或 Docker Redis 的成功當成 Cota 通過。
+- `CotaRedis` 若依 reference 沒有可設定的本機 fallback，不要把它假裝指向 Docker Redis，也不要讓本機 profile 無條件初始化它。
+- `CotaDB` 的公司 `svrdb + SSPI` 路徑與本地 SQL／LocalDB 的認證路徑不同；本機資料存取通過後，仍要保留公司 DB 連線與權限驗收。
+- 公司資源到位後，從已驗收的本地版本開始，一次只替換一層；不要直接把半成品設定全部打回專案。
 
 ## 目標拓撲與共享狀態
 
@@ -63,7 +84,7 @@ description: 依專案證據規劃本地先行開發、Cota 分階段接入與�
 4. **本機最小化開發**：以單 Web process + 本地 DB／LocalDB + Docker Redis 完成功能迭代；所有 endpoint、帳號與環境差異走設定，不寫死本機或公司連線。
 5. **本機多節點整合測試**：本機單 Web 與核心測試穩定後，才以 Web A + Web B、同一個本地 Redis、同一個本地 DB、兩個獨立 process 測試跨程序狀態。這是 AA 行為的本地模擬，不是公司 AA 證據。
 6. **本機基線驗收／必要時回復**：確認 build、啟動、核心測試、migration、重啟與必要的本機雙 Web檢查；若狀態混亂，依回復路徑移除或隔離 Cota，回到此階段重新建立基線。
-7. **Cota 分階段接入**：本機基線通過後，依下方接入順序一次引入一層；每層都要有本機影響、公司資源、驗收證據與回退點，發現環境差異就回到上一個通過階段。
+7. **Cota 分階段接入**：本機基線通過後，依下方接入順序一次引入一層，基本順序是 Local DB → CotaDB → Docker Redis → CotaRedis，再接身分／權限、外部服務與監控／HA；每層都要有本機影響、公司資源、驗收證據與回退點。
 8. **測試環境部署／實際 AA 驗證**：將已接入的版本部署到實際測試節點，確認兩個節點、流量路由、Cota DB／Redis、帳號權限與健康檢查；具備實機證據後才宣稱 AA 行為通過。
 9. **完整回歸／上線申請／版本凍結**：驗證功能、資料、Redis、身分權限、共享狀態、背景工作唯一性、重啟／故障切換、監控與回復方案，再整理正式版 commit／tag、部署文件與異動內容。
 10. **正式上線**：依 AA + Redis 拓撲部署節點、接正式資源、執行 smoke test、清理測試設定並保留可追溯的最終版本。
@@ -72,12 +93,13 @@ description: 依專案證據規劃本地先行開發、Cota 分階段接入與�
 
 ## Cota 分階段接入
 
-只接入專案實際需要的模組，不因「公司標準」一次加入所有 Cota package。每一層都先確認本機是否仍可建置與啟動，再確認公司資源與跨節點行為。
+只接入專案實際需要的模組，不因「公司標準」一次加入所有 Cota package。每一層都先確認本機是否仍可建置與啟動，再確認公司資源與跨節點行為；任一層造成狀態不明，就依回復路徑先退回本地。
 
 | 接入層 | 接入時機與內容 | 本機替代／限制 | 通過條件 |
 |---|---|---|---|
 | 套件與邊界 | 確認 target framework、NuGet 來源、package 版本、adapter／DI 邊界 | local profile 不依賴公司 feed、endpoint 或帳號；公司 package restore 可能需要內網或快取 | 本機可 restore、build、啟動；Cota 依賴點可逐項列出 |
-| DB／Redis 基礎 | 本機資料契約與 migration 穩定後，再接 Cota DB／Redis | 本地 DB／LocalDB + Docker Redis 只驗證應用邏輯；CotaRedis 若無 local fallback，不可假裝指向 Docker | 實際連線、認證、session／cache／pub-sub／lock／lease 與 migration 責任有證據 |
+| DB 基礎 | 本機資料契約與 migration 穩定後，先以 Local DB／LocalDB 驗證，再接 CotaDB | 本地資料庫只驗證應用邏輯與 schema；`svrdb + SSPI`、公司權限與實際 DB 連線仍待驗證 | CotaDB 實際連線、認證、schema／migration 責任與回復方式有證據 |
+| Redis 基礎 | DB 層穩定後，先用 Docker Redis 驗證，再接 CotaRedis | Docker Redis 可驗證共享狀態、pub/sub、lock／lease 與跨 process；CotaRedis 若無 local fallback，不可假裝指向 Docker | CotaRedis 實際連線、認證、session／cache／pub-sub／lock／lease 與兩節點行為有證據 |
 | 身分／權限 | 核心流程穩定後，接入口網、WebAuth、Keycloak、permission、employee 等實際用到的整合 | fake identity、seed role、local Keycloak 或 simulator 可支援本機；不代表公司登入或權限已通 | claims、角色、權限、員工資料與失敗處理在目標環境通過 |
 | 外部服務 | 功能需要且內部流程已可測後，接 Java／主機呼叫、通知、Customer、簽章等服務 | local simulator、no-op／outbox、fixture 或 deterministic mapping；不可讓公司服務成為本機必需 | endpoint、服務帳號、TLS／簽章、timeout、錯誤與重試行為有測試證據 |
 | 監控／HA | Cota 功能接入後，接 Redis log、HealthCheck、看板、HAProxy、共享檔案、DP keys 與 worker 協調 | 本機可用 Console／File log、local health endpoint、reverse proxy；不能證明公司監控或正式故障切換 | 兩節點路由、共享狀態、背景工作唯一性、重啟／故障切換與告警均完成驗收 |
@@ -88,7 +110,7 @@ description: 依專案證據規劃本地先行開發、Cota 分階段接入與�
 
 | 目的 | 合理配置 | 可以證明 | 不能證明 |
 |---|---|---|---|
-| 日常功能開發 | Web A + 本地 Redis + 本地 DB／LocalDB | 業務邏輯、資料存取與設定邊界 | 跨節點狀態、HAProxy、公司權限與故障切換 |
+| 日常功能開發 | Web A + Docker Redis + 本地 DB／LocalDB | 業務邏輯、資料存取與設定邊界 | 跨節點狀態、HAProxy、公司權限與故障切換 |
 | 分散式整合 | Web A + Web B + 共用本地 Redis + 共用本地 DB | A 寫 B 讀、跨程序狀態、重複 worker、lock／lease、路由與重啟行為 | 公司 Redis／MSSQL、網路、服務帳號、正式拓撲 |
 | 測試環境驗收 | 實際測試節點 + 測試 DB／Redis／路由 | 部署相容性、權限、真實連線與 AA 行為 | 正式上線本身，仍需正式 smoke test |
 
@@ -98,8 +120,8 @@ Redis 通常適合用 Docker 維持可重建的本地環境。MSSQL 用 Docker �
 
 ## 判斷方式
 
-1. 讀取足以支持判斷的專案證據，定位目前階段。
-2. 先定位正式目標拓撲與本機配置的用途，再對照目前已實作的共享狀態、執行責任與驗收證據。
+1. 先判斷是新專案本地起步、既有專案回復本地，還是已具備條件可進入 Cota 分層接入。
+2. 讀取足以支持判斷的專案證據，對照正式 AA + Redis 目標、本機配置用途、共享狀態、執行責任與驗收證據。
 3. 回報目前階段、證據、卡點／缺口、下一步、可並行工作與跳步代價；將觀察結果和結論分開。
 4. 不執行修改、部署或送申請；沒有證據的項目標為尚未確認，不用摘要或 timeout 直接判定成功或失敗。
 
