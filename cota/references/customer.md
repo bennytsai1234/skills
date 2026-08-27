@@ -106,8 +106,18 @@ BatchResultModel batch = await rngService.GetCustomerBatchRandomID(new List<stri
 ## 適用情境提醒
 
 只有專案確實處理到真實統一編號或其他 PII 欄位時才建議,不要對完全不碰個資的專案
-硬套。COBOL 端也有對應呼叫方式(透過 `web_access`),不在此 skill 涵蓋範圍內,遇到再
-連結 Confluence 頁面即可。
+硬套。
+
+COBOL 端對應呼叫方式(透過 `web_access` 呼叫外部程式):
+
+- **來源白名單**:COBOL 呼叫會驗證來源,允許的白名單是**資料夾名稱**,使用時須自行
+  指定 AppDomain,格式 `目錄名稱/程式名稱`(例如 `dp2/dpe110`、`ln2/lapply`)。
+- **API 位址**(注意大小寫):
+  - 單筆:`https://prjCustomerRNG.cotabank.com/CustomerRNG/api/COBOLService/GetRngID`
+    傳入 JSON `{ "ID":"", "AppDomain":"" }`;回傳字串用 tab 切割,欄位順序:
+    1. 執行結果 Y/N 2. 成功=統一編號/失敗=失敗訊息 3. 成功=虛擬統編 4. 成功=身分別
+  - 批次:`https://prjCustomerRNG.cotabank.com/CustomerRNG/api/COBOLService/GetBatchRngID`
+    傳入 AppDomain + 上傳 text 檔案;回傳檔案一行一個統編,同樣 tab 切割、欄位順序相同。
 
 ## 統編/證號驗證演算法參考文件
 

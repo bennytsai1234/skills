@@ -51,6 +51,14 @@ cotaJavaCall.Close(); // 批次模式務必手動關閉連線
 // 單次呼叫 —— 用靜態方法,自動關閉連線,不用手動 Close
 JavaCallByteOutputModel output2 = CotaJavaCall.CallServerByByte(
     JavaCallServerType.COBOL, input, timeout: 85); // 85 對應 Java Server 上限
+
+// 直接指定 host/port(不走 JavaCallServerType 預設主機)—— 實例與靜態都有對應版本
+var cotaJavaCall2 = new CotaJavaCall("host1.cotabank.com", "20000");
+JavaCallByteOutputModel output3 = cotaJavaCall2.CallByByte(input, timeout: 30);
+cotaJavaCall2.Close();
+
+JavaCallByteOutputModel output4 = CotaJavaCall.CallServerByByte(
+    "host1.cotabank.com", "20000", input, timeout: 30);
 ```
 
 **Big5 轉碼是內建的**:用 `Big5ToWideCharToString` 類別(`ToBig5E()` 編碼輸出、
@@ -72,8 +80,29 @@ JavaCallByteOutputModel output2 = CotaJavaCall.CallServerByByte(
 65700080/65700089)。
 
 **非 txdo server 的 COBOL server**(較少見的情境)要用更底層的 `CJavaCall` 類別
-(`tpinit`/`tpcall`/`close`/`get_error_str`),不是 `CotaJavaCall`,遇到這種情境對照
-Confluence 頁面上的獨立範例。
+(`tpinit`/`tpcall`/`close`/`get_error_str`),不是 `CotaJavaCall`:
+
+```csharp
+CJavaCall client = new CJavaCall { m_nReadTimeout = 30 };
+client.tpinit("host1.cotabank.com", "20000");
+
+JavaCallByteInputModel javaCallByteInputModel = new JavaCallByteInputModel();
+JavaCallByteOutputModel javaCallByteOutputModel = new JavaCallByteOutputModel();
+javaCallByteOutputModel.ErrorCode = client.tpcall(javaCallByteInputModel.ServerName, javaCallByteInputModel.InputData, out byte[] outputData);
+client.close();
+if (javaCallByteOutputModel.ErrorCode != 0)
+{
+    if (outputData != null)
+    {
+        javaCallByteOutputModel.ErrorMessage = new Big5ToWideCharToString(outputData, CharCode.BIG5).ToString();
+    }
+    else
+    {
+        javaCallByteOutputModel.ErrorMessage = client.get_error_str();
+    }
+}
+javaCallByteOutputModel.OutputData = outputData;
+```
 
 ## 參考
 

@@ -51,6 +51,9 @@ services.AddCotaRedisSession(environment: RedisEnvironment.Internal); // 內部�
 `IDistributedCache` 注入方式跟原生 ASP.NET Core 一致(`Get`/`SetString`),對開發者
 幾乎無痛轉移。
 
+注意:專案有使用 `AddCotaRedisSession` 時會**一併設定 CotaRedisCache**,不需要再
+另外呼叫 `AddCotaRedisCache`。
+
 ## ICotaRedisPubSub 完整用法(v1.1.0 新增)
 
 ```csharp

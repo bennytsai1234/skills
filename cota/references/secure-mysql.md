@@ -89,13 +89,42 @@ await connection.ExecuteAsync(new CommandDefinition(
 transaction.Commit();
 ```
 
-若同一個應用程式要存取多個 MySQL Database,可以在建立 Connection 時指定不同的
-`MySqlEndpoint`(不用整個服務只綁一個資料庫):
+若同一個應用程式要存取多個 MySQL Database,兩種做法:
+
+**A. 建立連線時指定 endpoint**(該次連線只用指定的 endpoint,不修改 DefaultEndpoint):
 
 ```csharp
 var endpoint = new MySqlEndpoint { Server = "reporting-mysql...", Port = 3306, Database = "reporting_db" };
 await using var connection = await connectionFactory.CreateAsync(endpoint, ct);
 ```
+
+**B. Named Endpoint**(同一個應用程式要連兩個不同 MySQL Server 時,兩個 endpoint
+都用名稱註冊、不設 DefaultEndpoint):
+
+```csharp
+builder.Services.AddSecureMySql(options =>
+{
+    options.RedisEnvironment = RedisEnvironment.Internal;
+})
+.AddSecureMySqlEndpoint("CI", new MySqlEndpoint
+{
+    Server = "SvrDbCI.core.cotabank.com",
+})
+.AddSecureMySqlEndpoint("CN", new MySqlEndpoint
+{
+    Server = "SvrDbCN.core.cotabank.com",
+});
+
+// 建立連線時指定名稱
+await using var connection = await connectionFactory.CreateAsync("CI", ct);
+```
+
+Named Endpoint 注意事項:
+
+- `CreateAsync()` 無參數用法只適用於已設定 `DefaultEndpoint` 的情境。
+- `AddSecureMySqlEndpoint` 的名稱不可重複(大小寫不敏感)。
+- 跨 database 查詢(如 `DBA.ATable` 與 `DBB.BTable`)時,兩個 database 必須位於
+  **同一個 MySQL Server**,且目前 Windows 使用者必須具備相應權限。
 
 支援範圍:.NET 5/6/7/8、Windows x64/x86、MySQL Driver 為 MySqlConnector、Data Access
 用 ADO.NET(Dapper 為選用,套件本身不相依 Dapper)。

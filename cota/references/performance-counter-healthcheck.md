@@ -111,7 +111,8 @@ public string GetExtraService()
 `GetMonitorInfo` 回傳的 JSON 結構包含 `SiteName`、`ProcessInfo`(Id/Name/StartTime/
 ThreadInfo/Cpu/Ram/Is64BitProcess)、`EnvironmentInfo`(UserName/MachineName/
 ClrVersion/DotNetCoreVersion)、`HelperInfo`(套件版本)。`GetCheckResults` 回傳陣列,
-每筆含 `Title`/`IsOk`/`ErrorMessage`/`Description`/`LastCheckTime`。
+每筆含 `Title`/`IsOk`/`ErrorMessage`/`Description`/`LastCheckTime`。另有
+`GetHelperVersion()` 可單獨取得 Helper dll 版本字串。
 
 若走 `CotaHealthCheckCore` 的整合路由包裝(推薦,免自己寫 Controller):
 

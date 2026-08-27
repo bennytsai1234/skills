@@ -9,7 +9,8 @@
 - hostname 統一:`zta.cotabank.com.tw`
 - HAProxy:`SvrMix_M`,狀態頁 `https://svrmix_m.cotabank.com/ServerStats`
 - 務必確認專案有上到 SvrMobile 主機群(可透過開發環境的程式異動系統執行抄送);
-  測試用行動設備向系統組申請。
+  測試用行動設備向系統組申請(數銀、行內網頁應用、外匯財會組各有一台測試用平板,
+  其他組請洽系統組)。
 
 ## 開發原則(強制)
 
@@ -20,24 +21,32 @@
 5. **版面配置統一**:左上角功能選單、右上角回入口網按鈕。
 6. **各覆核動作需加上生物辨識驗證**(CotaWebAuth FIDO2,見
    `references/web-auth.md`)。
-7. **CotaRedisSession 要加 Cookie.Name 設定**:
+7. **CotaRedisSession 要加 Cookie.Name 設定**(避免多專案共用同一台主機時
+   session cookie 互相覆蓋):
 
    ```csharp
-   // 避免多專案共用同一台主機時 session cookie 互相覆蓋
-   options.Cookie.Name = ".專案名稱.Session";
+   builder.Services.AddCotaRedisSession(options =>
+   {
+       options.Cookie.Name = ".專案名稱.Session";
+   });
    ```
 
 8. **HSTS 設定**:
 
    ```csharp
-   builder.Services.Configure<HstsOptions>(options =>
+   builder.Services.AddHsts(options =>
    {
        options.Preload = true;
        options.IncludeSubDomains = true;
        options.MaxAge = TimeSpan.FromDays(365);
    });
-   // pipeline: app.UseHsts();
+
+   // pipeline:
+   app.UseHsts();
    ```
+
+9. **三信 Logo**:官方素材在 Confluence「行動裝置網頁開發」頁(pageId 106561578)
+   的附件 `logo_svg.zip`、`logo_白字.zip`(含白字版與中文字白字版)。
 
 ## 回入口網處理方式
 
@@ -55,3 +64,4 @@
 
 - 行動裝置網頁開發: https://svrconf.cotabank.com/pages/viewpage.action?pageId=106561578
 - 回入口網處理方式: https://svrconf.cotabank.com/pages/viewpage.action?pageId=106561639
+- Session Timeout 處理方式: https://svrconf.cotabank.com/pages/viewpage.action?pageId=106561581
