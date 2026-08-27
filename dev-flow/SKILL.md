@@ -1,6 +1,6 @@
 ---
 name: dev-flow
-description: 依專案程式碼、設定、Git、測試與外部資源狀態，判斷目前開發階段、可信基線、卡點、下一步與可並行工作。適用於本機開發、AA + Redis、Cota 分階段接入與整合混亂的既有專案。只做唯讀流程判斷，不執行修改、部署或申請。
+description: 依專案程式碼、設定、Git、測試與外部資源狀態，判斷目前開發階段、最後一個確定能跑的版本、卡點、下一步與可並行工作。適用於本機開發、AA + Redis、Cota 分階段接入與整合混亂的既有專案。只做唯讀流程判斷，不執行修改、部署或申請。
 ---
 
 # Dev Flow
@@ -12,7 +12,7 @@ description: 依專案程式碼、設定、Git、測試與外部資源狀態，�
 - 正式目標未另行指定時，預設 **AA + Redis**。
 - 本機成功、Cota 成功、AA 成功是不同結論。
 - 外部資源等待期間，本機開發與申請可並行。
-- 找出「最後一個可信且已驗證的狀態」，再決定前進或回退。
+- 找出「最後一個確定能跑的版本」，再決定前進或回退。
 - 不為了最佳實務主動重構；只處理目前會阻塞或造成錯誤的問題。
 
 ## 開發流程
@@ -20,22 +20,22 @@ description: 依專案程式碼、設定、Git、測試與外部資源狀態，�
 ```text
 需求
 ↓
-Local Baseline
+本機可跑版本
 ↓
-Local Functional
+功能可用
 ↓
-Local AA Verification
+雙 Web 測試
 ↓
-Cota Integration
+接公司服務
 ↓
-Company AA Verification
+公司 AA 驗證
 ↓
-Release
+上線準備
 ↓
-Production
+正式環境
 ```
 
-### Local Baseline
+### 本機可跑版本
 
 預設使用：
 
@@ -43,22 +43,22 @@ Production
 單 Web
 + 本地 DB / LocalDB
 + Docker Redis
-+ Fake / Local Identity
-+ Local / Simulator 外部服務
++ 假登入／本機登入
++ 本機替代／模擬服務
 ```
 
 要求：
 
 - 沒有公司網路也能 build、啟動與測試。
 - 公司 endpoint、帳號、憑證不能是本機啟動必要條件。
-- 業務邏輯與 Cota implementation 有明確邊界。
+- 業務邏輯與公司套件或服務有明確邊界。
 - 本地替代物只負責本地驗證，不把本地通過誤報為 Cota 通過。
 
-### Local Functional
+### 功能可用
 
-先完成業務流程、資料契約、設定邊界、核心測試與必要 migration。業務程式依賴介面或 adapter boundary；本機使用 local implementation，後續才替換為 Cota implementation，不因切換環境重寫業務流程。
+先完成業務流程、資料契約、設定邊界與核心測試。切換本機服務與公司服務時，盡量只替換連接方式，不重寫業務流程。
 
-### Local AA Verification
+### 雙 Web 測試
 
 本機功能穩定後才測：
 
@@ -70,87 +70,85 @@ Web A + Web B
 
 依專案實際功能檢查：
 
-- Session / cache
-- 跨 process state
-- worker / scheduler 是否重複
-- distributed lock / lease
-- Data Protection
-- SignalR
-- 共用檔案
-- restart / recovery
+- 登入狀態與暫存資料是否一致。
+- A 寫入的資料或狀態，B 是否看得到。
+- 背景工作或排程是否被兩台重複執行。
+- 兩台切換後，連線、檔案與狀態是否仍能使用。
+- 重啟後是否能恢復。
 
 本機雙 Web 通過不代表公司 AA 已通過。
 
-### Cota Integration
+### 接公司服務
 
-一次只接一層：
+一次只接一項：
 
 ```text
 Local DB → CotaDB
 Docker Redis → CotaRedis
-Identity / Permission
-External Service
-Monitoring / HA
+登入／身分
+權限
+其他公司服務
+監控／HA
 ```
 
-每層都確認：
+每接一項都確認：
 
 - 公司資源是否已取得。
 - 本機是否仍可執行。
 - 是否有實際驗證證據。
-- 是否有明確回退點。
+- 是否有上一個正常版本可以退回。
 
-某層失敗就退回上一個已通過狀態，不把多層半成品一起繼續往前推。若 CotaRedis 或公司 DB 依賴內部資源且尚未取得，不要用 Docker Redis 或 LocalDB 的成功代替公司整合證據。
+某項失敗就退回上一個已通過的項目，不把多項半成品一起繼續往前推。若 CotaRedis 或公司 DB 只能使用公司內部資源且尚未取得，不要用 Docker Redis 或 LocalDB 的成功代替公司整合證據。
 
-## 狀態異常
+## 遇到問題怎麼辦
 
-### BLOCKED
+### 卡住
 
 公司 DB、Redis、帳號、權限、憑證或網路尚未取得。
 
-→ 保持 Local Baseline／Local Functional 繼續開發，申請流程與依賴盤點並行。
+→ 留在本機可跑版本或功能可用階段繼續開發，申請流程與需要的公司服務盤點並行。
 
-### MIXED
+### 混亂
 
-Local 與 Cota 混在一起，已無法判斷錯誤來源，或專案未按 AA + Redis 建立可信基線。
+本機與 Cota 混在一起，已無法判斷錯誤來源，或專案還沒有按 AA + Redis 建立可驗證的版本。
 
-→ 停止繼續整合，回到 Local Baseline。
+→ 停止繼續接公司服務，回到本機可跑版本。
 
-### INTEGRATION FAILED
+### 接公司服務失敗
 
-某一層 Cota 整合失敗。
+某一項 Cota 整合失敗。
 
-→ 退回上一個成功層，只處理該整合，不同時引入其他 Cota 變更。
+→ 退回上一個正常項目，只處理這一項，不同時加入其他公司服務。
 
-### AA FAILED
+### 雙 Web 失敗
 
-單 Web 正常，但雙 Web 出現狀態、worker、lock、session、檔案或 recovery 問題。
+單 Web 正常，但兩個 Web 出現狀態、重複執行、登入、檔案或重啟問題。
 
-→ 回到 Local AA Verification 修正，不重寫業務功能；先處理共享狀態、執行責任與 infrastructure boundary。
+→ 回到雙 Web 測試階段修正，不重寫業務功能；先找出哪些資料或工作不能只放在單台 Web。
 
-## Recover to Local
+## 退回本機版本
 
 既有專案整合混亂時：
 
 1. 保留目前 commit、設定、錯誤與套件證據，建立可回復點。
-2. 先移除或隔離本機啟動路徑中的 Cota package、DI registration、middleware、公司 endpoint 與強制初始化；保留業務介面、資料契約與 adapter boundary。
+2. 先移除或隔離本機啟動路徑中的 Cota 公司套件、設定與公司服務；保留業務功能與資料契約。
 3. 恢復：
-   `單 Web + Local DB + Docker Redis + Local/Fake Service`
-4. 通過 build、啟動、核心功能、測試與必要 migration。
-5. 再測 Local AA。
-6. 最後逐層接回 Cota。
+   `單 Web + Local DB + Docker Redis + 本機／模擬服務`
+4. 通過 build、啟動、核心功能與測試。
+5. 再測雙 Web。
+6. 最後逐項接回公司服務。
 
-目的是恢復可驗證性，不是刪除業務功能或全面重寫。若直接移除 Cota package 會造成編譯失敗，先隔離成可選的 infrastructure project／profile，再恢復本機建置。
+目的是找回最後一個確定能跑的版本，不是刪除業務功能或全面重寫。若直接移除公司套件會造成編譯失敗，先把它隔離，讓本機版本可以建置與啟動。
 
 ## 判斷流程
 
 執行本 Skill 時：
 
-1. 找出最後可信狀態。
-2. 判斷目前屬於正常前進、BLOCKED、MIXED、INTEGRATION FAILED 或 AA FAILED。
+1. 找出最後一個確定能跑的版本。
+2. 判斷目前是正常前進、卡住、混亂、接公司服務失敗或雙 Web 失敗。
 3. 找出真正卡點，區分資源等待、環境差異、程式問題與驗證不足。
 4. 只提出下一個最小可驗收動作。
-5. 列出可以並行的工作，例如本機功能開發、AA 設計盤點、測試資料準備與 Cota 資源申請。
+5. 列出可以並行的工作，例如本機功能開發、雙 Web 問題盤點、測試資料準備與公司資源申請。
 6. 若使用者想跳步，說明缺少的驗證與實際風險。
 
 ## 輸出
