@@ -20,6 +20,8 @@ atlas-planner/relay/worker 的成本，這裡不需要。
 6. 預設只做與變更直接相關的最小驗證；除非失敗後果高或使用者要求，不跑完整測試、不做額外 review。
 7. 回報結果與位置；程式碼變更依全域慣例 commit + push，commit message 就是這次唯一的記錄，寫清楚。
 
+直接執行也預設使用非互動、不可見視窗的命令環境：不開啟或附著到使用者的終端機、Windows Terminal、主控台視窗、TTY 或 PTY。Windows 子程序若必須獨立啟動，使用 hidden／no-window 設定並重新導向輸出；需要互動式 GUI 時先停下回報，不自行開窗。
+
 ## 原則
 
 不因任務看起來大就切換到其他 atlas skill；只有使用者明確要求規劃、派工或正式驗收才切換，規模大小是

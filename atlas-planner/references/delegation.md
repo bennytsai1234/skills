@@ -13,6 +13,16 @@ same package route.
 A request the human flags as wanting immediate results, with no plan or
 acceptance step, does not enter this loop at all — see `atlas-fast`.
 
+## Current handoff contract
+
+The current planning-to-execution contract is `atlas/v4`. It keeps the v3
+package shape and adds a required `EXECUTION_MODE: headless` field. Headless
+means that relay dispatch, worker commands, and relay acceptance run through a
+non-interactive command context without a visible Windows terminal window;
+stdout and stderr still need to be captured as evidence. A package marked
+`atlas/v3`, or missing this field, is legacy and must be regenerated before it
+is executed.
+
 ## 1. The Loop
 
 ```text
@@ -157,10 +167,11 @@ Write a dispatch plan even for a single package.
 ```markdown
 ---
 ROLE: relay-lead
-CONTRACT: atlas/v3
+CONTRACT: atlas/v4
 MODEL: GPT-5.6-Luna
 REASONING: Max
 DELIVERY_POLICY: <no commit | commit only | commit and push>
+EXECUTION_MODE: headless
 REPORTING_LEVEL: <plain | technical>
 ---
 
@@ -191,7 +202,7 @@ better regardless — shared build directory, heavy compile, overlapping files.>
 Hard ordering is the lead's and may not be reordered. Actual parallelism is the
 relay lead's: it may lower it or serialize a group, never raise it.
 
-## 5. Task Package (`atlas/v3`)
+## 5. Task Package (`atlas/v4`)
 
 The lead writes this to `docs/changes/planning/{{DATE}}-{{SLUG}}.md`. It is both
 the plan file and part of what the human hands over — one artifact, not two.
@@ -203,11 +214,12 @@ and prove the result with evidence.
 ```markdown
 ---
 ROLE: worker
-CONTRACT: atlas/v3
+CONTRACT: atlas/v4
 TASK_TYPE: implement        # implement | investigate | review
 MODEL: GPT-5.6-Luna         # use Claude Sonnet 5 for frontend/UI packages
 EXECUTION_ROUTE: gpt-subagent  # use claude-p for frontend/UI packages
 REASONING: Max              # GPT packages only; omit for Claude packages
+EXECUTION_MODE: headless   # no interactive shell or visible terminal window
 REPORTING_LEVEL: plain      # plain | technical — from the index, for anything
                              # in the report that surfaces to the human directly
 ---
@@ -306,6 +318,31 @@ uses another `claude -p` invocation. They are extensions of one task, not new
 packages or a new dispatch plan.
 
 ## 6. Concurrency And Waiting
+
+### Headless execution
+
+The relay and worker operate in an agent-owned, non-interactive command
+context. This is an execution invariant, not an optional convenience:
+
+- Do not open, attach to, or request a user-facing terminal, Windows Terminal,
+  console window, TTY, or PTY. On command tools that expose it, do not set
+  `tty: true`.
+- Run compilation, tests, and CLI programs directly through the headless
+  command tool. Do not use `start`, `wt`, `conhost`, `cmd /k`, an interactive
+  PowerShell, or an equivalent launcher that creates a visible window.
+- If a child process must be launched explicitly on Windows, make it hidden and
+  non-interactive, redirect stdout and stderr to an agent-owned log or temp
+  path, and retain its PID when it outlives the command. In PowerShell this
+  means `Start-Process -WindowStyle Hidden` with redirected output; in code it
+  means the platform's no-window setting with shell execution disabled.
+- Do not launch a GUI application as part of worker execution or acceptance. If
+  the acceptance genuinely requires an interactive window, stop and report the
+  blocker instead of opening it.
+- A visible terminal window is a policy failure even when the build or test
+  passes. Report the route and command as a gap, and do not re-run it visibly.
+
+`headless` does not mean silent: preserve the command, exit status, and captured
+output needed for the worker report and relay acceptance.
 
 ### Deciding what runs in parallel
 

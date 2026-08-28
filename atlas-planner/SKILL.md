@@ -129,7 +129,7 @@ Wait for explicit confirmation before writing packages.
 
 One per package, to `docs/changes/planning/{{DATE}}-{{SLUG}}.md` (`{{DATE}}` =
 today's local date, ISO `YYYY-MM-DD`). Each file is both the plan and the thing
-handed over — one artifact, not two. Use the `atlas/v3` shape from
+handed over — one artifact, not two. Use the `atlas/v4` shape from
 `references/delegation.md` §5, with `REPORTING_LEVEL` stamped from the index
 (step 4 of Entry) — `atlas-worker` never reads the index itself.
 

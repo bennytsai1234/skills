@@ -33,6 +33,12 @@ the completion protocol — lives in `../atlas-planner/references/delegation.md`
 
 The plan's hard ordering is not yours to change. Actual parallelism is.
 
+The plan and every package must use `CONTRACT: atlas/v4` and
+`EXECUTION_MODE: headless`. A v3 or missing/other execution mode is legacy:
+stop before dispatch and report that the planning tier must regenerate the
+handoff. Never downgrade to a visible-terminal route to make an old package
+run.
+
 ## Schedule
 
 Run packages **together** only when they touch disjoint code *and* running them
@@ -46,6 +52,29 @@ at once will not thrash a shared resource. Run them **one at a time** when:
 You may lower the plan's parallelism or serialize a group entirely. You may never
 exceed it, and never reorder a hard dependency. "Dispatch one, accept it,
 dispatch the next" is a good default.
+
+## Headless execution
+
+Every dispatch and every acceptance command runs in an agent-owned,
+non-interactive command context. Do not open or attach to the user's terminal,
+Windows Terminal, console window, TTY, or PTY; when the command tool exposes a
+TTY option, leave it disabled.
+
+For the GPT route, use the agent runtime. For the Claude route, run `claude -p`
+from the headless command context shown below. Do not use `start`, `wt`,
+`conhost`, `cmd /k`, an interactive PowerShell, or any launcher that creates a
+visible window. If a child process must outlive the command on Windows, launch
+it hidden with redirected stdout/stderr and retain its PID; do not attach it to
+the user's console.
+
+```text
+claude --model claude-sonnet-5 -p "Read and execute <package path> in the current repository. Implement the package, verify its Acceptance, and report with pasted evidence."
+```
+
+Headless execution still captures output for evidence. A visible terminal
+window is a failed execution policy even if the command itself succeeds; record
+it as a gap and do not re-run the command visibly. A package that genuinely
+requires an interactive GUI is a blocker to report, not permission to open one.
 
 ## Dispatch
 
