@@ -151,8 +151,6 @@ REPORTING_LEVEL: <plain | technical>
 <any batch-specific delivery requirement; otherwise use §10>
 ```
 
-There is no Parallel Groups section. Execution order is sequential.
-
 ## 5. Task Package (`atlas/v3`)
 
 ```markdown
@@ -232,8 +230,8 @@ package 3 → ...
 Do not dispatch package 2 while package 1's worker is active or while package 1
 is still awaiting acceptance.
 
-This removes shared-working-tree races and makes each package's diff, build, test,
-and commit attributable to one worker at a time.
+This makes each package's diff, build, test, and commit attributable to one worker
+at a time.
 
 ### Waiting
 
@@ -310,10 +308,6 @@ abstraction, and asks whether the fix would duplicate logic.
 
 ## 8. Worker Report
 
-Do not create durable package states such as `pending`, `running`, `blocked`,
-`done`, or `failed`. Execution difficulties are facts in the report; package
-lifecycle is represented by its location under `planning/` or `completed/`.
-
 ```markdown
 ## Changed
 - <file>: <what changed and why>
@@ -377,14 +371,12 @@ conflict that cannot be solved without changing the Goal.
 
 ## 10. Completion Protocol
 
-Package lifecycle has only two durable locations:
+Package lifecycle is represented by its location:
 
 ```text
 docs/changes/planning/   = not yet accepted
 docs/changes/completed/  = accepted and recorded
 ```
-
-Do not add status enums to packages or completion records.
 
 After Relay accepts one package:
 
@@ -412,18 +404,15 @@ After the last package is accepted:
 
 If an existing package cannot be accepted without changing its Goal, it and the
 dispatch plan remain in `planning/`. Already accepted packages remain archived
-in `completed/`. Relay reports the concrete conflict; it does not invent another
-workflow state.
+in `completed/`. Relay reports the concrete conflict to the human.
 
 ## 11. Cost and Context Discipline
 
 - Specify once, completely. A thin package makes Worker rediscover what Planner
   already knew.
-- One writer at a time. Sequential execution is the default and only package
-  scheduling mode.
+- Run one package at a time and finish its acceptance/recording before the next.
 - While Worker is active, Relay leaves the tree alone.
 - Worker receives the package, not chat history or Relay commentary.
 - Carry conclusions forward instead of repeatedly rereading the atlas.
-- Split by real change boundary or risk isolation, not by file count or a desire
-  for parallelism.
+- Split by real change boundary or risk isolation, not by file count.
 - Review/accept against the whole returned change once per worker round.
