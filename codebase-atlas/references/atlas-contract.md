@@ -32,10 +32,6 @@ same split without the relay tier. Format 2 was the lead-dispatches-cheap-
 subagents split. Format 1 was a single self-contained adapter with separate
 workflow docs.
 
-The map format number is separate from the planning-to-execution handoff
-contract. The current handoff contract is `atlas/v4`; the map format remains
-`5`.
-
 Every generated index records the format it was built to. An index recording
 format 4 or below has legacy per-project entrypoint skills alongside it — see
 Step 1 → Detect Old Atlas Silently in `SKILL.md` for how a rebuild removes them.

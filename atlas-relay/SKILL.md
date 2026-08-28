@@ -33,11 +33,10 @@ the completion protocol — lives in `../atlas-planner/references/delegation.md`
 
 The plan's hard ordering is not yours to change. Actual parallelism is.
 
-The plan and every package must use `CONTRACT: atlas/v4` and
-`EXECUTION_MODE: headless`. A v3 or missing/other execution mode is legacy:
-stop before dispatch and report that the planning tier must regenerate the
-handoff. Never downgrade to a visible-terminal route to make an old package
-run.
+Check each package's metadata once before dispatch. Invalid metadata produces
+`state: blocked` with `blocker: metadata` and no worker dispatch. Valid metadata
+goes to the worker; specification preflight belongs to the worker, not the
+relay. A metadata issue in one package does not reopen completed packages.
 
 ## Schedule
 
@@ -53,33 +52,14 @@ You may lower the plan's parallelism or serialize a group entirely. You may neve
 exceed it, and never reorder a hard dependency. "Dispatch one, accept it,
 dispatch the next" is a good default.
 
-## Headless execution
-
-Every dispatch and every acceptance command runs in an agent-owned,
-non-interactive command context. Do not open or attach to the user's terminal,
-Windows Terminal, console window, TTY, or PTY; when the command tool exposes a
-TTY option, leave it disabled.
-
-For the GPT route, use the agent runtime. For the Claude route, run `claude -p`
-from the headless command context shown below. Do not use `start`, `wt`,
-`conhost`, `cmd /k`, an interactive PowerShell, or any launcher that creates a
-visible window. If a child process must outlive the command on Windows, launch
-it hidden with redirected stdout/stderr and retain its PID; do not attach it to
-the user's console.
-
-```text
-claude --model claude-sonnet-5 -p "Read and execute <package path> in the current repository. Implement the package, verify its Acceptance, and report with pasted evidence."
-```
-
-Headless execution still captures output for evidence. A visible terminal
-window is a failed execution policy even if the command itself succeeds; record
-it as a gap and do not re-run the command visibly. A package that genuinely
-requires an interactive GUI is a blocker to report, not permission to open one.
-
 ## Dispatch
 
 Read each package's `EXECUTION_ROUTE` before running it. The route is part of
 the lead's specification and is not changed by the relay:
+
+Dispatch and acceptance commands follow the shared rule: they must not
+intentionally create a visible terminal window and must retain output and exit
+code.
 
 - `gpt-subagent` → one subagent with model and reasoning set explicitly:
 
@@ -207,7 +187,8 @@ A package that contradicts itself, rests on a false premise, or sets an
 unsatisfiable constraint is a specification defect, and specification belongs to
 the planning tier.
 
-Record the problem and your reasoning in the `Completion record`, stop that
+Record `state: blocked` and `blocker: spec` in the `Completion record`, preserve
+facts about any implementation or delivery that already happened, stop that
 package, and continue with every package the failure does not block. Reshaping
 the goal into whatever was achievable — a lowered acceptance item, a spec bent to
 match the implementation — is what makes the defect invisible, and losing one
@@ -219,12 +200,13 @@ planning tier.
 
 ## Record and commit
 
-Per package, after acceptance, in this order:
+Per package, after it reaches a terminal state (`done`, `blocked`, or `failed`),
+in this order:
 
 1. **Fill in `Completion record`** while the package is still in
    `docs/changes/planning/`. You are its only writer. It is read by agents, not
    skimmed by a human, so completeness beats brevity:
-   - Final status.
+   - `state`, `blocker`, `implementation_completed`, and `pushed`.
    - What was actually changed, and where it diverged from the package.
    - Acceptance and verification results, with real values.
    - Whether the change altered a module boundary, ownership, or an external
@@ -257,7 +239,7 @@ reported upward and the planning tier writes it.
 
 ```markdown
 ## Batch result
-<per package: name → accepted / stopped, one line each>
+<per package: name → state, blocker, implementation_completed, pushed>
 
 ## Shared verification
 <the plan's authoritative check, with pasted output>

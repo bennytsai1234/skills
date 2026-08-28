@@ -15,11 +15,11 @@ by the relay with `claude -p`. Keep that route; if the package's route cannot be
 executed as written, report it in `Needs A Decision` rather than switching
 models.
 
-The package must use `CONTRACT: atlas/v4` and `EXECUTION_MODE: headless`. If it
-is marked v3 or the field is missing or different, stop before compiling or
-running anything and report that the planning tier must regenerate the package.
-Headless means no interactive shell, TTY/PTY, or visible Windows terminal
-window; command output is still captured for evidence.
+The relay has already checked package metadata. Before editing, perform one
+lightweight specification preflight: read Goal, Acceptance, and Constraints
+together and stop on an obvious contradiction. Report that as `state: blocked`
+with `blocker: spec`; do not edit, compile, or run the package. This is a
+reasonableness check, not a general-purpose specification parser.
 
 If your instructions did **not** arrive as a task package with a `ROLE: worker`
 header, this file does not apply to you — use `atlas-planner` when working with
@@ -29,19 +29,9 @@ Full doctrine — the loop, roles, shortcut patterns, and the report format — 
 in `../atlas-planner/references/delegation.md` §§1-3, 7-8. This file carries
 what you personally need inline.
 
-## Execution window
-
-Run compilation, tests, and CLI programs directly through the agent's
-non-interactive command tool. Do not open or attach to the user's terminal,
-Windows Terminal, console window, TTY, or PTY; when the command tool exposes a
-TTY option, leave it disabled. Do not use `start`, `wt`, `conhost`, `cmd /k`, an
-interactive PowerShell, or an equivalent visible-window launcher.
-
-If a child process must be launched explicitly on Windows, make it hidden and
-non-interactive, redirect stdout and stderr to an agent-owned log or temp path,
-and retain its PID if it outlives the command. If acceptance needs a GUI or an
-interactive window, stop and report the blocker instead of opening it. A
-visible terminal is a policy failure even when the command passes.
+Build, test, and run commands follow the shared rule: they must not
+intentionally create a visible terminal window and must retain output and exit
+code.
 
 ## Do
 
@@ -129,6 +119,12 @@ the implementation and continue.
 ## Report format
 
 ```markdown
+## Status
+state: <pending | running | blocked | done | failed>
+blocker: <metadata | spec | execution | acceptance | null>
+implementation_completed: <true | false>
+pushed: <true | false>
+
 ## Changed
 - <file>: <what changed and why — one line each>
 

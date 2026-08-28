@@ -13,16 +13,6 @@ same package route.
 A request the human flags as wanting immediate results, with no plan or
 acceptance step, does not enter this loop at all — see `atlas-fast`.
 
-## Current handoff contract
-
-The current planning-to-execution contract is `atlas/v4`. It keeps the v3
-package shape and adds a required `EXECUTION_MODE: headless` field. Headless
-means that relay dispatch, worker commands, and relay acceptance run through a
-non-interactive command context without a visible Windows terminal window;
-stdout and stderr still need to be captured as evidence. A package marked
-`atlas/v3`, or missing this field, is legacy and must be regenerated before it
-is executed.
-
 ## 1. The Loop
 
 ```text
@@ -167,11 +157,10 @@ Write a dispatch plan even for a single package.
 ```markdown
 ---
 ROLE: relay-lead
-CONTRACT: atlas/v4
+CONTRACT: atlas/v3
 MODEL: GPT-5.6-Luna
 REASONING: Max
 DELIVERY_POLICY: <no commit | commit only | commit and push>
-EXECUTION_MODE: headless
 REPORTING_LEVEL: <plain | technical>
 ---
 
@@ -202,7 +191,7 @@ better regardless — shared build directory, heavy compile, overlapping files.>
 Hard ordering is the lead's and may not be reordered. Actual parallelism is the
 relay lead's: it may lower it or serialize a group, never raise it.
 
-## 5. Task Package (`atlas/v4`)
+## 5. Task Package (`atlas/v3`)
 
 The lead writes this to `docs/changes/planning/{{DATE}}-{{SLUG}}.md`. It is both
 the plan file and part of what the human hands over — one artifact, not two.
@@ -214,12 +203,11 @@ and prove the result with evidence.
 ```markdown
 ---
 ROLE: worker
-CONTRACT: atlas/v4
+CONTRACT: atlas/v3
 TASK_TYPE: implement        # implement | investigate | review
 MODEL: GPT-5.6-Luna         # use Claude Sonnet 5 for frontend/UI packages
 EXECUTION_ROUTE: gpt-subagent  # use claude-p for frontend/UI packages
 REASONING: Max              # GPT packages only; omit for Claude packages
-EXECUTION_MODE: headless   # no interactive shell or visible terminal window
 REPORTING_LEVEL: plain      # plain | technical — from the index, for anything
                              # in the report that surfaces to the human directly
 ---
@@ -264,6 +252,16 @@ EXECUTION_ROUTE: claude-p
 Do not add `REASONING` to a Claude package. The relay uses the route metadata to
 choose between a GPT subagent and `claude --model claude-sonnet-5 -p`; it does
 not change the route after the package is written.
+
+### Preflight ownership
+
+Preflight is layered, not repeated. The planner avoids obvious contradictions
+when writing the package. The relay checks package metadata once; invalid
+metadata is `state: blocked` with `blocker: metadata`, and the worker is not
+dispatched. After valid metadata, the worker performs one lightweight
+specification preflight before editing; an obvious contradiction is
+`state: blocked` with `blocker: spec`. This is a reasonableness check, not a
+general-purpose specification parser.
 
 **Background** is what makes the package portable to a model with zero
 conversation history, on another platform. No length limit. Include, when they
@@ -319,30 +317,8 @@ packages or a new dispatch plan.
 
 ## 6. Concurrency And Waiting
 
-### Headless execution
-
-The relay and worker operate in an agent-owned, non-interactive command
-context. This is an execution invariant, not an optional convenience:
-
-- Do not open, attach to, or request a user-facing terminal, Windows Terminal,
-  console window, TTY, or PTY. On command tools that expose it, do not set
-  `tty: true`.
-- Run compilation, tests, and CLI programs directly through the headless
-  command tool. Do not use `start`, `wt`, `conhost`, `cmd /k`, an interactive
-  PowerShell, or an equivalent launcher that creates a visible window.
-- If a child process must be launched explicitly on Windows, make it hidden and
-  non-interactive, redirect stdout and stderr to an agent-owned log or temp
-  path, and retain its PID when it outlives the command. In PowerShell this
-  means `Start-Process -WindowStyle Hidden` with redirected output; in code it
-  means the platform's no-window setting with shell execution disabled.
-- Do not launch a GUI application as part of worker execution or acceptance. If
-  the acceptance genuinely requires an interactive window, stop and report the
-  blocker instead of opening it.
-- A visible terminal window is a policy failure even when the build or test
-  passes. Report the route and command as a gap, and do not re-run it visibly.
-
-`headless` does not mean silent: preserve the command, exit status, and captured
-output needed for the worker report and relay acceptance.
+Relay／worker 執行命令不得主動建立可見終端視窗，並須保留輸出與 exit
+code；實際開窗時先找出 launcher，再修真正的來源。
 
 ### Deciding what runs in parallel
 
@@ -460,7 +436,30 @@ put the same logic in a second place?
 
 ## 8. Worker Report Format
 
+Every package report records the outcome separately from facts about work that
+already happened:
+
+```text
+state: pending | running | blocked | done | failed
+blocker: metadata | spec | execution | acceptance | null
+implementation_completed: true | false
+pushed: true | false
+```
+
+`blocked` means the next stage cannot be attempted or continued because a
+prerequisite or defect prevents it. `failed` means the stage was attempted but
+execution or verification failed. A specification defect discovered after
+implementation can therefore be `blocked / spec` while
+`implementation_completed` and `pushed` are both true. `done` is reserved for
+acceptance that passed.
+
 ```markdown
+## Status
+state: <pending | running | blocked | done | failed>
+blocker: <metadata | spec | execution | acceptance | null>
+implementation_completed: <true | false>
+pushed: <true | false>
+
 ## Changed
 - <file>: <what changed and why — one line each>
 
@@ -532,7 +531,8 @@ specification is the lead's to withdraw, fix, and reissue.
 ## 10. Completion Protocol
 
 Order matters: a summary written before the files reach their final state
-describes a state that no longer exists. Per package, after acceptance:
+describes a state that no longer exists. Per package, after it reaches a
+terminal state (`done`, `blocked`, or `failed`):
 
 1. **Fill in `Completion record`** while the package is still in `planning/`.
    Written by the relay lead, read by agents rather than skimmed by a human, so
