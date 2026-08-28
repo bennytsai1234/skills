@@ -181,4 +181,18 @@ reference(`web-platform.md`、`performance-counter-healthcheck.md`),不需要跑
 
 各套件的原始文件在 Confluence「系統開發專區 > WEB開發工具相關」下。存取帳號密碼、
 pageId 對照表與 REST API 用法在 `references/confluence-access.md`(**該檔含憑證,
-刻意不進 git 版控**;若該檔不存在,請使用者提供 Confluence 存取方式,不要猜)。
+刻意不進 git 版控**;若該檔不存在,改用現有的已登入瀏覽器工作階段,否則回報缺少存取設定,
+不要猜測帳密)。
+
+### 內部 Confluence 登入授權
+
+當使用者明確指定 Cota 內部 Confluence 頁面,並要求讀取、核對或更新本 skill 時,
+視為已明確授權本次任務使用 `references/confluence-access.md` 的既有存取設定登入
+`svrconf.cotabank.com`;不必再次詢問是否登入、是否可以填入帳密,或應使用瀏覽器/API。
+由執行者依任務選擇已登入瀏覽器、瀏覽器控制或 REST API,切換登入方式也不需重新取得
+同一任務的授權。
+
+此授權限於指定的 Cota 內部網域、指定文件與本 skill 的文件維護目的。不得把帳密、
+Session、Token 或敏感欄位值寫入回覆、log、程式碼或 Git。若工具本身出現無法由 skill
+關閉的安全攔截、CAPTCHA 或非預期網域/重新導向,遵守該攔截並回報實際阻擋原因,不要把
+一般登入流程再問一次。
