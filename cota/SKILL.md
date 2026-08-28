@@ -50,7 +50,7 @@ CotaUtility 原本是單一套件,已於 2023.12.01 停止更新(EOS),拆成多�
 | Keycloak OIDC 登入 / JWT 授權 / 下游 Token 轉拋 | CotaUtility.KeycloakAdapter | .NET 6/7/8 | `references/keycloak-adapter.md` |
 | 員工入口網串接(進站驗證 / 回入口網,JWT 版) | CotaUtility.CotaPortal | net8.0 | `references/cota-portal.md` |
 | 客戶統一編號遮罩 / 亂數化 / 統編證號驗證演算法 | CotaUtility.Customer | .NET Framework 4.7.2+ / .NET Core | `references/customer.md` |
-| 集中權限/角色查詢 | CotaUtility.PermProvider | .NET Framework 4.6.1+ / .NET Core 2.0+ | `references/perm-provider.md` |
+| 集中權限/角色查詢與權限管理流程 | CotaUtility.PermProvider（本次公告含 1.0.5） | .NET Framework 4.6.1+ / .NET Core 2.0+ | `references/perm-provider.md` |
 | 員工人事資料 / svremp 權限等級查詢 | CotaEmployee(命名空間 CotaUtility.Models) | .NET Framework 4.8 / .NET Core(套件拆分狀態待確認) | `references/cota-employee.md` |
 | 網頁呼叫本機 32-bit DLL / 啟動桌面程式(用戶端服務) | CotaXMaster(用戶端 Windows 服務,非 NuGet) | 用戶端 Windows | `references/cota-xmaster.md` |
 | 網頁轉 PDF 報表(含浮水印) | CotaUtility.Reporting | 未特別限制,依 wkhtmltopdf/puppeteer 執行環境 | `references/reporting.md` |
@@ -66,6 +66,14 @@ CotaUtility 原本是單一套件,已於 2023.12.01 停止更新(EOS),拆成多�
 | .NET 8 平台設定 / 開發環境 / 上線申請 | Web.config 等效寫法、NAS 工具包、Checkmarx、IIS 憑證、開發與上線分開申請、上線申請單完整欄位(逐欄填寫)、HSTS 標準 | `references/web-platform.md` |
 | 版本控制 / 抄送 / 異動單 | Gogs 倉庫、master=正式/dev=測試抄送、避免漏選檔案、風險評估表與測試報告、緊急抄送 | `references/git-workflow.md` |
 | NuGet 私有來源 | CotaNuGet 設定(`\\192.168.251.238\data\CotaNuGet`)、開發環境 proxy | `references/nuget-setup.md` |
+
+### 權限管理系統近期更新（CotaUtility.PermProvider 1.0.5）
+
+- 專案異動流程現在只需「設計組長」核可，不再需要「管理組長」核可。
+- 權限管理系統新增法遵主管指派規則；指派規則也可以排除特定單位，例如「所有單位，但不包含 XX 部」。
+- 角色若指派給特定人員，該人員調離單位或離職時通知指派人員；專案成員若指派給特定人員，則通知專案管理人。
+- 套件 1.0.5 新增同步查詢方法，.NET Framework 專案遇到非同步呼叫卡住時可改用同步方法；反查角色/權限的人員清單可用 `PermFilter.DpCode` 或 `PermFilter.Branch` 依單位過濾。
+- 後台流程、指派規則與異動通知是權限管理系統的控制鏈；Client reference 只記錄串接時要核對的行為與查詢 API，完整方法與過濾語義見 `references/perm-provider.md`。
 
 ### 舊版 / 未拆分模組(掃描時遇到要特別處理)
 
