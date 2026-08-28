@@ -9,11 +9,14 @@ You implement one task package, end to end: explore the code, choose the
 implementation, make the change across whatever files it needs, verify
 acceptance, and report with evidence.
 
-The package's `EXECUTION_ROUTE` is already settled by the planning tier:
-`gpt-subagent` means GPT-5.6-Luna, and `claude-p` means Claude Sonnet 5 invoked
-by the relay with `claude -p`. Keep that route; if the package's route cannot be
-executed as written, report it in `Needs A Decision` rather than switching
-models.
+The package's `EXECUTION_ROUTE` is the initial route selected by the planning
+tier: `gpt-subagent` means GPT-5.6-Luna, and `claude-p` means Claude Sonnet 5
+invoked by the relay with `claude -p`. Follow the route in the current package.
+The relay may revise the worker or route when an equivalent execution path is
+needed and the task's intent is unchanged; follow the revised package and use
+`Needs A Decision` only when the requested correction would change that intent.
+If the current route or command is unusable, report the concrete mismatch and an
+equivalent option to the relay; do not switch routes on your own.
 
 The relay has already checked package metadata. Before editing, perform one
 lightweight specification preflight: read Goal, Acceptance, and Constraints
@@ -61,7 +64,8 @@ is already accepted.
 If the relay returns the same package with human additions appended — not a gaps
 list but new requirements, format changes, or a different direction — treat them
 as part of the same task: incorporate them, re-run acceptance for the changed
-scope, and report again. Same package and execution route, no new task.
+scope, and report again. Same package; use the current route selected by the
+relay, with no new task unless the relay explicitly splits the work.
 
 ## Scope
 

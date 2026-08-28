@@ -8,7 +8,7 @@ The handoff from planning to execution is human-mediated: the lead writes files
 and stops, and the human carries one file across. Everything after that — order,
 dispatch, acceptance, records — belongs to the relay lead, who is also the
 human's window during the batch: mid-course additions are relayed through the
-same package route.
+same package unless an allowed execution adjustment changes the route.
 
 A request the human flags as wanting immediate results, with no plan or
 acceptance step, does not enter this loop at all — see `atlas-fast`.
@@ -33,15 +33,16 @@ Relay     11. accept by re-running the decisive checks — or return precise gap
           13. run the batch verification, report
           14. run the atlas refresh from the completion records
 Human     (optional, any time) → reviews a package or asks the relay for status;
-          injects mid-course additions → the relay relays them through the same route
+          injects mid-course additions → the relay updates the same package and route as needed
 ```
 
 Step 4→5 crosses a human, once. Steps 7→8 and 10→11 do not — the relay lead
 dispatches and accepts on its own. The relay is the human's window during the
 batch: the human may review completed packages, ask for status, and inject
-mid-course additions, which the relay relays through the same route. If the human
-injects nothing, the batch runs to completion on its own — the workflow must be
-complete without mid-course input.
+mid-course additions, which the relay relays through the same package and adjusts
+the route only under the execution-adjustment rules. If the human injects
+nothing, the batch runs to completion on its own — the workflow must be complete
+without mid-course input.
 
 ## 2. Roles
 
@@ -84,10 +85,14 @@ the dispatch plan. Runs on **GPT-5.6-Luna, reasoning Max**. It owns:
   as a GPT subagent.
 - Waiting without interfering (§6).
 - Acceptance, by re-running the decisive checks (§9).
+- Repairing non-semantic task details and, when the intended outcome is
+  unchanged, adjusting execution order, package boundaries, workers, or routes;
+  every adjustment is recorded for acceptance.
 - Completion records, the completed folder, the daily summary, and the commit and
   push (§10).
 - Being the human's window during the batch: status questions and mid-course
-  additions are relayed through the same package route (§6).
+  additions are relayed through the same package, with route adjustments governed
+  by §6.
 - The atlas refresh at batch end, from the completion records (§10).
 
 **Worker (`atlas-worker`)** — an implementation route selected by one task
@@ -250,18 +255,21 @@ EXECUTION_ROUTE: claude-p
 ```
 
 Do not add `REASONING` to a Claude package. The relay uses the route metadata to
-choose between a GPT subagent and `claude --model claude-sonnet-5 -p`; it does
-not change the route after the package is written.
+choose between a GPT subagent and `claude --model claude-sonnet-5 -p`. The route
+is the planning tier's initial choice; the relay may revise it or the worker
+assignment when an equivalent execution path is needed and the task's intent is
+unchanged. It records the before/after and reason.
 
 ### Preflight ownership
 
 Preflight is layered, not repeated. The planner avoids obvious contradictions
-when writing the package. The relay checks package metadata once; invalid
-metadata is `state: blocked` with `blocker: metadata`, and the worker is not
-dispatched. After valid metadata, the worker performs one lightweight
-specification preflight before editing; an obvious contradiction is
-`state: blocked` with `blocker: spec`. This is a reasonableness check, not a
-general-purpose specification parser.
+when writing the package. The relay checks package metadata once; it repairs an
+unambiguous non-semantic defect and records the before/after, or reports
+`state: blocked` with `blocker: metadata` when the intended value cannot be
+determined without changing the task's meaning. After valid or repaired
+metadata, the worker performs one lightweight specification preflight before
+editing; an obvious contradiction is `state: blocked` with `blocker: spec`.
+This is a reasonableness check, not a general-purpose specification parser.
 
 **Background** is what makes the package portable to a model with zero
 conversation history, on another platform. No length limit. Include, when they
@@ -310,10 +318,11 @@ A package carries only what a worker with zero conversation history needs: goal,
 background, acceptance, and constraints. Implementation the worker can determine
 from the goal and the code is left to it.
 
-Mid-course additions from the human are appended to the package and re-sent
-through the same route; GPT uses the same worker dispatch pattern and Claude
-uses another `claude -p` invocation. They are extensions of one task, not new
-packages or a new dispatch plan.
+Mid-course additions from the human are appended to the package and re-sent as
+the same task; GPT uses the same worker dispatch pattern and Claude uses another
+`claude -p` invocation. The relay may adjust the route or worker under the
+execution-adjustment rules when needed. They are extensions of one task, not new
+product requirements or a new dispatch plan.
 
 ## 6. Concurrency And Waiting
 
@@ -392,10 +401,11 @@ format change, a different direction for a package that is done or still
 running.
 
 - An addition for a **finished** package: append it to that package and re-run
-  the **same route** with the appended package — GPT uses the same worker
-  dispatch pattern; Claude uses another `claude --model claude-sonnet-5 -p`
-  invocation — an extension of the same task, not a new package or dispatch
-  plan.
+  the same package — normally on the same route, but an equivalent route or
+  worker may be selected under the execution-adjustment rules — GPT uses the
+  same worker dispatch pattern; Claude uses another `claude --model
+  claude-sonnet-5 -p` invocation — an extension of the same task, not a new
+  package or dispatch plan.
 - An addition for a **running** package: queue it; the worker gets it when it
   reports, as the same appended package. The tree and the running worker stay
   untouched.
@@ -407,6 +417,23 @@ Human additions are human decisions, not relay inventions: relay them organized,
 not reinterpreted, and update the package so the worker has one source of truth.
 If an addition makes the spec self-contradictory, flag it upward rather than
 resolving it yourself.
+
+### Relay task adjustments
+
+The relay may modify how a task is executed without waiting for a new planning
+round. It may repair unambiguous metadata, obvious non-semantic omissions, stale
+paths, or verification commands;
+change an equivalent command, worker, or execution route; reorder independent
+work; or split a package when the original Goal, Acceptance, and important
+Constraints remain unchanged. A split carries the original acceptance across
+its pieces and makes dependencies explicit.
+
+For every adjustment, record a short `Task adjustments` note in the package or
+completion record: original value, replacement, reason, and evidence that the
+intent is unchanged. If no equivalent adjustment exists, or the change would
+alter the meaning of a requirement, escalate it as a specification decision.
+The relay may include a proposed revision, but must not apply it without that
+decision.
 
 ## 7. Shortcut Patterns
 
@@ -488,10 +515,13 @@ If it contradicts itself, rests on a false premise, or sets an unsatisfiable
 constraint, the worker stops and reports the conflict rather than quietly
 reinterpreting the goal.
 
-The relay lead does the same, upward. It records the problem and its reason in
-the `Completion record`, stops that package, and continues with every package the
+The relay lead first checks whether an unambiguous equivalent task adjustment
+can make the package executable. If so, it records the adjustment and continues
+with the revised package. If not, it records the problem and its reason in the
+`Completion record`, stops that package, and continues with every package the
 failure does not block — so the least possible work is lost before the human
-returns. A specification defect belongs to the planning tier.
+returns. A correction that changes the meaning of a requirement belongs to the
+planning tier.
 
 ## 9. Acceptance
 
@@ -536,10 +566,11 @@ terminal state (`done`, `blocked`, or `failed`):
 
 1. **Fill in `Completion record`** while the package is still in `planning/`.
    Written by the relay lead, read by agents rather than skimmed by a human, so
-   completeness beats brevity: final status; what was actually changed and where
-   it diverged from the package; acceptance and verification results with real
-   values; whether a module boundary, ownership, or external contract changed;
-   known limits, remaining debt, residual risk.
+   completeness beats brevity: final status; any `Task adjustments` with original
+   and revised values, reasons, and evidence; what was actually changed and
+   where it diverged from the package; acceptance and verification results with
+   real values; whether a module boundary, ownership, or external contract
+   changed; known limits, remaining debt, residual risk.
 2. **Move** to `docs/changes/completed/{{DATE}}/{{SLUG}}.md`, by completion date.
    Every completed package is archived; none is deleted, and none is left in
    `planning/`.

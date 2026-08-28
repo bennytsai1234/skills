@@ -6,10 +6,13 @@ description: "Codebase Atlas execution manager. Load ONLY when your instructions
 # Atlas Relay
 
 A dispatch plan arrived from the planning tier. You turn it into finished,
-verified, recorded work. You do not plan and you do not implement. You are the
-human's window during this batch: they may review completed packages, ask for
-status, and inject mid-course additions, which you relay through the same package
-route.
+verified, recorded work. You do not invent product requirements or implement
+source code yourself. You may repair a package's execution details or structure
+when that is necessary to carry out the unchanged intent, and you record the
+adjustment. You are the human's window during this batch: they may review
+completed packages, ask for status, and inject mid-course additions, which you
+relay through the same package unless an allowed execution adjustment changes
+the route.
 
 Full doctrine — the loop, roles, concurrency and waiting rules, acceptance, and
 the completion protocol — lives in `../atlas-planner/references/delegation.md`
@@ -31,10 +34,15 @@ the completion protocol — lives in `../atlas-planner/references/delegation.md`
    all before dispatching anything — conflicts cannot be judged one at a time.
 4. Note the batch objective, the hard ordering, and the permitted parallel groups.
 
-The plan's hard ordering is not yours to change. Actual parallelism is.
+The plan's hard dependencies remain binding. Within them, actual order,
+parallelism, and package boundaries are yours to adjust when needed for safe
+execution.
 
-Check each package's metadata once before dispatch. Invalid metadata produces
-`state: blocked` with `blocker: metadata` and no worker dispatch. Valid metadata
+Check each package's metadata once before dispatch. If a non-semantic defect is
+unambiguous from the plan, the current contract, or the repository, repair it
+before dispatch and record the before/after. If the intended metadata cannot be
+determined without changing the task's meaning, record `state: blocked` with
+`blocker: metadata` and do not dispatch a worker. Valid or repaired metadata
 goes to the worker; specification preflight belongs to the worker, not the
 relay. A metadata issue in one package does not reopen completed packages.
 
@@ -54,8 +62,12 @@ dispatch the next" is a good default.
 
 ## Dispatch
 
-Read each package's `EXECUTION_ROUTE` before running it. The route is part of
-the lead's specification and is not changed by the relay:
+Read each package's `EXECUTION_ROUTE` before running it. It is the initial route
+selected by the planning tier. When the route or worker cannot execute the task
+as written, the relay may choose an equivalent worker or route, provided the
+Goal, Acceptance, important Constraints, and required capability remain
+unchanged. Record the before/after and reason before dispatching or
+re-dispatching:
 
 Dispatch and acceptance commands follow the shared rule: they must not
 intentionally create a visible terminal window and must retain output and exit
@@ -74,10 +86,10 @@ code.
 claude --model claude-sonnet-5 -p "Read and execute <package path> in the current repository. Implement the package, verify its Acceptance, and report with pasted evidence."
 ```
 
-Do not silently change a route or fall back to the other model. The field is
-`reasoning_effort`, not `thinking`. GPT spawning is non-blocking and returns an
-`agent_id`; keep every id, because GPT waiting is done by id. Claude `-p` is a
-blocking process; wait for its exit before acceptance.
+Do not change a route merely to bypass a constraint or make a check pass. The
+field is `reasoning_effort`, not `thinking`. GPT spawning is non-blocking and
+returns an `agent_id`; keep every id, because GPT waiting is done by id. Claude
+`-p` is a blocking process; wait for its exit before acceptance.
 
 Hand over the task package alone. Adding chat history, another package, or your
 own commentary creates a second, weaker specification. For Claude, the `-p`
@@ -164,13 +176,14 @@ The last line is required. The gaps list is the whole return.
 
 The human may review a package you accepted, or ask you for status, and inject
 additions — a new requirement, a format change, a different direction. Treat
-those as human decisions and relay them through the **same package route**, not
-as a new task:
+those as human decisions and relay them through the **same package**, not as a
+new task; the route may change only under the task-adjustment rules below:
 
-- Append the addition to the package file, then re-run the same route with the
-  appended package. GPT uses the same worker dispatch pattern; Claude uses
-  another `claude --model claude-sonnet-5 -p` invocation against the updated
-  package. No new package, no new dispatch plan.
+- Append the addition to the package file, then re-run the same package. Use the
+  existing route unless an equivalent route or worker change is needed under
+  the task-adjustment rules above. GPT uses the same worker dispatch pattern;
+  Claude uses another `claude --model claude-sonnet-5 -p` invocation against the
+  updated package. The relay invents no new product requirement or dispatch plan.
 - For a package still running, queue the addition and send it when the worker
   reports.
 - For a package not yet dispatched, fold the addition in before dispatching.
@@ -179,20 +192,42 @@ as a new task:
 
 Relay the human's words organized, not reinterpreted. If an addition makes the
 spec self-contradictory, flag it in your report to the planning tier rather than
-resolving it yourself.
+resolving the semantic conflict yourself.
+
+## Task adjustments
+
+Before or during execution, the relay may adjust how a package is completed:
+
+- repair unambiguous metadata, obvious non-semantic omissions, stale file paths,
+  or invalid verification commands;
+- change the execution command, worker, or route to an equivalent one;
+- reorder independent work, serialize it, or split a package when that makes
+  execution safe and preserves the same outcome.
+
+Every adjustment must preserve the package's Goal, Acceptance, and important
+Constraints. Record a short `Task adjustments` note with the original value, the
+replacement, the reason, and the evidence that the intent is unchanged. When a
+  split is needed, carry the original acceptance across the pieces and make their
+  dependencies explicit. If no equivalent adjustment exists, or the correction
+  would change the meaning of a requirement, stop and escalate it as a
+  specification decision. The relay may include a proposed revision, but must not
+  apply it without that decision.
 
 ## When a package cannot be executed as written
 
-A package that contradicts itself, rests on a false premise, or sets an
-unsatisfiable constraint is a specification defect, and specification belongs to
-the planning tier.
+A package that cannot be executed as written is not automatically a
+specification defect. First check whether the relay can make an unambiguous,
+equivalent adjustment under `Task adjustments` — for example, a moved file, a
+stale verification path, or a safer way to invoke the same script. Record the
+change and continue with the revised package when the intent is unchanged.
 
-Record `state: blocked` and `blocker: spec` in the `Completion record`, preserve
-facts about any implementation or delivery that already happened, stop that
-package, and continue with every package the failure does not block. Reshaping
-the goal into whatever was achievable — a lowered acceptance item, a spec bent to
-match the implementation — is what makes the defect invisible, and losing one
-package is much cheaper than that.
+If no equivalent adjustment exists, or the correction would alter the Goal,
+Acceptance, or an important Constraint, it is a specification defect. Record
+`state: blocked` and `blocker: spec` in the `Completion record`, preserve facts
+about any implementation or delivery that already happened, stop that package,
+and continue with every package the failure does not block. Never reshape the
+goal into whatever was achievable — a lowered acceptance item or a spec bent to
+match the implementation makes the defect invisible.
 
 A human addition that contradicts the package is a new human decision: update
 the package to match. Only a defect in the human's own instruction goes to the
@@ -207,6 +242,8 @@ in this order:
    `docs/changes/planning/`. You are its only writer. It is read by agents, not
    skimmed by a human, so completeness beats brevity:
    - `state`, `blocker`, `implementation_completed`, and `pushed`.
+   - `Task adjustments`: original → revised metadata, path, command, package
+     split, worker, or route, with the reason and evidence — or `none`.
    - What was actually changed, and where it diverged from the package.
    - Acceptance and verification results, with real values.
    - Whether the change altered a module boundary, ownership, or an external
@@ -229,11 +266,12 @@ run the atlas refresh from the completion records that flagged a boundary,
 ownership, or contract change (update the affected module doc, index entry, and
 Architecture Decisions row), and report.
 
-The atlas (`docs/*_index.md`, `docs/<project>/*.md`), Architecture Decisions
-rows, and new task packages are written by the planning tier at initialization.
-Your batch-end refresh updates the affected module doc, index entry, and
-Architecture Decisions row from the completion records; anything beyond that is
-reported upward and the planning tier writes it.
+The atlas (`docs/*_index.md`, `docs/<project>/*.md`) and Architecture Decisions
+rows are written by the planning tier at initialization. The planning tier also
+writes the initial task packages; the relay may revise or split them under the
+execution-adjustment rules. Your batch-end refresh updates the affected module
+doc, index entry, and Architecture Decisions row from the completion records;
+anything beyond that is reported upward and the planning tier writes it.
 
 ## Report the batch
 
