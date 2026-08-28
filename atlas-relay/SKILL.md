@@ -6,13 +6,13 @@ description: "Codebase Atlas execution manager. Load ONLY when your instructions
 # Atlas Relay
 
 A dispatch plan arrived from the planning tier. You turn it into finished,
-verified, recorded work. You do not invent product requirements or implement
-source code yourself. You may repair a package's execution details or structure
-when that is necessary to carry out the unchanged intent, and you record the
-adjustment. You are the human's window during this batch: they may review
-completed packages, ask for status, and inject mid-course additions, which you
-relay through the same package unless an allowed execution adjustment changes
-the route.
+verified, recorded work. In the current workflow, source implementation is
+normally assigned to the worker; you do not invent product requirements. You may
+repair a package's execution details or structure when that is necessary to
+carry out the unchanged intent, and you record the adjustment. You are the
+human's window during this batch: they may review completed packages, ask for
+status, and inject mid-course additions, which you relay through the same
+package unless an allowed execution adjustment changes the route.
 
 Full doctrine — the loop, roles, concurrency and waiting rules, acceptance, and
 the completion protocol — lives in `../atlas-planner/references/delegation.md`
@@ -148,7 +148,10 @@ scheduling, not interference.
 An executor's report is a claim, not a result — and you started the work, so you
 are biased toward believing it. Acceptance re-runs the decisive checks:
 
-- Re-run the decisive acceptance commands yourself and read the real output.
+- Re-run the decisive acceptance commands yourself and read the real output when
+  the environment provides what they require. If a check depends on unavailable
+  resources, assess whether it is mandatory, skippable, conditional, or provable
+  by equivalent evidence.
 - Read the diff. Does it match the goal, or only make the check pass?
 - Check that nothing outside the goal broke or was bypassed.
 - Watch for a relaxed rule, lowered threshold, loosened detector, deleted
@@ -156,6 +159,19 @@ are biased toward believing it. Acceptance re-runs the decisive checks:
   One the report explains and justifies is fine; an unexplained one is the
   finding.
 - Check the report's stated risks against what the diff shows.
+
+The relay makes the final completion judgment against the actual environment and
+available resources. A missing resource is not automatically a failure or a
+blocker: judge whether it prevents a reasonable conclusion about the core result,
+using the Goal, Acceptance, actual change, available evidence, and the resource
+limitation. If the missing check is non-material in context, explicitly
+skippable/conditional, or covered by equivalent evidence, the package may be
+`state: done`; record the limitation and residual risk. If a core result cannot
+be reasonably judged because a required resource is unavailable, use
+`blocked / execution`. A check actually attempted and failing
+because of the environment is `state: failed` with `blocker: execution`. The
+worker reports resource facts and alternatives; the relay decides the final
+state.
 
 Scale depth to what the package matters. Nothing is accepted on "the subagent
 said it passed."
@@ -202,7 +218,7 @@ Before or during execution, the relay may adjust how a package is completed:
   or invalid verification commands;
 - change the execution command, worker, or route to an equivalent one;
 - reorder independent work, serialize it, or split a package when that makes
-  execution safe and preserves the same outcome.
+  execution safe with the available resources and preserves the same outcome.
 
 Every adjustment must preserve the package's Goal, Acceptance, and important
 Constraints. Record a short `Task adjustments` note with the original value, the
@@ -246,6 +262,8 @@ in this order:
      split, worker, or route, with the reason and evidence — or `none`.
    - What was actually changed, and where it diverged from the package.
    - Acceptance and verification results, with real values.
+   - Environment and resource availability relevant to acceptance, including
+     skipped or substituted checks and the basis for the completion judgment.
    - Whether the change altered a module boundary, ownership, or an external
      API/contract.
    - Known limits, remaining debt, residual risk.
@@ -292,4 +310,6 @@ anything beyond that is reported upward and the planning tier writes it.
 
 Reporting level from `REPORTING_LEVEL` (Entry, step 2) — Plain: no module names,
 paths, or code in anything a human reads. Technical: include them. Verification
-results appear regardless. Never report completion on a failed check.
+results appear regardless. Never report completion when a core result failed or
+cannot be reasonably judged; record non-material unavailable checks and their
+risk instead.

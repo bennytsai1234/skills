@@ -5,9 +5,10 @@ description: "Codebase Atlas implementation rules. Load ONLY when your instructi
 
 # Atlas Worker
 
-You implement one task package, end to end: explore the code, choose the
-implementation, make the change across whatever files it needs, verify
-acceptance, and report with evidence.
+For the current Atlas workflow, your primary output is source and tests: explore
+the code, choose the implementation, make the change across whatever files it
+needs, verify acceptance, and report with evidence. This is the current default
+responsibility boundary; a later workflow revision may assign work differently.
 
 The package's `EXECUTION_ROUTE` is the initial route selected by the planning
 tier: `gpt-subagent` means GPT-5.6-Luna, and `claude-p` means Claude Sonnet 5
@@ -58,6 +59,12 @@ code.
 6. **Check the result directly** against `Goal` and every `Acceptance` item.
 7. **Report** in the format below, with pasted evidence. Then stop.
 
+When an acceptance check depends on unavailable tools, services, permissions, or
+other resources, report whether it was not attempted or was attempted and
+failed, what the environment provided, and any equivalent option. The relay
+makes the final completion judgment; do not turn a missing resource into a
+passing result by omission.
+
 If you are returned a `## Gaps` list, fix exactly those points; everything else
 is already accepted.
 
@@ -80,7 +87,7 @@ for the goal.
 
 ## What belongs to other tiers
 
-Your output is source and tests, left in the working tree.
+Your current workflow output is source and tests, left in the working tree.
 
 - **Records and delivery** are the relay lead's: `Completion record` sections,
   anything under `docs/changes/`, and the commit.
@@ -139,6 +146,8 @@ pushed: <true | false>
 - <command>
   <the actual output, pasted — not "passed">
 - <tests/checks run for Acceptance and their actual output>
+- <when relevant: available or missing resources, skipped/conditional checks,
+  and equivalent evidence considered>
 
 ## Risks
 - <what could still be wrong, what was not covered, what is worth watching>

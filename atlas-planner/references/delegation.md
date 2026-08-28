@@ -61,17 +61,20 @@ the strongest available model. It owns:
 - Atlas docs and Architecture Decisions rows for work it planned itself.
 - Reissuing a specification when the relay escalates a spec defect.
 
-**The lead never edits source code or tests.** No size exemption: small fixes
-like a typo go straight to an execution model rather than through this workflow
-— or to `atlas-fast` when the human explicitly wants to skip ceremony. It never
-dispatches a subagent. Its output is specification.
+For the current workflow, the lead's default output is specification. Source or
+test edits and subagent dispatch belong to the execution tier; this is a current
+responsibility boundary, not a permanent statement about what the role can never
+do. No size exemption: small fixes like a typo go straight to an execution model
+rather than through this workflow — or to `atlas-fast` when the human explicitly
+wants to skip ceremony.
 
 The lead may read code, run read-only checks, and re-run a verification whose
 result decides acceptance. When one of those fails, it is a gap to return, not
 something to fix.
 
 **Relay lead (`atlas-relay`)** — the execution manager, started by the human with
-the dispatch plan. Runs on **GPT-5.6-Luna, reasoning Max**. It owns:
+the dispatch plan. Runs on **GPT-5.6-Luna, reasoning Max**. Its current workflow
+responsibilities are:
 
 - Reading the dispatch plan and every package it names.
 - Execution order within the plan's dependencies, and the real parallelism
@@ -110,8 +113,8 @@ subagents. Frontend/UI packages run on **Claude Sonnet 5** through the relay's
   build and the full test suite — and fixing relevant failures.
 - Reporting with evidence: what was changed, what was run, what came back.
 
-Everything else belongs to another tier: records and delivery to the relay lead,
-the atlas and Architecture Decisions to the lead, the Before / After gate to the
+In the current workflow, records and delivery belong to the relay lead, the atlas
+and Architecture Decisions to the lead, and the Before / After gate to the
 conversation that produced the package. A decision the package settled stays
 settled — a worker that thinks one is wrong says so in `Needs A Decision`.
 
@@ -295,8 +298,9 @@ existence claims. Cover the negative case and say what a negative fixture must
 contain. Name what must not change. Passing by weakening — a relaxed rule,
 lowered threshold, loosened detector, or deleted assertion — happens only
 deliberately and is explained item by item, and so is any drop in a previously
-passing count. Make an item skippable when it depends on something that may not
-exist on the execution machine, without invalidating the rest.
+passing count. When an item depends on something that may not exist on the
+execution machine, state whether it is skippable or conditional and what
+evidence remains required.
 
 **Command rules.** Write commands for the shell the worker will get. One command
 per line, never an `&&` chain — Windows PowerShell 5.1 has no `&&`. On a Windows
@@ -477,8 +481,16 @@ pushed: true | false
 prerequisite or defect prevents it. `failed` means the stage was attempted but
 execution or verification failed. A specification defect discovered after
 implementation can therefore be `blocked / spec` while
-`implementation_completed` and `pushed` are both true. `done` is reserved for
-acceptance that passed.
+`implementation_completed` and `pushed` are both true. `done` means the relay
+judges the core result sufficiently established in the available environment.
+A missing resource is not automatically a failure or a blocker; the relay judges
+whether the unavailable check is material to the core result using the Goal,
+Acceptance, actual change, available evidence, and the limitation. A non-material
+or explicitly skippable/conditional check, or one covered by equivalent evidence,
+may coexist with `done` when the limitation and residual risk are recorded. If a
+core result cannot be reasonably judged because a resource is missing, use
+`blocked / execution`; if the check ran and failed because of the environment,
+use `failed / execution`.
 
 ```markdown
 ## Status
@@ -497,6 +509,8 @@ pushed: <true | false>
 - <command>
   <the actual output, pasted — not "passed">
 - <tests/checks run for Acceptance and their actual output>
+- <when relevant: available or missing resources, skipped/conditional checks,
+  and equivalent evidence considered>
 
 ## Risks
 - <what could still be wrong, what was not covered, what is worth watching>
@@ -528,15 +542,29 @@ planning tier.
 **Relay acceptance is the primary gate**, and the only one guaranteed to happen.
 An executor's report is a claim, not a result — and the relay lead started the
 work, so it is biased toward believing it. Scale depth to what the package
-matters; acceptance re-runs the decisive checks.
+matters; acceptance re-runs the decisive checks against the actual environment
+and available resources.
 
-- Re-run the decisive acceptance commands and read the real output.
+- Re-run the decisive acceptance commands and read the real output when the
+  environment provides what they require. If a check depends on unavailable
+  resources, determine whether the package makes it skippable or conditional, or
+  whether equivalent evidence proves the same acceptance item.
 - Read the diff. Does it match the goal, or only make the check pass?
 - Check that nothing outside the goal broke or was bypassed.
 - Check for §7 shortcut patterns — especially a relaxed rule or weakened
   assertion that makes a number look right. A shortcut the report explains and
   justifies is fine; an unexplained one is the finding.
 - Check the report's stated risks against what the diff shows.
+
+The relay makes the final completion judgment against the actual environment. It
+may mark a package `done` when the core result is reasonably established and a
+missing check is non-material in context, explicitly skippable/conditional, or
+covered by equivalent evidence. It must not mark a core result complete merely
+because a resource is missing. If the missing resource prevents a reasonable
+completion judgment, use `blocked / execution`; if a check was attempted and
+failed because of the environment, use `failed / execution`. Record the available
+and missing resources, what was skipped or substituted, the basis for the
+judgment, and the remaining risk.
 
 **Returning.** A return names gaps and nothing else; re-explaining the task, the
 goal, or the package adds nothing.
@@ -570,7 +598,8 @@ terminal state (`done`, `blocked`, or `failed`):
    and revised values, reasons, and evidence; what was actually changed and
    where it diverged from the package; acceptance and verification results with
    real values; whether a module boundary, ownership, or external contract
-   changed; known limits, remaining debt, residual risk.
+   changed; environment/resource limits, known limits, remaining debt, residual
+   risk.
 2. **Move** to `docs/changes/completed/{{DATE}}/{{SLUG}}.md`, by completion date.
    Every completed package is archived; none is deleted, and none is left in
    `planning/`.
