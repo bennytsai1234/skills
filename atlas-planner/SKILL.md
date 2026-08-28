@@ -146,8 +146,8 @@ The dispatch plan is the single file the human hands to Relay. Write one even fo
 a single package so the receiving agent resolves to the relay role rather than
 the worker role.
 
-Packages execute **strictly in sequence**. The dispatch plan records the order and
-why any dependency matters; it does not define parallel groups.
+Packages execute **strictly in sequence**. The dispatch plan records their exact
+order and why any dependency matters.
 
 Split packages along real change boundaries or to isolate a risky piece. Do not
 split merely by file count.
