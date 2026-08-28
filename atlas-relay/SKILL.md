@@ -146,13 +146,10 @@ the specification to match what happened to be achievable.
 
 ## Record and commit
 
-A package has only two lifecycle locations:
+Package lifecycle is represented by its location:
 
 - `docs/changes/planning/` → not yet accepted.
 - `docs/changes/completed/` → accepted and recorded.
-
-Do not create package status enums such as done, blocked, or failed. Execution
-problems are facts in the report, not durable package states.
 
 After a package is accepted:
 
