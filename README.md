@@ -17,14 +17,22 @@ This repository is the canonical home for reusable Codex and agent skills.
 
 ## Current Skills
 
+- `atlas-fast`
+- `atlas-planner`
+- `atlas-relay`
+- `atlas-worker`
+- `blueprint` — 把已確認內容整理成可執行方案
+- `bro` — 把上一則訊息改寫成白話
 - `codebase-atlas`
 - `codebase-memory`
 - `codex-update`
+- `codex-wsl-terminal-repair`
 - `compass` — 把偏掉的對話拉回正確方向
+- `cota`
+- `dev-flow`
 - `hermes-ops`
 - `mmx-cli`
 - `openclaw-ops`
-- `blueprint` — 把已確認內容整理成可執行方案
 - `project-genius`
 - `summarize-project-work`
 - `video-to-text`
