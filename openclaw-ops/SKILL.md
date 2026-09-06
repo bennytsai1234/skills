@@ -1,7 +1,7 @@
 ---
 name: openclaw-ops
 description: "Use when operating OpenClaw itself: checking versions, updating the CLI, managing the gateway service, verifying health, handling restart edge cases after upgrades, cleaning up plugins/stale install-index state, and migrating plaintext secrets to SecretRefs."
-version: 1.2.0
+version: 1.3.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -29,6 +29,7 @@ Use this skill when you need to:
 - Inspect managed-service status after an upgrade
 - Add/remove plugins or providers, or chase down "version drift" / "conflicting plugin install metadata" warnings that persist after an uninstall
 - Migrate plaintext secrets in `openclaw.json` / auth profiles to SecretRefs
+- Recover a post-upgrade gateway **crash-loop** where every error says "Run `openclaw doctor --fix`" but `doctor --fix` / `openclaw update repair` throw on legacy state (exec-approvals, session store) and never migrate — the migration-deadlock keystone
 
 Do **not** use this skill for:
 - General npm troubleshooting unrelated to OpenClaw
@@ -257,6 +258,7 @@ See `references/secrets-migration.md` for the field→pointer mapping and the pr
 - `references/model-route-and-auth-triage.md` — post-update triage for cases where OpenClaw rewrites the default model/provider route and Codex/OpenAI auth starts failing or timing out.
 - `references/plugin-and-state-cleanup.md` — removing/keeping plugins and providers, and clearing version-drift / install-index / metadata-conflict warnings that survive an uninstall (three-layer cleanup).
 - `references/secrets-migration.md` — migrating plaintext config + auth-profile keys to `file` SecretRefs (TTY-only `secrets configure`, pre-populate gotcha, field→pointer map, verification).
+- `references/upgrade-migration-deadlock.md` — 2026.7.x → 2026.8.x upgrade that crash-loops the gateway because legacy `exec-approvals.json` makes `doctor --fix`/`update repair` **throw** before they can migrate, which also strands the session-store migration and a fail-closed check on a declared-but-uninstalled plugin. Covers the keystone (move the legacy exec-approvals file aside so doctor can cascade every migration), the plugin re-consent/pin gotchas, and why the moved file doesn't change the effective exec policy.
 
 ## Verification Checklist
 
