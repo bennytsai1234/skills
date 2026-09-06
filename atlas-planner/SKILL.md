@@ -1,195 +1,146 @@
 ---
 name: atlas-planner
-description: "Codebase Atlas lead — navigation, change discipline, and task-package authoring, for the agent talking directly to a human, in any project that has an atlas under docs/. Triggers on ordinary development requests (explain, investigate, or change something) once a project atlas exists. Do not load when instructions arrived as a dispatch plan or with a ROLE: relay-lead header (use atlas-relay instead), or as a task package with a ROLE: worker header (use atlas-worker instead), or when the human explicitly asks to skip the process and move fast (use atlas-fast instead). If no atlas exists yet for this project, use codebase-atlas to build one first or atlas-fast to act without one."
+description: "Formal planning path for software changes. Use when the human explicitly wants to discuss the problem first, plan or decompose work, prepare detailed task packages, hand work to Relay/Worker, or require an independent acceptance loop. Investigate with the human until the problem, root cause, target state, and recommended solution are understood and explicitly confirmed; only then write task packages and a dispatch plan. Do not implement source code."
 ---
 
 # Atlas Planner
 
-Entrypoint for the agent talking directly to the human on a project with an
-atlas. Understand the need, investigate enough to ground it, align Before / After
-with the human, then write portable task packages and one dispatch plan.
+Work with the human until the change is understood well enough that another agent can implement it without rediscovering the problem or inventing the solution from scratch.
 
-Your normal output is specification, not source code. The human hands the
-dispatch plan to `atlas-relay`; after that, execution and acceptance stay between
-the relay and workers unless the human starts a new planning conversation.
+The planner owns investigation, discussion, solution shaping, decomposition, and package authoring. It does not implement source code and does not dispatch workers.
 
-Full doctrine lives in `references/delegation.md`.
+Read `references/delegation.md` for the shared Planner -> Relay -> Worker contract.
 
 ## Role check
 
-- `ROLE: worker` → stop; use `atlas-worker`.
-- `ROLE: relay-lead`, or handed a dispatch plan → stop; use `atlas-relay`.
-- Human explicitly asks to skip planning/acceptance and get the result now → use
-  `atlas-fast`.
-- Otherwise you are the planner.
+- `ROLE: worker` -> use `atlas-worker`.
+- `ROLE: relay-lead`, or a dispatch plan -> use `atlas-relay`.
+- Human wants ordinary direct execution without formal planning -> use `atlas-fast`.
+- Human explicitly wants discussion/planning/decomposition/formal handoff -> continue here.
 
-**You write:** atlas docs, Architecture Decisions rows, task packages, dispatch
-plans.
-**Relay writes:** Completion records, completed archives, implementation commits.
+## Enter the repository
 
-## Entry
+1. Preserve the human's original request and current constraints.
+2. Read applicable `AGENTS.md` rules.
+3. If a Codebase Atlas exists, read its index once and then the module docs relevant to the request.
+4. Read `DEVELOPMENT.md` only when build/run/test/environment details matter.
+5. Read `DESIGN.md` only for UI/design-system work.
+6. Read `docs/architecture.md` only when the issue crosses modules/processes/services or depends on runtime/state/deployment relationships.
+7. Use live search and code reading for exact evidence.
 
-1. Preserve the user's original request.
-2. Find the project's atlas under `docs/*_index.md`, walking up from the current
-   directory if needed.
-3. If none exists, stop and offer `codebase-atlas` or `atlas-fast`.
-4. Read the index once. Carry forward its working language, delivery policy, and
-   reporting level without re-asking them.
-5. Read the module docs the request touches, then only the code needed to answer
-   or diagnose the request.
-6. Route by intent:
-   - **know** → investigate and answer read-only;
-   - **change** → investigate enough to ground the change, then prepare packages;
-   - mixed/unclear → investigate first.
+If no atlas exists, continue with normal repository inspection. Do not stop planning merely because a map is missing.
 
-## Investigate
+## Discussion phase
 
-Use the atlas plus the minimum code needed. Separate confirmed facts,
-assumptions, and unknowns.
+Do not write a task package yet.
 
-For bugs, reproduce the failure and establish the root cause before writing a
-package. For review, compare the diff with the owning/boundary modules. For an
-open design choice the repository cannot settle, ask the human one decision at a
-time and include your recommended answer.
+Investigate and discuss until the following are grounded:
 
-Do not edit source code in this role.
+- **Current** — what the system actually does now.
+- **Problem** — what is wrong or missing.
+- **Root Cause** — for bugs, the direct cause and the layer that owns it.
+- **Target** — what must become true.
+- **Recommended Solution** — the concrete technical direction you recommend.
+- **Trade-offs** — only real alternatives or consequences worth deciding.
+- **Boundaries** — compatibility, ownership, contracts, or behavior that must not be broken.
 
-## Change discipline
+Ask one useful question at a time when the repository cannot settle a real product or compatibility decision. Do not ask for information that code, configuration, tests, docs, or the atlas can answer.
 
-Use two tiers:
+The human may challenge the diagnosis or solution. Re-investigate, revise, and continue the discussion as needed. The purpose of this phase is shared understanding, not speed.
 
-- **T1 normal** — contained, reversible, clear diagnosis: full package with
-  objective Acceptance and any real constraints.
-- **T2 hard/risky** — async/stateful, multi-module, external API, irreversible,
-  migration, performance regression, or uncertain diagnosis: full package plus
-  stronger evidence and a Decision Gate only when the repository cannot settle a
-  real choice.
+### Confirmation gate
 
-Irreversible, cross-module, external-API, and migration work is at least T2.
+Before writing any package or dispatch plan, summarize the settled understanding in a compact form:
 
-A typo, constant, or one-line config change does not need this workflow. If the
-human wants it done immediately, use `atlas-fast`.
+```markdown
+## Current
+...
 
-### Decision Gate
+## Problem / Root Cause
+...
 
-Use only for choices the human must settle: compatibility promises, ownership,
-schema authority, product behavior, or similar external decisions. Present
-Context / Options / Recommendation. Once confirmed, record the decision in
-`Constraints`.
+## Target
+...
 
-Implementation details belong to the worker unless the human explicitly made
-them a requirement.
+## Recommended Solution
+...
 
-### Route packages by surface
+## Boundaries
+...
+```
 
-- Frontend/UI → `claude-p` / Claude Sonnet 5.
-- Backend/API/data/infrastructure/other → `gpt-subagent` / GPT-5.6-Luna.
-- Mixed request → split only when the frontend/non-frontend boundary represents
-  a real change boundary; record the package order in the dispatch plan.
+Wait for explicit human confirmation that the planner has understood the problem and the intended solution. A vague acknowledgment earlier in the conversation is not enough if the solution changed afterward.
 
-### Before / After gate
+Until this confirmation:
 
-Before writing packages, tell the human:
+- do not write `docs/changes/planning/**`;
+- do not write a dispatch plan;
+- do not modify source code.
 
-- **Before** — current state and why the change is needed; for a bug, include the
-  diagnosed cause.
-- **After** — what becomes true and how it will be verified.
+## Decompose after confirmation
 
-Wait for explicit confirmation.
+After confirmation, split the work into detailed packages.
 
-## Write task packages
+Prefer a separate package when it creates a distinct engineering result that can be understood and verified on its own, especially when:
 
-Write one file per package:
+- one result must exist before the next can be implemented safely;
+- different layers have different failure modes or acceptance evidence;
+- isolating a risky migration, contract, state, or async change makes acceptance clearer;
+- a frontend/backend boundary is a real implementation boundary;
+- a large change would otherwise force one worker to rediscover several independent problems.
+
+Do not split merely by file count. Do not create one-file or one-function packages when they do not represent a real result.
+
+A good package has one clear Goal, one coherent solution, and objective Acceptance.
+
+## Write detailed task packages
+
+Write each package to:
 
 `docs/changes/planning/{{DATE}}-{{SLUG}}.md`
 
-Use the `atlas/v3` task-package shape from `references/delegation.md` §5 and
-stamp `REPORTING_LEVEL` from the index.
+Use the `atlas/v4` package shape from `references/delegation.md`.
 
-Before committing, read Goal, Acceptance, and Constraints together and remove
-obvious contradictions.
+Each package must carry the conclusions already established by Planner:
 
-A package is complete when an agent with zero conversation history can:
+- the actual problem and root cause;
+- the confirmed recommended solution;
+- concrete implementation steps;
+- likely change surfaces or starting points;
+- objective acceptance evidence;
+- real constraints only.
 
-1. understand the desired result;
-2. find the relevant code;
-3. choose an implementation;
-4. prove the result with objective evidence.
+The package should be detailed enough that a competent worker with zero chat history does not need to redo Planner's product discussion, root-cause discovery, or solution design.
 
-`Background` carries what the worker cannot infer: the real problem, current
-behavior, wrong examples, prior inventory, and analysis limits. `Constraints`
-contains only real requirements that code and ordinary engineering judgment do
-not already imply.
+### Recommended Solution
 
-Acceptance must be independently checkable. Prefer expected values and observable
-behavior over phrases like "works correctly". Cover important negative cases and
-say what must not change. If a check may depend on unavailable resources, state
-whether it is conditional/skippable and what evidence remains required.
+Be concrete. It may name existing abstractions, state transitions, APIs, data ownership, migration order, algorithms, or pseudocode when that materially reduces ambiguity.
 
-Use one command per line. Keep paths relative with forward slashes. Write commands
-for the worker's actual shell.
+Do not turn the package into line-by-line coding instructions when the repository should decide the exact syntax. Distinguish the confirmed design direction from implementation details that a worker can safely choose.
 
-`Starting Points` is a map, not a fence. The worker follows real dependencies and
-may change whatever the Goal requires unless an explicit Constraint says
-otherwise.
+### Implementation Steps
+
+Write an ordered implementation path. Each step should describe a meaningful change or verification point, not a narrative of every command the worker might type.
+
+### Acceptance
+
+Acceptance must be independently checkable. Prefer observable behavior, exact expected values, decisive commands, regression cases, and important negative cases. State what must not regress.
+
+When a check depends on unavailable infrastructure, say what evidence is still mandatory and what may be conditional.
 
 ## Write the dispatch plan
 
-Then write:
+After all packages are internally consistent, write:
 
 `docs/changes/planning/{{DATE}}-{{SLUG}}-dispatch-plan.md`
 
-Use `references/delegation.md` §4. Stamp `DELIVERY_POLICY` and
-`REPORTING_LEVEL` from the index.
+Use the `atlas/v4` dispatch shape from `references/delegation.md`.
 
-The dispatch plan is the single file the human hands to Relay. Write one even for
-a single package so the receiving agent resolves to the relay role rather than
-the worker role.
-
-Packages execute **strictly in sequence**. The dispatch plan records their exact
-order and why any dependency matters.
-
-Split packages along real change boundaries or to isolate a risky piece. Do not
-split merely by file count.
-
-Commit/push planning files according to the project's delivery policy so the
-execution side can read them. Then tell the human exactly which dispatch-plan file
-to hand over.
-
-## While the batch is out
-
-The work belongs to `atlas-relay`. Do not inspect the tree, narrate progress, or
-shadow the relay's work from this conversation. The human may interact with Relay
-during execution; Relay and Worker are expected to finish the handed-off batch
-without returning to Planner.
-
-A materially different human request is a new planning task, not a continuation
-of the old package.
+- Record the exact package order and dependency reason.
+- Resolve delivery policy from the human's current instruction first, then project guidance; if neither defines one, use `no commit` rather than guessing.
+- Choose `EXECUTION_ROUTE` per package by capability, not by hard-coded model version. `gpt-subagent` and `claude-p` are route names; Relay resolves the concrete current executor.
+- Hand the human one dispatch-plan path. The human handing that file to Relay is the execution handoff.
 
 ## Review
 
-Only review the completed work when the human explicitly asks you to.
-
-Check:
-
-1. Goal and every Acceptance item against the Completion record and real checks.
-2. The diff against explicit Constraints and the actual Goal.
-3. Whether the record accurately states limits and residual risk.
-
-If you find gaps, report them precisely. Do not edit source code yourself.
-
-## Atlas updates
-
-Relay performs the batch-end atlas refresh from accepted Completion records that
-flagged a boundary, ownership, or contract change. Do not repeat that work.
-
-Use `codebase-atlas` only when the human explicitly asks for a refresh/rebuild or
-when a wider map repair is needed beyond the batch-local refresh.
-
-## Reporting and delivery
-
-- Plain reporting: omit module names, paths, and code identifiers from human-facing
-  reports.
-- Technical reporting: include them.
-- Verification results are always reported.
-- Never claim completion when mandatory evidence is missing or failed.
+Review completed work only when the human explicitly asks. Check the confirmed Goal, Recommended Solution, Acceptance, real diff, and completion evidence. Report precise gaps; do not silently implement them in Planner role.

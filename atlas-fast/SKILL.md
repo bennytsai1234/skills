@@ -1,31 +1,52 @@
 ---
 name: atlas-fast
-description: 使用者明確要求快速、直接、立即執行或跳過一般流程時使用，例如「快一點」「直接改」「直接做」「不用走那套流程」。處理使用者當下就要看到結果的任務，不限程式碼。若使用者明確要求規劃、派工或正式驗收，改用對應的 atlas-planner、atlas-relay 或 atlas-worker。
+description: "Default execution path for ordinary development work. Use when the human asks to investigate, fix, change, build, implement, or adjust something and does not explicitly request formal planning, task packages, dispatch, or independent acceptance. If a Codebase Atlas exists, use it for navigation before live search. Route explicit planning/discussion work to atlas-planner, dispatch plans to atlas-relay, and ROLE: worker packages to atlas-worker."
 ---
 
 # Atlas Fast
 
-直接做到結果，不建立 plan、task package、dispatch 或驗收流程。那是
-atlas-planner/relay/worker 的成本，這裡不需要。
+Handle ordinary development with the least process needed to reach a correct result.
+Do not create task packages, dispatch plans, completion records, or a formal acceptance loop.
 
-## 執行
+## Route first
 
-1. 若目標本身不明確（例如多個可能對象、多種可能理解），問一句釐清再動手——這不是規劃確認，
-   純粹是連要做什麼都不確定就不該用猜的。
-2. 若做法不確定，優先查專案既有 script、設定、README、`--help`（有 codebase-atlas 建的地圖，
-   索引也算在內）；已有明確做法就直接沿用，不為確認而重查。
-3. 只探索到能確定「改哪裡、怎麼執行」為止；一旦確定立即動手，不繼續理解周邊架構。
-4. 直接執行達成目標。
-5. 若為了速度動了專案本身的設定（而非只是選對指令/選項），完成時講清楚動了什麼、跟預設差在哪裡。
-6. 預設只做與變更直接相關的最小驗證；除非失敗後果高或使用者要求，不跑完整測試、不做額外 review。
-7. 回報結果與位置；程式碼變更依全域慣例 commit + push，commit message 就是這次唯一的記錄，寫清楚。
+- `ROLE: worker` -> use `atlas-worker`.
+- `ROLE: relay-lead`, or a dispatch plan -> use `atlas-relay`.
+- Human explicitly asks to discuss first, plan, decompose, write packages, dispatch, or run formal acceptance -> use `atlas-planner`.
+- Otherwise continue here, including read-only investigation and normal implementation work.
 
-## 原則
+## Navigate
 
-不因任務看起來大就切換到其他 atlas skill；只有使用者明確要求規劃、派工或正式驗收才切換，規模大小是
-使用者當下的判斷。
+1. Read the applicable `AGENTS.md` rules.
+2. If a Codebase Atlas exists under `docs/`, read its index once.
+3. Read only the module docs relevant to the request.
+4. Use live search (`rg`, symbol search, call hierarchy, tests) for exact locations.
+5. If no atlas exists, do not stop or build one automatically; inspect the repository normally unless the human explicitly asks for an atlas.
 
-不做與當前目標無關的架構探索、全面 review、預防性修改或額外文件。
+The atlas is a routing layer, not a substitute for reading code.
 
-不因為這個技能而放棄全域工程原則（只做現在會出事的、不腦補未來需求、優先最小解）或系統層安全規則
-（破壞性操作前確認等）——「快」省的是流程開銷，不是判斷力。
+## Investigate
+
+For explanation, review, or diagnosis requests:
+
+- inspect only enough code and evidence to answer the question;
+- separate confirmed facts, inference, and unknowns;
+- for bugs, establish the direct cause when the available environment makes that practical;
+- do not modify source code unless the human also asked for a change.
+
+## Change
+
+For implementation requests:
+
+1. Identify the real problem and the correct change surface.
+2. Check whether an existing abstraction already owns the behavior.
+3. Choose the smallest sufficient fix that preserves existing architecture unless that architecture is the cause.
+4. Implement across every file genuinely required by the goal.
+5. Run the smallest decisive verification first. Expand only for new failures, meaningful uncertainty, or higher-impact changes.
+6. Follow the current user instruction and project `AGENTS.md` for commit/push behavior. This skill does not impose its own delivery policy.
+
+Do not keep exploring once the change surface and implementation are clear. Do not add preventive refactors, unrelated documentation, speculative features, or a formal workflow merely because the task is large.
+
+## Report
+
+Report the result, decisive evidence, and any real remaining limitation. Keep implementation narration short.

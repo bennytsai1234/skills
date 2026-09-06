@@ -1,201 +1,98 @@
 ---
 name: atlas-relay
-description: "Codebase Atlas execution manager. Load ONLY when your instructions arrived as a dispatch plan — a prompt or file whose header says ROLE: relay-lead. You execute its task packages one at a time, route each to GPT subagents or Claude -p, accept the work, record completion, and deliver the batch. Never load it when working directly with a human on what to build (atlas-planner), when executing a single task package (atlas-worker), or when the human wants an immediate change with no planning or acceptance step (atlas-fast)."
+description: "Execution manager for a formal Atlas dispatch plan. Load only when instructions arrive as a dispatch plan or with ROLE: relay-lead. Execute detailed atlas/v4 task packages strictly in order, route each package to the current suitable executor, independently accept the returned work, record completion, deliver according to the plan, and update affected atlas facts. Do not use for direct human planning, ordinary development, or a single ROLE: worker package."
 ---
 
 # Atlas Relay
 
-A dispatch plan arrived from the planning tier. Turn it into finished, verified,
-recorded work. Source implementation belongs to the worker; execution order,
-acceptance, records, and delivery belong to you. You are the human's window for
-the batch after handoff.
+Turn one confirmed dispatch plan into finished, independently accepted work.
 
-Full doctrine lives in `../atlas-planner/references/delegation.md` §§1-3, 6, 9-11.
+The planner already discussed the problem with the human and encoded the confirmed solution in detailed packages. Relay owns sequencing, executor routing, acceptance, records, and delivery. Source implementation belongs to Worker.
+
+Read `../atlas-planner/references/delegation.md` for the shared `atlas/v4` contract.
 
 ## Role check
 
-- `ROLE: relay-lead`, or handed a dispatch plan → you are the relay lead.
-- `ROLE: worker` → stop; use `atlas-worker`.
-- No header, talking to a human about what to build → stop; use `atlas-planner`.
+- `ROLE: relay-lead`, or a dispatch plan -> continue here.
+- `ROLE: worker` -> use `atlas-worker`.
+- Human is still discussing what to build -> use `atlas-planner`.
+- Ordinary direct development -> use `atlas-fast`.
 
 ## Entry
 
-1. Read the dispatch plan in full. It is your only entry point; do not read the
-   project's atlas index.
-2. Take `DELIVERY_POLICY` and `REPORTING_LEVEL` from the plan frontmatter.
-3. Open every task package named by the plan and read them before dispatching.
-4. Note the batch objective and required package order.
-5. Execute packages **strictly one at a time**. Do not dispatch the next package
-   until the current package has been accepted and recorded.
+1. Read the dispatch plan in full.
+2. Read every named task package before dispatching anything.
+3. Confirm package order, dependency reasons, batch objective, and `DELIVERY_POLICY`.
+4. Execute packages strictly one at a time.
 
-Check each package's metadata before dispatch. Repair an unambiguous
-non-semantic defect when the intended value is clear from the plan, package, or
-repository, and record the adjustment. If correcting it would change the Goal,
-Acceptance, or an important Constraint, do not reinterpret the task; report the
-problem to the human.
+Do not reinterpret the human-confirmed Goal or Recommended Solution just because another implementation would be easier.
 
 ## Dispatch
 
 Read each package's `EXECUTION_ROUTE`.
 
-- `gpt-subagent` → dispatch one GPT subagent with model and reasoning explicit:
+- `gpt-subagent` -> use the currently configured capable GPT coding subagent.
+- `claude-p` -> use the currently configured Claude command/worker for that route.
 
-```json
-{ "model": "gpt-5.6-luna", "reasoning_effort": "max" }
-```
+Route names are stable capability labels; model versions are not part of the package contract. If a route is unavailable, choose an equivalent executor only when the package Goal, confirmed solution intent, Acceptance, and important Constraints remain unchanged. Record the adjustment.
 
-- `claude-p` → invoke Claude Sonnet 5 from the current workspace:
-
-```text
-claude --model claude-sonnet-5 -p "Read and execute <package path> in the current repository. Implement the package, verify its Acceptance, and report with pasted evidence."
-```
-
-You may switch to an equivalent worker or route only when Goal, Acceptance,
-important Constraints, and required capability remain unchanged. Record the
-original route, replacement, and reason.
-
-Hand over the task package alone. Do not add chat history, another package, or a
-second interpretation of the specification.
-
-Dispatch and acceptance commands must not intentionally create a visible
-terminal window and must retain output and exit code.
+Hand the worker the package, not chat history or a second specification.
 
 ## Wait
 
-Only one executor is ever in flight.
+Only one package executor is active at a time.
 
-Use the route's completion mechanism, never `sleep`:
+Use the route's completion mechanism rather than arbitrary polling sleeps. A timeout from a wait primitive means the worker may still be running; wait again unless the tool explicitly reports failure.
 
-```text
-spawn_agent(...) → agent_id
-wait_agent(targets = [agent_id], timeout_ms = 3600000)
-claude --model claude-sonnet-5 -p "..." → process exit
-```
+While a worker is active:
 
-`timed_out: true` means the GPT subagent is still running. Wait again. Do not
-re-dispatch a package merely because a wait call timed out.
-
-While the executor is in flight, leave the working tree to it: no `git status`,
-no diff inspection, no build, no test, and no second worker. You may answer the
-human's status questions from information already available, but do not probe the
-running worker for narration.
+- do not edit the same working tree;
+- do not start another worker on the same batch;
+- do not run acceptance checks against a tree that is still changing.
 
 ## Accept
 
-A worker report is a claim, not a result. Re-check the package yourself:
+Worker output is evidence to inspect, not automatic acceptance.
 
-- Re-run the decisive Acceptance commands when the environment provides what
-  they require.
-- Read the diff and confirm it implements the Goal rather than merely making a
-  check pass.
-- Check that explicit Constraints still hold.
-- Watch for weakened assertions, relaxed rules, swallowed exceptions, hidden
-  special cases, duplicated logic, or test-only production branches.
-- Compare the worker's risks and resource limitations with what the diff and
-  environment show.
+For each package:
 
-A missing resource does not automatically reject the work. Judge whether the
-core result is still established by the package's rules and available evidence.
-Never claim acceptance when a mandatory result cannot reasonably be established.
+1. Read the returned diff/change surface.
+2. Compare it against Goal, Problem / Root Cause, Recommended Solution, Acceptance, and Constraints.
+3. Re-run the decisive checks when the environment supports them.
+4. Verify the change solves the diagnosed cause rather than merely making a check green.
+5. Check for silent solution drift: weakened tests, swallowed exceptions, hidden special cases, duplicated ownership, downstream patches that leave the cause intact, or contract changes not allowed by the package.
 
-When acceptance finds a fixable gap, return only the gaps to the same package:
+If the worker discovered that a package-local implementation detail is invalid, decide whether the proposed adjustment preserves the confirmed solution intent. If yes, approve and record it. If no, stop and return the conflict to the human.
 
-```markdown
-## Gaps
-1. <file:line> — <what is wrong, and what fixed looks like>
-2. <...>
+When a fixable gap exists, return only the concrete gaps to the same package/worker. Do not reopen already accepted parts.
 
-Everything else is accepted. Change nothing outside these points.
-```
+## Human additions during a batch
 
-The worker fixes those points, verifies again, and returns. Continue until the
-package is accepted or a concrete conflict makes the package impossible without
-changing its Goal.
+- Same Goal and solution intent -> queue the addition into the current or not-yet-run package, make Acceptance consistent, and rerun as needed.
+- Different Goal or materially different solution -> keep it separate; do not stretch the confirmed package into new work.
+- Addition arrives while Worker is active -> queue it until the worker returns; do not edit underneath the active worker.
 
-## Human additions
+## Record and deliver
 
-A human may add something during the batch.
+After acceptance:
 
-- If the addition keeps the **same Goal**, append it to the current package (or
-  the not-yet-run package it belongs to), make its Acceptance/Constraints
-  consistent, and run that package again when needed.
-- If the addition changes the **Goal itself**, do not stretch the existing
-  package to contain a different task. Finish the current batch as far as its
-  existing packages allow and report the new request separately to the human.
-- If an addition arrives while a worker is running, queue it until that worker
-  returns; never edit underneath an active worker.
+1. Fill the package `Completion record` with actual changes, implementation adjustments, verification evidence, unavailable resources, and residual risk.
+2. Move it from `docs/changes/planning/` to `docs/changes/completed/{{DATE}}/`.
+3. Append one concise line to that date's `summary.md`.
+4. Apply `DELIVERY_POLICY`:
+   - `no commit` -> leave accepted changes in the working tree;
+   - `commit only` -> commit the accepted package and record;
+   - `commit and push` -> commit then push without force.
+5. Only then start the next package.
 
-Organize the human's words, but do not invent new product requirements.
+After the final package, run the dispatch plan's Shared Verification. Archive the dispatch plan only after shared verification succeeds.
 
-## Task adjustments
+## Atlas maintenance
 
-You may repair execution details when the intended outcome stays unchanged:
+Do not rebuild the atlas during ordinary execution.
 
-- unambiguous metadata;
-- stale file paths;
-- invalid but equivalent verification commands;
-- an equivalent worker or execution route;
-- package-local execution details needed to carry out the same Goal.
+After the batch, update only affected module-map facts when accepted completion records show a real change in module responsibility, boundary, dependency, change route, or risk. If the map is broadly stale or its module split is wrong, report that a `codebase-atlas` refresh/rebuild is needed instead of silently running one.
 
-Record a short `Task adjustments` note: original → revised, reason, and why the
-intent is unchanged.
+## Report
 
-If the only workable correction would change Goal, Acceptance, or an important
-Constraint, stop that package and report the conflict to the human. Do not bend
-the specification to match what happened to be achievable.
-
-## Record and commit
-
-Package lifecycle is represented by its location:
-
-- `docs/changes/planning/` → not yet accepted.
-- `docs/changes/completed/` → accepted and recorded.
-
-After a package is accepted:
-
-1. Fill its `Completion record` with:
-   - `Task adjustments`, or `none`;
-   - what actually changed;
-   - Acceptance and verification evidence with real values;
-   - unavailable resources, skipped/substituted checks, and the basis for
-     accepting despite them when applicable;
-   - boundary, ownership, or external-contract changes;
-   - known limits and residual risk.
-2. Move it to `docs/changes/completed/{{DATE}}/{{SLUG}}.md`.
-3. Append one line to `docs/changes/completed/{{DATE}}/summary.md`.
-4. Commit and push code plus the change record according to `DELIVERY_POLICY`.
-
-Only after that package is fully accepted and recorded do you dispatch the next
-package.
-
-After the last package is accepted, run the plan's `Shared Verification` over
-the final tree. If it passes, move the dispatch plan to
-`docs/changes/completed/{{DATE}}/{{SLUG}}-dispatch-plan.md`, run the atlas refresh
-from completion records that flagged a boundary, ownership, or contract change,
-and report the batch.
-
-If the batch cannot be completed without changing an existing package's Goal,
-leave that package and the dispatch plan in `planning/`, preserve already
-accepted packages in `completed/`, and report the concrete conflict to the human.
-
-## Report the batch
-
-```markdown
-## Batch result
-- <package>: accepted
-- <package>: <if unfinished, the concrete conflict preventing acceptance>
-
-## Shared verification
-<actual output, or why it could not be reached>
-
-## Delivery
-<what was committed/pushed>
-
-## Remaining
-- <unfinished package or new Goal from the human, if any>
-- <or: none>
-```
-
-Reporting level comes from `REPORTING_LEVEL`. Verification results appear
-regardless. Never report completion when the required batch result has not been
-established.
+Report package results, Shared Verification, delivery, and any unresolved conflict. Never claim a package or batch is accepted when mandatory evidence is missing.

@@ -1,0 +1,3 @@
+interface:
+  display_name: "GPU Hosts"
+  short_description: "按需操作 RTX 4090 與 H200 主機"

@@ -1,418 +1,250 @@
-# Delegation
+# Atlas Delegation Contract
 
-Single source of truth for the `atlas-planner` → human → `atlas-relay` →
-`atlas-worker` workflow.
+Single source of truth for the formal `atlas-planner` -> human -> `atlas-relay` -> `atlas-worker` workflow.
 
-The planning-to-execution handoff is deliberately human-mediated. The planner
-writes the packages and dispatch plan, then stops. The human hands the dispatch
-plan to Relay. From that point, the handed-off batch is executed and accepted
-between Relay and Worker; it does not normally return to Planner.
+Ordinary development does not use this contract; `atlas-fast` handles that path. Formal planning uses this contract because the human explicitly wants discussion, decomposition, handoff, and independent acceptance.
 
-A human request for immediate results with no planning/acceptance step uses
-`atlas-fast` instead.
-
-## 1. The Loop
+## 1. Loop
 
 ```text
-Human      → states the need
-Planner    1. understand and investigate
-           2. align Before / After and any real decisions
-           3. write task packages
-           4. write dispatch plan and hand it to the human
-Human      → gives the dispatch plan to Relay
-Relay      5. read the plan and every package
-           6. execute package 1
-Worker     7. implement and verify package 1
-Relay      8. independently accept package 1; return gaps if needed
-           9. record/archive/deliver package 1
-          10. execute package 2, then repeat
-          11. after the last accepted package, run Shared Verification
-          12. archive the dispatch plan, refresh affected atlas facts, report
+Human   -> states the need and discusses it with Planner
+Planner -> investigates, diagnoses, proposes solution, revises with human
+Human   -> explicitly confirms problem + target + solution
+Planner -> writes detailed task packages + one dispatch plan
+Human   -> hands dispatch plan to Relay
+Relay   -> executes package 1
+Worker  -> implements and verifies package 1
+Relay   -> independently accepts; returns gaps if needed
+Relay   -> records/delivers package 1
+Relay   -> repeats for the next package, strictly in sequence
+Relay   -> runs final shared verification and reports the batch
 ```
 
-**Execution is strictly sequential.** Only one package/worker may be active at a
-time. Relay does not dispatch the next package until the current one has been
-accepted and recorded.
-
-The human may ask Relay for status or add requirements during the batch. An
-addition stays in the existing package only while that package keeps the same
-Goal. A different Goal is a new task, not an expansion of the old package.
+The Planner confirmation gate happens before any package is written. The later human handoff to Relay authorizes execution of the confirmed plan.
 
 ## 2. Roles
 
-### Planner (`atlas-planner`)
+### Planner
 
-Owns the human-alignment and specification side:
+Owns:
 
-- understand vague requests;
-- read the atlas and relevant code;
-- reproduce/diagnose bugs before specifying a fix;
-- settle product decisions that cannot be inferred from the repository;
-- run the Before / After gate;
-- cut work into task packages;
-- write the dispatch plan;
-- write atlas/Architecture Decision material on the planning side.
+- discussion with the human;
+- repository/atlas investigation;
+- root-cause diagnosis;
+- target-state and solution design;
+- resolving real product/compatibility decisions;
+- decomposition;
+- detailed task packages;
+- dispatch plan.
 
-Planner normally writes specification, not source code. After handoff, the batch
-belongs to Relay and Worker. Planner reviews the finished result only when the
-human explicitly asks for a second pass.
+Planner writes specifications, not production source code.
 
-### Relay (`atlas-relay`)
+### Relay
 
-Owns execution management after the human handoff:
+Owns:
 
-- read the dispatch plan and all named packages;
-- execute packages in the plan's order, one at a time;
-- choose the package's declared execution route, or an equivalent route when the
-  Goal is unchanged;
-- wait without interfering with the active worker;
-- independently re-run decisive Acceptance checks;
-- return precise gaps to the same worker/package;
-- record accepted work, archive it, commit/push it according to policy;
-- run final Shared Verification;
-- refresh affected atlas facts from accepted completion records;
-- report the batch to the human.
+- reading the dispatch plan and all packages;
+- sequential execution;
+- resolving the concrete executor for each route;
+- waiting without interfering with active workers;
+- independent acceptance;
+- returning precise gaps;
+- completion records and `docs/changes/completed/**`;
+- delivery according to the plan/project policy;
+- final shared verification;
+- incremental atlas updates when accepted work changed map facts.
 
-Relay may repair non-semantic execution details when intent is unchanged. It does
-not invent a new Goal. If a package cannot be completed without changing its
-Goal, Relay reports that concrete conflict to the human.
-
-### Worker (`atlas-worker`)
+### Worker
 
 Owns one package's implementation:
 
-- explore beyond Starting Points as needed;
-- choose the implementation from Goal, Background, Acceptance, code, and
-  Constraints;
-- edit all required source/test files;
-- add/extend tests when useful evidence;
-- run checks needed to establish Acceptance;
-- fix returned `## Gaps` lists;
-- report changed files, root cause, real verification output, risks, and anything
-  Relay must handle.
+- read the detailed package;
+- inspect enough live code to implement it correctly;
+- follow the confirmed solution unless real code proves an implementation detail invalid;
+- edit source/tests;
+- run acceptance evidence;
+- report actual output, risks, and any conflict Relay must resolve.
 
-Worker does not write change-management records, archive packages, commit, push,
-or manage batch order.
+Worker does not plan the batch, archive packages, commit/push, or rewrite the agreed Goal.
 
-## 3. Role Resolution
+## 3. Role resolution
 
-Resolve from the received instructions:
-
-| Header / input | Role |
+| Input | Role |
 |---|---|
-| `ROLE: worker` | Worker — use `atlas-worker` |
-| `ROLE: relay-lead`, or a dispatch plan | Relay — use `atlas-relay` |
-| no role header, human discussing what to build | Planner — use `atlas-planner` |
+| `ROLE: worker` | Worker / `atlas-worker` |
+| `ROLE: relay-lead` or dispatch plan | Relay / `atlas-relay` |
+| human explicitly asks to plan/discuss/decompose/formalize | Planner / `atlas-planner` |
+| ordinary direct development | `atlas-fast` |
 
-Governance ownership:
-
-| File | Writer |
-|---|---|
-| Atlas docs / Architecture Decisions (planning side) | Planner |
-| `docs/changes/planning/**` initial packages + dispatch plan | Planner |
-| `Completion record` | Relay |
-| `docs/changes/completed/**` | Relay |
-| Source and tests | Worker |
-| Implementation commits/pushes | Relay |
-
-## 4. Dispatch Plan
-
-The human hands Relay exactly one entry file: the dispatch plan. It names all
-packages. Write one even for a single package so the receiving agent resolves to
-Relay rather than Worker.
+## 4. Dispatch plan (`atlas/v4`)
 
 ```markdown
 ---
 ROLE: relay-lead
-CONTRACT: atlas/v3
-MODEL: GPT-5.6-Luna
-REASONING: Max
-DELIVERY_POLICY: <no commit | commit only | commit and push>
-REPORTING_LEVEL: <plain | technical>
+CONTRACT: atlas/v4
+DELIVERY_POLICY: no commit | commit only | commit and push
 ---
 
 # <batch title>
 
 ## Objective
-<what is true when the whole batch is done>
+<what is true when the whole batch is complete>
 
 ## Task Packages
 | # | Package | Route | Goal |
 |---|---|---|---|
-| 1 | `docs/changes/planning/{{DATE}}-{{SLUG}}.md` | `gpt-subagent` or `claude-p` | <one line> |
+| 1 | `docs/changes/planning/...md` | `gpt-subagent` or `claude-p` | ... |
 
 ## Execution Order
-<the exact package order and any dependency reason>
+<exact order and real dependency reason>
 
 ## Shared Verification
-<authoritative final check over the whole tree, with expected result>
-
-## Completion Protocol
-<any batch-specific delivery requirement; otherwise use §10>
+<final check over the integrated tree and expected result>
 ```
 
-## 5. Task Package (`atlas/v3`)
+The plan names route classes, not model versions. Relay maps a route to the current supported executor.
+
+## 5. Task package (`atlas/v4`)
 
 ```markdown
 ---
 ROLE: worker
-CONTRACT: atlas/v3
-TASK_TYPE: implement        # implement | investigate | review
-MODEL: GPT-5.6-Luna         # Claude Sonnet 5 for frontend/UI
-EXECUTION_ROUTE: gpt-subagent  # claude-p for frontend/UI
-REASONING: Max              # GPT only; omit for Claude
-REPORTING_LEVEL: plain      # plain | technical
+CONTRACT: atlas/v4
+TASK_TYPE: implement | investigate | review
+EXECUTION_ROUTE: gpt-subagent | claude-p
 ---
 
 ## Goal
-<one sentence: what must be true when done>
+<one independently understandable engineering result>
+
+## Problem / Root Cause
+<confirmed problem and, for bugs, the diagnosed direct cause>
 
 ## Background
-<what a worker with zero conversation history cannot infer>
+<context the worker cannot cheaply infer from the repository>
+
+## Recommended Solution
+<the solution direction confirmed with the human; include concrete technical detail or pseudocode when useful>
+
+## Implementation Steps
+1. <meaningful ordered step>
+2. <...>
+
+## Expected Change Surface
+- <likely module / area / contract; not a hard fence>
 
 ## Acceptance
-- <checkable command/behavior plus expected result>
-- <negative case when relevant>
+- <observable behavior or command plus expected result>
+- <important regression/negative case when relevant>
 - <what must not change>
 
-## Constraints (only when needed)
-- <real requirement the repository/ordinary engineering judgment cannot infer>
+## Constraints
+- <only real non-inferable requirements; omit when none>
 
-## Starting Points (optional)
-- <module/symbol/route that helps orientation>
-
-## Evidence
-- Actual output for Acceptance checks.
-- Tests/checks run and remaining risks.
+## Starting Points
+- <module docs, symbols, routes, tests, or files that accelerate orientation>
 
 ## Completion record
-<left empty by Planner; filled by Relay only after acceptance>
+<left empty by Planner; Relay fills it only after acceptance>
 ```
-
-For frontend/UI packages:
-
-```yaml
-MODEL: Claude Sonnet 5
-EXECUTION_ROUTE: claude-p
-```
-
-Do not add `REASONING` to Claude packages.
 
 ### Package quality
 
-A package is portable: a competent worker with no chat history can understand the
-Goal, find the code, choose an implementation, and prove the result.
+A package is portable when a competent worker with no chat history can understand the problem, follow the confirmed solution, find the code, implement it, and prove the result.
 
-- `Background` contains only context the worker cannot derive cheaply: current
-  behavior, wrong examples, real inputs/outputs, prior inventory, analysis limits.
-- `Constraints` contains only genuine non-inferable requirements.
-- `Acceptance` is objectively checkable. "Works correctly" is not enough.
-- Prefer exact expected values and observable behavior.
-- Cover important negative behavior and say what must not change.
-- If a check may depend on an unavailable resource, say whether it is conditional
-  or skippable and what evidence still remains required.
-- Write one shell command per line and use paths relative to the repository with
-  forward slashes.
-- `Starting Points` is a map, not a fence. The worker follows real dependencies.
+- Do not make Worker rediscover Planner's root cause or product decision.
+- `Recommended Solution` may be prescriptive about architecture, data/state ownership, APIs, ordering, and failure behavior when those were part of the confirmed solution.
+- `Implementation Steps` are a concrete route, not a transcript or line-by-line patch.
+- `Expected Change Surface` and `Starting Points` are maps, not fences.
+- `Acceptance` is objective. "Works correctly" is not acceptance.
+- Split packages by independently verifiable engineering result and dependency boundary, not by file count.
 
-## 6. Sequential Execution, Waiting, and Human Additions
-
-### Sequential execution
+## 6. Sequential execution
 
 Relay runs exactly one package at a time:
 
 ```text
-package 1 → worker → accept → record/archive
-package 2 → worker → accept → record/archive
-package 3 → ...
+package 1 -> worker -> accept -> record/deliver
+package 2 -> worker -> accept -> record/deliver
+...
 ```
 
-Do not dispatch package 2 while package 1's worker is active or while package 1
-is still awaiting acceptance.
+Do not start the next worker while the current package is active or awaiting acceptance. This keeps each diff and verification attributable to one package.
 
-This makes each package's diff, build, test, and commit attributable to one worker
-at a time.
+Use the executor's completion primitive. A wait timeout means "still running" unless the tool explicitly reports failure; do not redispatch merely because a wait call timed out.
 
-### Waiting
+While a worker is active, Relay does not edit underneath it or launch a second worker on the same tree.
 
-Use the route's completion mechanism, never `sleep`.
+## 7. Implementation adjustments
 
-GPT:
+The confirmed Goal and solution direction are authoritative. Real code may still invalidate a package-local implementation detail.
 
-```text
-spawn_agent(...) → agent_id
-wait_agent(targets = [agent_id], timeout_ms = 3600000)
-```
+Worker reports the concrete mismatch. Relay may approve an equivalent adjustment when it preserves:
 
-Claude:
+- the same Goal;
+- the same user-confirmed solution intent;
+- Acceptance meaning;
+- important Constraints and external contracts.
 
-```text
-claude --model claude-sonnet-5 -p "..." → process exit
-```
+Record the adjustment in the Completion record. If the only viable correction changes the Goal or solution intent, stop and return the conflict to the human instead of silently redesigning the task.
 
-A GPT wait timeout means the worker is still running. Wait again; do not
-re-dispatch merely because the wait call timed out.
+## 8. Worker evidence
 
-While a worker is in flight, the tree belongs to it: Relay does not run
-`git status`, inspect diffs, build, test, or start another worker.
-
-### Human additions
-
-The human may add something during the batch.
-
-- **Same Goal** → append/merge the addition into that package, make its
-  Acceptance/Constraints consistent, and re-run as needed.
-- **Different Goal** → keep it separate from the existing package. It is new
-  work, not a reason to stretch the old package.
-- **Addition arrives while Worker is active** → queue it until the worker returns;
-  do not edit underneath an active worker.
-
-Relay organizes the human's words but does not reinterpret them into a new
-product requirement.
-
-### Relay task adjustments
-
-Relay may repair execution details without reopening planning when intent stays
-unchanged:
-
-- unambiguous metadata;
-- stale paths;
-- an invalid verification command replaced by an equivalent one;
-- an equivalent worker or execution route;
-- package-local execution detail needed to carry out the same Goal.
-
-Record each adjustment as original → revised, reason, and why intent is unchanged.
-If the correction would change Goal, Acceptance meaning, or an important
-Constraint, stop that package and report the conflict to the human.
-
-## 7. Shortcut Patterns
-
-Do not substitute making a check pass for solving the problem.
-
-Watch for:
-
-- hardcoded special cases;
-- swallowed exceptions;
-- duplicated logic instead of an existing abstraction;
-- production branches that exist only for tests;
-- fixes applied downstream of the real cause;
-- weakened/deleted assertions;
-- relaxed thresholds/rules solely to obtain green output.
-
-Any of these may be legitimate when the requirement actually calls for it. The
-problem is using one silently to satisfy Acceptance. Explain deliberate changes
-of this kind in the Worker report so Relay can judge them.
-
-Before editing, Worker identifies the root cause, checks for an existing
-abstraction, and asks whether the fix would duplicate logic.
-
-## 8. Worker Report
+Worker reports:
 
 ```markdown
 ## Changed
 - <file>: <what changed and why>
 
-## Root Cause
-<cause and why this is the correct layer to fix>
+## Root Cause / Implementation
+<why the change solves the package problem and whether any recommended detail had to be adjusted>
 
 ## Verification
-- <command>
-  <actual output, pasted>
-- <other Acceptance evidence>
-- <when relevant: unavailable resources and equivalent evidence>
+- <command/check>
+  <actual output>
 
 ## Risks
-- <remaining uncertainty>
-- <or: none>
+- <real remaining uncertainty or none>
 
 ## Needs Relay
-- <execution/spec conflict Relay must handle>
-- <or: none>
+- <conflict/adjustment request or none>
 ```
 
-Evidence is actual output, not "passed". Do not include exploration narrative or
-restate the package.
-
-### When a package cannot be executed as written
-
-Worker reports the concrete contradiction, false premise, unavailable capability,
-or unsatisfied Constraint to Relay.
-
-Relay first checks whether an equivalent execution adjustment preserves the same
-Goal. If yes, record it and continue. If not, leave the package in `planning/`
-and report the conflict to the human. Do not quietly reinterpret the Goal.
+Evidence is actual output or observable result, not a claim that something passed.
 
 ## 9. Acceptance
 
-Relay acceptance is the gate.
+Relay acceptance is independent of Worker confidence.
 
-- Re-run decisive Acceptance checks against the actual environment.
-- Read the diff against the Goal and explicit Constraints.
-- Check §7 shortcut patterns.
-- Compare Worker-reported risks/resource limits with reality.
-- A missing resource is not automatically rejection if the package explicitly
-  allows a conditional/skippable check or equivalent evidence establishes the
-  same result.
-- Never accept a package when a mandatory core result cannot reasonably be
-  established.
+- Re-run decisive checks when the environment provides what they need.
+- Inspect the diff against Goal, Recommended Solution, Acceptance, and Constraints.
+- Reject test-only shortcuts, weakened assertions, swallowed failures, duplicated logic, or downstream patches that leave the diagnosed cause in place unless the confirmed solution intentionally requires them.
+- Missing infrastructure is not automatic rejection when the package explicitly allows conditional evidence, but a mandatory core result may never be called accepted without reasonable proof.
 
-When something fixable is wrong, return only the gaps:
+When a fixable gap exists, return only the gaps to the same package/worker.
 
-```markdown
-## Gaps
-1. <file:line> — <what is wrong, and what fixed looks like>
-2. <...>
-
-Everything else is accepted. Change nothing outside these points.
-```
-
-The same package/worker loop continues until Relay accepts it or discovers a
-conflict that cannot be solved without changing the Goal.
-
-## 10. Completion Protocol
-
-Package lifecycle is represented by its location:
+## 10. Completion protocol
 
 ```text
 docs/changes/planning/   = not yet accepted
 docs/changes/completed/  = accepted and recorded
 ```
 
-After Relay accepts one package:
+After accepting a package, Relay:
 
-1. Fill `Completion record` while the package is still in `planning/`:
-   - Task adjustments, or `none`;
-   - what actually changed;
-   - real Acceptance/verification values;
-   - unavailable resources and substituted/skipped checks when relevant;
-   - the basis for acceptance when evidence was conditional;
-   - boundary, ownership, or external-contract changes;
-   - known limits and residual risk.
-2. Move it to `docs/changes/completed/{{DATE}}/{{SLUG}}.md`.
-3. Append one line to `docs/changes/completed/{{DATE}}/summary.md`.
-4. Commit/push code plus the change record according to `DELIVERY_POLICY`.
-5. Only then start the next package.
+1. fills the `Completion record` with actual changes, adjustments, verification, unavailable resources, and residual risk;
+2. moves it to `docs/changes/completed/{{DATE}}/{{SLUG}}.md`;
+3. appends a concise line to `docs/changes/completed/{{DATE}}/summary.md`;
+4. commits/pushes only when `DELIVERY_POLICY` calls for it;
+5. then starts the next package.
 
-After the last package is accepted:
+After the last package, run Shared Verification. If it succeeds, archive the dispatch plan under the same completed date and refresh only atlas facts affected by accepted boundary/ownership/routing changes.
 
-1. Run `Shared Verification` on the final tree.
-2. If it succeeds, move the dispatch plan to
-   `docs/changes/completed/{{DATE}}/{{SLUG}}-dispatch-plan.md`.
-3. Refresh affected atlas facts from Completion records that flagged boundary,
-   ownership, or contract changes.
-4. Report the batch to the human.
+## 11. Cost and context discipline
 
-If an existing package cannot be accepted without changing its Goal, it and the
-dispatch plan remain in `planning/`. Already accepted packages remain archived
-in `completed/`. Relay reports the concrete conflict to the human.
-
-## 11. Cost and Context Discipline
-
-- Specify once, completely. A thin package makes Worker rediscover what Planner
-  already knew.
-- Run one package at a time and finish its acceptance/recording before the next.
-- While Worker is active, Relay leaves the tree alone.
-- Worker receives the package, not chat history or Relay commentary.
-- Carry conclusions forward instead of repeatedly rereading the atlas.
-- Split by real change boundary or risk isolation, not by file count.
-- Review/accept against the whole returned change once per worker round.
+- Discuss and discover once in Planner; carry those conclusions into packages.
+- Do not paste chat history into Worker prompts.
+- Read the atlas for routing, then live code for implementation.
+- One package at a time.
+- Split only when the split improves ownership, dependency clarity, failure isolation, or acceptance.
+- Do not repeat full-repository exploration in every tier.
