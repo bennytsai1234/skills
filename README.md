@@ -25,6 +25,7 @@ Canonical home for reusable Codex and agent skills.
 - `codex-update`
 - `codex-wsl-terminal-repair`
 - `compass` — 把偏掉的對話拉回正確方向
+- `engineering-judgment` — 教你身為工程師如何做技術取捨與判斷
 - `hermes-ops`
 - `mmx-cli`
 - `openclaw-ops`
