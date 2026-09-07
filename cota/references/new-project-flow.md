@@ -92,7 +92,9 @@ Session): https://svrconf.cotabank.com/pages/viewpage.action?pageId=82511127
 
 1. 上線前**一定看差異比對**;先用 GIT 檔案清單小工具產「異動檔案列表」再逐項檢查
    (避免漏選 NuGet/csproj/dll)。
-2. **Checkmarx SCA** 原始碼掃描(`https://sca.cotabank.com/CotaSCA/`,7-Zip 壓 zip 送掃)。
+2. **Mend 原始碼掃描(實際跑 SAST)**——內部入口 `https://sca.cotabank.com/Mendsca`(網域帳號直接進),
+   選 Application/Project 後上傳原始碼 zip(7-Zip 壓 zip,上限 1.5 GB)。舊的 Checkmarx
+   `CotaSCA` 已停用。見 `references/git-workflow.md` 的「原始碼檢測」。
 3. 異動單附兩份:**風險評估表**(抄程式的人填)＋**測試報告**(上半抄送者、下半測試人員)。
 4. 抄送完 `git tag` 記 online 版本,再 `git push origin <tag>`。
 5. 緊急抄送只在營業日 17:20 後／非營業日開放。
@@ -129,7 +131,7 @@ Session): https://svrconf.cotabank.com/pages/viewpage.action?pageId=82511127
 - [ ] 背景服務盤點:能否跟前台一起雙跑?不能 → 拆單一 worker + Redis 協調
 - [ ] 身分入口:CotaPortal 串接;角色 PermProvider
 - [ ] 監控:CotaHealthCheckCore + PerformanceCounter 接看板
-- [ ] 資安:HSTS、Cookie 政策、CSP、Checkmarx 掃描過
+- [ ] 資安:HSTS、Cookie 政策、CSP、Mend 原始碼掃描過(SAST;相依漏洞另計)
 - [ ] 辦**上線申請**(正式機;AA→「Active/Active 模式服務=啟用」+ HAProxy=啟用,
       AP→依系統組主備設定);逐欄填 `references/web-platform.md`
 - [ ] 抄送:`dev` 上測試 → `master` 上正式;異動單附風險評估表 + 測試報告;tag 記版本

@@ -38,6 +38,28 @@ builder.Services.Configure<CookiePolicyOptions>(options =>
 // pipeline: app.UseCookiePolicy();  // 必須在 UseRouting 之後
 ```
 
+⚠ **這一條是既有專案最容易漏掉的偏離**:`web.config` 裡留著
+`<httpCookies httpOnlyCookies="true" requireSSL="true" />`,看起來設好了,但
+ASP.NET Core(含 IIS `hostingModel="InProcess"`)**根本不讀 `system.web` 區段**,
+等於一直沒生效,而且不會有任何錯誤或警告。掃描既有專案時,看到 `web.config` 有這行
+就要回頭確認 `Program.cs` 有沒有 `CookiePolicyOptions` + `UseCookiePolicy()`。
+
+`SameSite` 用 `Lax` 不要用 `Strict`:使用者是由入口網以連結導進站台的,`Strict`
+會讓這趟跨站導覽不帶 Cookie,進站直接失敗。
+
+Session Cookie 另外要具名(見 `references/mobile-web.md`),CotaRedisSession 寫法:
+
+```csharp
+builder.Services.AddCotaRedisSession(options =>
+{
+    options.Cookie.Name = ".專案名稱.Session";
+});
+```
+
+驗證方式:部署後對站台發一次請求,看回應的 `Set-Cookie` 是否帶
+`secure; samesite=lax; httponly`,以及 Session Cookie 名稱是否為指定的名字。
+未登入頁面通常也會發防偽 Cookie(`.AspNetCore.Antiforgery.*`),可先用它確認政策生效。
+
 ## 開發環境準備
 
 工具包(NAS 共用):
@@ -45,7 +67,7 @@ builder.Services.Configure<CookiePolicyOptions>(options =>
 - Visual Studio: `\\nas\0146\UserData\PublicData\共用專區\000_WEB開發相關資源\VisualStudio\`(VS2022 / VS2019 / VS2015)
 - Git: 同目錄 `\Git`
 - SSMS: 同目錄 `\SSMS`
-- 原始碼掃描 Checkmarx: `http://sca.cotabank.com/CotaSCA/`
+- 原始碼掃描 Mend: `https://sca.cotabank.com/Mendsca`(名稱寫 SCA 但實際跑 SAST;舊的 Checkmarx `CotaSCA` 已停用)
 
 IIS 安裝:「程式和功能 → 開啟或關閉 Windows 功能」勾選 IIS 相關項目。
 
@@ -74,6 +96,8 @@ IIS 安裝:「程式和功能 → 開啟或關閉 Windows 功能」勾選 IIS �
 說明，依實際作業需要開啟原頁確認最新內容:
 
 - 申請表填寫範例: [WEB專案上線申請單-範例.pdf](https://svrconf.cotabank.com/download/attachments/82511127/WEB%E5%B0%88%E6%A1%88%E4%B8%8A%E7%B7%9A%E7%94%B3%E8%AB%8B%E5%96%AE-%E7%AF%84%E4%BE%8B.pdf?version=1&modificationDate=1679963289950&api=v2)
+- **上線申請單產生器**: <https://svr134.cotabank.com/CotaReport/Report/GoLive>
+  (同站另有風險評估報告產生器,見 `references/git-workflow.md`)
 - 開發機 WEB 專案更新: <https://svrconf.cotabank.com/x/JoDSAw>
 - 專案監控: <https://svrconf.cotabank.com/x/DgBeAg>
 - `CotaPerformanceCounter`: <https://svrconf.cotabank.com/x/noDSAw>
@@ -240,6 +264,27 @@ AP User 填入**。表單編號 `ISMS-3-002-T02-V2.0`(版本 2.0)。
 公司資安簡報系列(OWASP Top Ten 2023、CSP、HSTS、Heuristic_Parameter_Tampering
 等)對應到 WEB 專案的實際檢查點:HSTS 設定(見上)、Content-Security-Policy
 header、直接物件參考(參數未經權限驗證直接拼進查詢)的輸入驗證與過濾。
+
+### Mend SAST 在 .NET MVC 專案的常見判定
+
+送掃流程見 `references/git-workflow.md`。實際掃內部 MVC 專案時反覆出現這三類:
+
+- **Error Messages Information Exposure** —— 真的要修。把上游服務的錯誤原文
+  (`ProblemDetails.Detail`)或 .NET 例外訊息直接回給前端,會帶出內部主機名與路徑;
+  `HttpRequestException.Message` 尤其明顯。改成細節只寫 log、對外回狀態碼分類的
+  一般化文案,**HTTP 狀態碼保留**前端才分得出失敗類型。
+- **Trust Boundary Violation**(sink `ISession.SetString`) —— 只要資料從 query
+  參數流到 Session 就報,**它不承認任何 `Regex.Replace` 白名單當 sanitizer**
+  (實測連 `[^0-9]` 這種最嚴的白名單照樣被標)。入口網簽章值(`hiseed`/
+  `hisignedhash`)更不能過濾——那兩個值要原樣送回入口網比對簽章,改一個字元就失效;
+  它們的可信度由 RSA 驗章提供,補償控制寫成長度上限 + 程式碼註解即可。
+- **Insufficient Transport Layer Protection**(sink `HttpClient.GetAsync` 等) ——
+  相對路徑呼叫時 Mend 追不到 DI 注入的 `BaseAddress`,一律先標。與其標誤判,不如
+  在 `Program.cs` 加啟動期 fail-fast:非 Development 環境下 `BaseUrl` 不是 https
+  就丟例外,讓應用程式起不來,而不是安靜地明文傳輸。
+
+改不掉又確實是誤判的,走 Mend AI Reviewer 產複核報告當佐證(見
+`references/git-workflow.md`),或在 Mend 上提 Suppress。
 
 ## 版本控制 / 抄送 / 異動單
 

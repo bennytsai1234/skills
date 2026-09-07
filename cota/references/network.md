@@ -246,11 +246,54 @@ Dim ret As Integer = crypt.RSASign(hiseed, hisignedhash)
 2. **匯入 Registry 機碼**——到
    `HKEY_LOCAL_MACHINE\SOFTWARE\CotaBank\Portal` 及
    `HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\CotaBank\Portal`
-   確認有 `priv_key` 及 `pub_key`。測試環境機碼(`DEV_KEY.reg`,同時含 32/64-bit,
-   一併匯入)與正式環境機碼、各 DLL 最新版檔案,都在 Confluence
-   「【入口網站】CryptUtil加密簽章」頁(pageId 3048856)的附件。
+   確認有 `priv_key` 及 `pub_key`。測試環境機碼、正式環境機碼與各 DLL 最新版檔案,
+   都在 Confluence「【入口網站】CryptUtil加密簽章」頁(pageId 3048856)的附件。
+
+   **⚠ 該頁說測試環境機碼「同時含 32bits 及 64bits,一併匯入即可」,實測不是這樣。**
+   `DEV_KEY.reg` 檔內只有 `[HKEY_LOCAL_MACHINE\SOFTWARE\CotaBank\Portal]` 一個
+   區段,直接 `reg import` 只會寫進 64-bit 檢視。要讓 32-bit 檢視
+   (`Wow6432Node`)也有,得**再匯入一次並指定 `/reg:32`**:
+
+   ```
+   reg import DEV_KEY.reg            :: 寫 HKLM\SOFTWARE\CotaBank\Portal
+   reg import DEV_KEY.reg /reg:32    :: 寫 HKLM\SOFTWARE\Wow6432Node\CotaBank\Portal
+   ```
+
+   只跑第一行、然後照頁面去「確認兩處都有 `priv_key`/`pub_key`」的話,會發現
+   `Wow6432Node` 底下是空的。應用程式集區是 64-bit 就只需要第一行。
+
+   另外該頁的兩個 `.reg` 附件——`DEV_KEY.reg` 與
+   「入口網與專案之間驗證用的KEY(測試用).reg」——**是同一份檔案**
+   (皆 8054 bytes,md5 相同),下載其一即可。
 3. **個人電腦安裝**:在 C 槽新開目錄 `CotaDll` 放入下載的檔案,到該目錄執行
    `regsvr32 DataEnc_x64.dll`、`regsvr32 CryptUtil_x64.dll`。
+
+#### .NET Core / .NET 8 專案:不能用 dotnet CLI 建置
+
+.NET Framework 專案用 COM 參考沒問題;**`.Core` 專案在 `.csproj` 放
+`<COMReference>` 之後,`dotnet build` 與 `dotnet publish` 一定失敗**:
+
+```
+error MSB4803: MSBuild 的 .NET Core 版本不支援工作 "ResolveComReference"。
+              請使用 MSBuild 的 .NET Framework 版本。
+```
+
+`ResolveComReference` 只存在於 .NET Framework 版的 MSBuild,dotnet CLI 內建的
+MSBuild 沒有,而且沒有替代參數可繞。整個專案的建置與發佈都要改用 Visual Studio
+附帶的 `MSBuild.exe`:
+
+```
+"C:\Program Files\Microsoft Visual Studio\<版本>\<edition>\MSBuild\Current\Bin\amd64\MSBuild.exe" <專案>.csproj -t:Publish -p:Configuration=Release -p:PublishDir=<輸出目錄>
+```
+
+換成 VS MSBuild 之後若改報 `error CS0246: 找不到類型或命名空間名稱 'CryptUtilLib'`,
+表示 MSBuild 對了但**這台機器還沒註冊 COM 元件**,回到上面的架設步驟。
+
+兩個錯誤要分清楚:`MSB4803` 是建置工具用錯,`CS0246` 是元件沒註冊。
+
+`<COMReference>` 用 `EmbedInteropTypes=true` 時,interop 型別會內嵌進主組件,
+發佈目錄**不會**多出 `Interop.*.dll`;要確認有沒有編進去,直接在產物裡找
+`CryptUtilLib` 字串即可。
 
 專案端:將 COM 元件加入參考後使用 `CryptUtilLib.IRSAHandler`:
 
@@ -285,6 +328,38 @@ Public Shared Function FormatMsg(ByVal msg As String)
     Return msg.Replace(Chr(13), "").Replace(Chr(10), "").Replace("'", """")
 End Function
 ```
+
+#### `IRSAHandler` 的實際介面簽章
+
+Confluence 只有 VB 範例,VB 的 `ByRef` 讓人看不出參數方向。實際 COM 介面是:
+
+```
+int    RSASign(string sDataToSign, string sSignedData)   // 第 2 參數是 out,回傳 0 為成功
+string VerifySignature(string sSignedData, string sSeedData)  // 回傳 "0000" 為成功
+```
+
+- `RSASign` 的**簽章結果由第二個參數帶出**,不是回傳值;回傳的是 int 錯誤碼
+  (0 = 成功)。失敗時第二個參數帶出的是錯誤訊息文字。
+- `VerifySignature` 的參數順序是**先簽章、後 seed**,跟直覺相反,寫反了會一直
+  驗不過。
+- 兩個方法的參數順序在 C#/VB 之外的呼叫端(PowerShell、腳本測試)容易踩雷。
+  PowerShell 直接 `$crypt.RSASign($seed)` 會因為缺第二參數而失敗,要用
+  `ParameterModifier` 指定 byref:
+
+  ```powershell
+  $crypt = New-Object -ComObject CryptUtil.RSAHandler
+  $args  = [object[]]@($seed, "")
+  $mod   = New-Object Reflection.ParameterModifier(2); $mod[1] = $true
+  $rc = [Type]::GetTypeFromProgID('CryptUtil.RSAHandler').InvokeMember(
+          'RSASign', [Reflection.BindingFlags]::InvokeMethod, $null, $crypt, $args, $mod, $null, $null)
+  $signed = $args[1]      # 簽章在這裡
+  ```
+
+  這在「不透過入口網、要自己產生合法簽章來測試進站流程」時很有用。
+
+註冊成功後 `HKLM\SOFTWARE\Classes` 下會出現 ProgID `CryptUtil.RSAHandler`、
+`DataEnc.Crypt`(及各自的 `.1`);`.csproj` `<COMReference>` 的 `Guid` 對應
+`HKLM\SOFTWARE\Classes\TypeLib\{...}`,兩者要一致才連得上。
 
 ### 常見問題
 
