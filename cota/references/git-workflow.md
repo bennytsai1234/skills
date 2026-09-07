@@ -113,6 +113,33 @@ zip 檔名帶上 commit 短 SHA,報告才對得回程式版本。
 
 ### Mend 平台(結果查詢)
 
+#### CSV 匯出自動化
+
+`skills/cota/scripts/mend-export-csv.js`(Playwright)可以把匯出跑成一行指令:
+
+```bash
+NODE_PATH="C:/Users/045650/.local/mcp/playwright-mcp/node_modules" node mend-export-csv.js --project Dev_AISTT --out "<...>/Mend掃描_上線版_<sha>.csv"
+```
+
+選填 `--uuid <專案 UUID>`(跳過查詢)、`--org`、`--headed`、`--timeout`。第一次會登入,
+之後沿用 profile 的 session,實測**約 17 秒**跑完。
+
+- **帳密不寫在腳本裡**:執行時以 Windows 整合式驗證抓送掃入口頁上公告的共用帳密
+  (頁面 `data-copy` 屬性),只存在記憶體,不 log 不落地。
+- 瀏覽器 profile 放 `%LOCALAPPDATA%\cota-mend-export\profile`。
+- 匯出網址會帶 `filter_sast_findings_tbl_status=Unreviewed,In Review,Jira Issue Submitted`,
+  與既有報告的篩選一致,筆數才對得起來。
+
+寫這支腳本時踩到、之後改版要注意的兩點:
+
+1. **不能用網址判斷有沒有登入**。Mend 是 SPA,沒有 session 時網址一開始仍是
+   `/app/orgs/...`,幾秒後才換成 `/app/login`。`waitForURL` 會立刻通過而誤判成已登入。
+   要改成等「密碼欄」或「專案搜尋框」誰先出現。
+2. **專案清單是虛擬捲動的**,DOM 裡只有前幾十筆,直接找連結會找不到。一定要先在
+   `input[placeholder="Search by project name"]` 打專案名篩過,再從
+   `a[href*="project="]` 取 UUID。
+
+
 - 組織:`COTA Commercial Bank, Ltd.`
 - 資安總覽:
   `https://saas.mend.io/app/orgs/COTA%20Commercial%20Bank%2C%20Ltd./dashboard/security`
@@ -187,6 +214,49 @@ dotnet list package --vulnerable --include-transitive
 - 部署包分 test / prod 兩種,**檔名完全相同,只有 exe 內建的抄送金鑰不同**,
   靠 SHA-256 分辨(包內 `版本環境-測試.txt` 有宣告值)。更新流程:停服務 → 覆蓋
   `mend_ai_reviewer.exe` → 啟動 → 對雜湊 → 跑 `部署驗收.cmd`。
+
+#### ⚠ 合併 PDF 預設**不含**提示詞附件
+
+匯出區有一個「附上 AI 提示詞」核取方塊(`chk-export-ai-prompt`),**預設沒勾**。
+稽核要求附件要能看出 AI 依什麼提示詞判定時,務必勾起來——勾了會在合併 PDF 最前面
+多出「AI 評估提示詞」附件頁,內容是工具內建 `security-review` skill 的提示詞全文
+(角色設定、必做的調查方法、輸出結構要求)。實測 2 案的報告:不勾 5 頁、勾了 7 頁。
+
+已經匯出過、少了這兩頁的 PDF 不必重跑複核,直接用同樣的 md 重新匯出即可。
+
+#### 用 API 匯出(不必開 UI)
+
+管理介面是純前端,底層都是本機 HTTP API,`http://127.0.0.1:3800`,單機模式免驗證
+(`/api/whoami` 回 `SYSTEM` / Viewer+Reviewer+Admin)。合併匯出:
+
+```bash
+curl -X POST http://127.0.0.1:3800/api/reports/pdf   -H "Content-Type: application/json"   -d '{"report_paths":["<專案根>/RiskAssessmentReport/<報告>.md", "..."],
+       "report_dir":"<專案根>/RiskAssessmentReport",
+       "include_ai_prompt_page":true}'   -o 合併報告.pdf
+```
+
+`report_paths` 的順序就是附件一、附件二……的順序。回應是 PDF 位元組,同時也會寫回
+`report_dir`。
+
+| 端點 | 用途 |
+|---|---|
+| `GET /api/config` | 目前設定(`projects_base_dir`、`reports_base_dir`、skill、LLM base_url/model/temperature) |
+| `GET /api/skills` | 可用 skill 清單,**`body` 欄就是提示詞全文**(要單獨保存提示詞時從這裡拿) |
+| `GET /api/reports?report_dir=<dir>` | 該目錄的報告清單,含 `ai_verdict`(誤判/存在風險) |
+| `GET /api/report?path=<md>` | 單份報告內容 |
+| `POST /api/parse-findings?project_root=<root>&rules=<外部關鍵字>` | 上傳 Mend CSV(`multipart/form-data`,欄位 `file`),回 `groups` 與 `findings_path` |
+| `POST /api/task/start` | 啟動複核,body 見下 |
+| `GET /api/tasks` | 任務清單與逐案 log |
+| `POST /api/reports/pdf` | 合併匯出(上方) |
+| `GET /health` | 存活檢查 |
+
+`/api/task/start` 的 body:`project_name`、`project_root`、`findings_path`
+(來自 parse-findings)、`context_content`(**留 null**,理由見上)、`report_dir`、
+`skill`(`security-review`)、`base_url`、`api_key`、`model`、`temperature`(0.1)、
+`max_iters`(36)、`concurrency_limit`(≤4)。
+
+另有「最終複核報告」匯出(`SAST_FinalReport_*.pdf`,含異動單號、資安經辦、
+訊息序號與認證碼,認證碼走 `auth_code.serial_host`)——**尚未實際跑過,用法待確認**。
 
 ## 風險評估表與測試報告(異動單附件)
 
