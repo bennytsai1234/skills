@@ -65,7 +65,7 @@ CotaUtility 原本是單一套件,已於 2023.12.01 停止更新(EOS),拆成多�
 | 行動入口網專案標準 | SvrMobile 主機群、zta hostname、RWD、覆核生物辨識、CotaRedisSession Cookie.Name、HSTS、回入口網(RSASign 舊機制 / CotaPortal JWT 新機制) | `references/mobile-web.md` |
 | .NET 8 平台設定 / 開發環境 / 上線申請 | Web.config 等效寫法、NAS 工具包、Mend 原始碼掃描、IIS 憑證、開發與上線分開申請、上線申請單完整欄位(逐欄填寫)、HSTS 標準 | `references/web-platform.md` |
 | 版本控制 / 抄送 / 異動單 | Gogs 倉庫、master=正式/dev=測試抄送、避免漏選檔案、Mend 原始碼檢測(入口名為 SCA 但實跑 SAST)與結果比對、Mend AI Reviewer 複核、CotaIT 異動單填寫、風險評估報告產生器(可直接打 API)、緊急抄送 | `references/git-workflow.md` |
-| NuGet 私有來源 | CotaNuGet 設定(`\\192.168.251.238\data\CotaNuGet`)、開發環境 proxy | `references/nuget-setup.md` |
+| NuGet 私有來源 | BaGetter + CotaNuGet 來源分工、NuGet.Config 優先順序、Proxy/Restore 驗證 | `references/nuget-setup.md` |
 
 ### 權限管理系統近期更新（CotaUtility.PermProvider 1.0.5）
 
@@ -158,10 +158,13 @@ reference(`web-platform.md`、`performance-counter-healthcheck.md`),不需要跑
    (CotaDapper、CotaWebAuth 2.0+、SecureMySql、部分 HealthCheckCore)。
 2. **確認專案類型** —— 內部 / DMZ(對外)/ 分行系統。分行系統(Br 前綴、中台/AIX
    路由架構)不適用本 skill,提醒使用者查分行系統專用規範。
-3. **確認專案是否已設定 CotaNuGet 私有來源** —— 沒有的話參考
-   `references/nuget-setup.md`。目前有效路徑以 `\\192.168.251.238\data\CotaNuGet`
-   為準(較新文件);舊文件另有 `\\192.168.233.237\data\CotaNuGet`,若 restore 失敗
-   再找系統組核對。
+3. **確認專案與建置環境的 NuGet 來源** —— 參考 `references/nuget-setup.md`，
+   先用 `dotnet nuget list source` 檢查實際生效來源與方案/專案層級的
+   `NuGet.Config`。公司要求客戶端集中取用公開套件時，BaGetter
+   (`https://ctbaget.cotabank.com/v3/index.json`) 應啟用、`nuget.org` 應停用；
+   Cota 內部套件是否已完整搬到 BaGetter 尚未由切換教學證明，因此在確認前保留
+   已核對的 `CotaNuGet` UNC 來源。不能把 `\\nas\data\CotaNuGet` 或其他文件路徑
+   直接當成所有環境的有效值。
 
 ## 回報格式(健檢完成後)
 
