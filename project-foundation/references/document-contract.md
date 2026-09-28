@@ -1,6 +1,6 @@
 # Project Document Contract
 
-Use one canonical home for each kind of durable information.
+Use one canonical home for each kind of durable information. If the code or git history already shows it, do not write it down.
 
 ## `AGENTS.md` — how agents work in this repository
 
@@ -9,37 +9,23 @@ Keep it project-specific and compact.
 Include only rules a coding agent cannot reliably infer from the repository, for example:
 
 - required project language or reporting behavior when different from global defaults;
-- important project-specific constraints/contracts;
-- authoritative build/test/document pointers;
-- project-specific delivery expectations;
-- where the atlas index and key docs live.
+- important project-specific constraints and scope;
+- build/test/verification commands and which ones are authoritative;
+- release and delivery process;
+- local environment facts that affect how agents work (services, ports, secrets handling), when they matter.
 
-Do not copy the global Agent philosophy, architecture narrative, environment tutorial, or every development command into it.
+Do not copy the global agent instructions, architecture narrative or file inventories into it.
 
 ## `README.md` — what the project is
 
 Include:
 
 - purpose and major user-facing capability;
-- minimal quick start when useful;
-- links to DEVELOPMENT, DESIGN (if present), architecture (if present), and atlas index;
+- minimal quick start for a human (prerequisites, setup, run) when useful;
+- link to `DESIGN.md` when present;
 - any information a human should see first.
 
-Do not turn README into the full architecture or engineering map.
-
-## `DEVELOPMENT.md` — how to build/run/test locally
-
-Include only current, actionable developer information:
-
-- prerequisites/toolchain;
-- setup;
-- build/run/test commands;
-- local DB/Redis/queue/services when applicable;
-- ports and configuration entrypoints;
-- local topology and debugging notes;
-- how company/test/prod resources differ when that matters to development.
-
-Keep secrets out of the repository. Move host-specific reusable operations to Skills when they are not part of ordinary project development.
+Do not turn README into an architecture document.
 
 ## `DESIGN.md` — visual/product design system
 
@@ -58,28 +44,15 @@ Useful sections may include:
 
 Prefer concrete rules and rationale over adjectives such as "modern" or "premium" alone.
 
-## `docs/architecture.md` — optional high-level system structure
+## Not created
 
-Create only when a separate cross-module view adds value.
-
-Keep to:
-
-1. System overview.
-2. Critical runtime flows.
-3. Data and state ownership.
-4. External systems.
-5. Deployment topology.
-
-Do not copy module maps, file inventories, or work-history decisions into it.
-
-## Codebase Atlas
-
-Atlas files answer where code ownership lives and where a change should start. They are maintained by `codebase-atlas` and are not duplicated into the foundation docs.
+- `DEVELOPMENT.md`: setup and commands go in `README.md` (for humans) or `AGENTS.md` (for agents).
+- `docs/architecture.md` and code maps: module structure and data flow are read from the code.
 
 ## `docs/changes/`
 
-Formal Atlas Planner/Relay task packages, dispatch plans, completion records, and summaries live here. They are work history, not architecture or foundation guidance.
+Formal Atlas Planner/Relay task packages, dispatch plans and completion records live here when that workflow is used. They are work history, not project guidance; leave them in place.
 
 ## Other docs
 
-Other long-lived project-specific documents belong under `docs/` when practical. Do not move files whose root location is required or conventional for tooling/ecosystem behavior (for example LICENSE or tool-discovered configuration) merely to satisfy a visual layout.
+Specs, changelogs and other long-lived documents that are not agent guidance can stay under `docs/`. Do not move files whose root location is required by tooling (for example LICENSE) merely to satisfy a layout.

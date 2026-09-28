@@ -22,13 +22,9 @@ Read `references/delegation.md` for the shared Planner -> Relay -> Worker contra
 
 1. Preserve the human's original request and current constraints.
 2. Read applicable `AGENTS.md` rules.
-3. If a Codebase Atlas exists, read its index once and then the module docs relevant to the request.
-4. Read `DEVELOPMENT.md` only when build/run/test/environment details matter.
-5. Read `DESIGN.md` only for UI/design-system work.
-6. Read `docs/architecture.md` only when the issue crosses modules/processes/services or depends on runtime/state/deployment relationships.
-7. Use live search and code reading for exact evidence.
-
-If no atlas exists, continue with normal repository inspection. Do not stop planning merely because a map is missing.
+3. Read `README.md` when project purpose or build/run/test commands matter.
+4. Read `DESIGN.md` only for UI/design-system work.
+5. Use live search, code reading and git history for exact evidence.
 
 ## Discussion phase
 

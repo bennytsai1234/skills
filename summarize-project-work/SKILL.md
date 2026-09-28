@@ -19,7 +19,7 @@ description: "以專案目前的原始碼、檔案、Git 歷史、README、測�
 - 測試檔、測試命令、CI 設定與可安全執行的驗證；沒有測試時明確記錄「目前專案未找到測試檔」。
 - 可執行原始碼的實際控制鏈：入口 → 核心流程 → 輸出或副作用；只讀摘要、圖譜或文件不足以替代原始碼。
 
-若專案適用 codebase-memory，先確認索引；未索引就先建立索引，再優先使用 get_architecture、search_graph、trace_path、get_code_snippet 做程式碼探索。圖譜可能過期，必須回到目前 Git 檔案、實際引用與必要的 targeted check 交叉驗證。找字串、README、設定、腳本與非程式檔時可使用 rg／rg --files。
+找字串、README、設定、腳本與非程式檔時可使用 rg／rg --files。
 
 ## 分析流程
 

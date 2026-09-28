@@ -1,6 +1,6 @@
 ---
 name: atlas-relay
-description: "Execution manager for a formal Atlas dispatch plan. Load only when instructions arrive as a dispatch plan or with ROLE: relay-lead. Execute detailed atlas/v4 task packages strictly in order, route each package to the current suitable executor, independently accept the returned work, record completion, deliver according to the plan, and update affected atlas facts. Do not use for direct human planning, ordinary development, or a single ROLE: worker package."
+description: "Execution manager for a formal Atlas dispatch plan. Load only when instructions arrive as a dispatch plan or with ROLE: relay-lead. Execute detailed atlas/v4 task packages strictly in order, route each package to the current suitable executor, independently accept the returned work, record completion, and deliver according to the plan. Do not use for direct human planning, ordinary development, or a single ROLE: worker package."
 ---
 
 # Atlas Relay
@@ -86,12 +86,6 @@ After acceptance:
 5. Only then start the next package.
 
 After the final package, run the dispatch plan's Shared Verification. Archive the dispatch plan only after shared verification succeeds.
-
-## Atlas maintenance
-
-Do not rebuild the atlas during ordinary execution.
-
-After the batch, update only affected module-map facts when accepted completion records show a real change in module responsibility, boundary, dependency, change route, or risk. If the map is broadly stale or its module split is wrong, report that a `codebase-atlas` refresh/rebuild is needed instead of silently running one.
 
 ## Report
 
