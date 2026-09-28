@@ -4,7 +4,6 @@ Canonical home for reusable Codex and agent skills.
 
 ## Atlas development workflow
 
-- `atlas-fast` — disabled (not linked into agent skill dirs); ordinary development is handled directly under the global `AGENTS.md`.
 - `atlas-planner` — formal planning path: investigate and discuss with the human until problem/root cause/target/solution are explicitly confirmed, then write detailed `atlas/v4` packages and one dispatch plan.
 - `atlas-relay` — execute a confirmed dispatch plan sequentially, route workers, independently accept results, record completion, and deliver the batch.
 - `atlas-worker` — implement one detailed worker package and return real verification evidence.
