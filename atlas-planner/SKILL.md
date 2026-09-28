@@ -15,7 +15,7 @@ Read `references/delegation.md` for the shared Planner -> Relay -> Worker contra
 
 - `ROLE: worker` -> use `atlas-worker`.
 - `ROLE: relay-lead`, or a dispatch plan -> use `atlas-relay`.
-- Human wants ordinary direct execution without formal planning -> use `atlas-fast`.
+- Human wants ordinary direct execution without formal planning -> handle it directly without an atlas skill.
 - Human explicitly wants discussion/planning/decomposition/formal handoff -> continue here.
 
 ## Enter the repository

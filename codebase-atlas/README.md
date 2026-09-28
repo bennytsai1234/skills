@@ -13,7 +13,7 @@ The index routes work between modules. Each module doc explains ownership, bound
 
 Project foundation files (`AGENTS.md`, `README.md`, `DEVELOPMENT.md`, optional `DESIGN.md`, optional `docs/architecture.md`) are intentionally outside this skill. `project-foundation` owns that concern.
 
-Ordinary development uses `atlas-fast`. Formal human-discussed planning uses `atlas-planner` -> `atlas-relay` -> `atlas-worker`. Codebase Atlas runs only when a human explicitly asks to build, refresh, rebuild, or repair the map.
+Ordinary development is handled directly without an atlas skill. Formal human-discussed planning uses `atlas-planner` -> `atlas-relay` -> `atlas-worker`. Codebase Atlas runs only when a human explicitly asks to build, refresh, rebuild, or repair the map.
 
 ## Modes
 

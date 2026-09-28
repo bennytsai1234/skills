@@ -2,7 +2,7 @@
 
 Single source of truth for the formal `atlas-planner` -> human -> `atlas-relay` -> `atlas-worker` workflow.
 
-Ordinary development does not use this contract; `atlas-fast` handles that path. Formal planning uses this contract because the human explicitly wants discussion, decomposition, handoff, and independent acceptance.
+Ordinary development does not use this contract; it is handled directly without an atlas skill. Formal planning uses this contract because the human explicitly wants discussion, decomposition, handoff, and independent acceptance.
 
 ## 1. Loop
 
@@ -74,7 +74,7 @@ Worker does not plan the batch, archive packages, commit/push, or rewrite the ag
 | `ROLE: worker` | Worker / `atlas-worker` |
 | `ROLE: relay-lead` or dispatch plan | Relay / `atlas-relay` |
 | human explicitly asks to plan/discuss/decompose/formalize | Planner / `atlas-planner` |
-| ordinary direct development | `atlas-fast` |
+| ordinary direct development | direct handling (no atlas skill) |
 
 ## 4. Dispatch plan (`atlas/v4`)
 

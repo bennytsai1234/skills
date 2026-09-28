@@ -16,7 +16,7 @@ Read `../atlas-planner/references/delegation.md` for the shared `atlas/v4` contr
 - `ROLE: worker` -> continue here.
 - `ROLE: relay-lead` or a dispatch plan -> use `atlas-relay`.
 - Human is planning/discussing -> use `atlas-planner`.
-- Ordinary direct development -> use `atlas-fast`.
+- Ordinary direct development -> handle it directly without an atlas skill.
 
 ## Read before editing
 
