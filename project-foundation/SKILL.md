@@ -29,7 +29,7 @@ Every file and every host artifact needs a current consumer. Variant files encod
 
 ## Organize once, maintain every day
 
-A one-time cleanup decays unless everyday work keeps it. The rules that keep the shape live in the repository's `AGENTS.md`, which every session loads: the maintenance section from `references/cleanup.md` (top level, deploy targets, removing what is replaced, no topic docs, scratch files, host versions) and, for repositories that run experiments, the experiments section from `references/experiments.md`. This skill writes and updates those sections; it is not what keeps the repository tidy between runs.
+A one-time cleanup decays unless everyday work keeps it. The rules that keep the shape live in the repository's `AGENTS.md`, which every session loads: the maintenance section and the delivery workflow from `references/cleanup.md` (top level, deploy targets, removing what is replaced, no topic docs, LF line endings, fixed tags and staging, streamed images, three-check acceptance) and, for repositories that run experiments, the experiments section from `references/experiments.md`. This skill writes and updates those sections; it is not what keeps the repository tidy between runs.
 
 Do not create `README.md`, `CLAUDE.md`, `DEVELOPMENT.md`, a `docs/` directory, a lessons folder, or other documents. Module structure, data flow and file layout are read from the code, behavior contracts live in tests, and work history lives in git; written copies go stale. An existing `README.md` is the human's entry point: keep it short and correct what is stale, but do not create one or move agent rules into it.
 
@@ -54,14 +54,14 @@ Split mixed statements so only the observed part is `[verified]`. When unsure, l
 8. Do not delete ecosystem-required files (LICENSE, tool configuration), files an external tool or party requires, an existing `README.md`, or Atlas packages under `docs/changes/planning/` while their dispatch is still running.
 9. Agent memory outside the repository (for example Claude Code auto-memory) may hold experiment verdicts and project rules. Propose them as candidates and copy only after the human confirms; never copy credentials, hostnames or account details the repository does not already contain.
 10. Clean up the repository shape following `references/cleanup.md`: deploy variants into `deploy/<target>/`, unconsumed files deleted, `docs/` harvested and removed, untracked clutter classified. Present the full move/rename/delete map first and apply only the groups the human approves.
-11. If the project deploys to hosts, prune runtime artifacts following `references/cleanup.md`: keep what is running plus one rollback per service, delete the rest only after confirmation, then check the services are still healthy.
-12. Write or update the `AGENTS.md` maintenance section from `references/cleanup.md`, filled in with this repository's actual top level, deploy targets and hosts.
+11. If the project deploys to hosts, prune runtime artifacts following `references/cleanup.md`: keep only what is running and what a build or on-demand start still uses, delete the rest only after confirmation, then check the services are still healthy.
+12. Write or update the `AGENTS.md` maintenance section and delivery workflow from `references/cleanup.md`, filled in with this repository's actual top level, deploy targets, tags, hosts and smoke sample; add `.gitattributes`/`.editorconfig` for LF and `LABEL project=<project>` to the Dockerfiles.
 13. Decide whether `DESIGN.md` is justified; skip it when it would be empty or speculative.
 14. Validate links and paths, run the tests or build that cover moved files, and eliminate contradictory duplicate instructions.
 
 ## New repository workflow
 
-1. Create `AGENTS.md` with the known conventions and commands and the maintenance section from `references/cleanup.md`; use explicit TODOs for genuinely undecided values rather than inventing them.
+1. Create `AGENTS.md` with the known conventions and commands, the maintenance section and the delivery workflow from `references/cleanup.md`, plus `.gitattributes`/`.editorconfig` for LF; use explicit TODOs for genuinely undecided values rather than inventing them.
 2. If the repository will run experiments, add the experiments section to `AGENTS.md` and create the experiment root when the first run happens; an empty registry or placeholder run adds nothing.
 3. Create `DESIGN.md` only when a UI/design system or confirmed prototype already exists.
 

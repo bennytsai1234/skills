@@ -1,0 +1,5 @@
+# 文字檔一律 LF：Windows 開發機與 Linux 主機共用同一份檔案，shell script 帶 CRLF 會在主機上跑壞。
+* text=auto eol=lf
+# 只有 Windows 專用的批次檔用 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
