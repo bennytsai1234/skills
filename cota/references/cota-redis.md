@@ -23,8 +23,9 @@
 
 ## 已用時的正確用法檢查清單
 
+- [ ] **新申請專案是否使用當下最新版 Redis 連線程式碼／CotaRedis 套件**，並以申請帳號的執行身分連線（2026-10-01 使用者確認）。下方 v1.1.0 / v1.2.x 是已驗證的歷史機制，不把 v1.2.x 當成固定的最新版。
 - [ ] 套件版本是否跟 Redis 帳號的建立方式相符(見下方「帳號與版本」)。帳號是用新方式(AD User)
-      建的專案**只能用 v1.2.x**,停在 v1.1.0 會在所有節點 `WRONGPASS`
+      建的專案需要新版驗證機制，停在 v1.1.0 會在所有節點 `WRONGPASS`
 - [ ] 是否用新式的 `environment: RedisEnvironment.Internal/Dmz/BrSys` 參數,而不是舊式
       `isExternalProject: bool`(舊寫法仍可用但文件標示建議遷移到新版)
 - [ ] `AddCotaRedisSession` 是否確實**取代**掉原本的
@@ -173,16 +174,13 @@ in-process／out-of-process,也不能放兩個 in-process app,暫時的探測 ap
 申請時要確認帳號對應的是專案的 AP User。這不是程式碼層面能自己解決的,回報時
 要提醒使用者這個前置作業。
 
-**這個申請要在開始本機開發/測試前就辦好,不是等上線才辦**:CotaRedis 套件沒有可設定的
-connection string,內部直接依 `RedisEnvironment.Internal/Dmz/BrSys` 參數指向銀行內部
-真實 Redis Server,**沒有本地端模擬/dev fallback**。也就是說開發機(`dotnet run`/IIS
-Express)一樣是連正式的內部 Redis——已驗證的實際案例(`CotaIT2019` 專案)
-`appsettings.Development.json` 完全沒有針對 Redis/Session 覆寫任何設定,證實開發環境
-與正式環境用的是同一套內部服務。若還沒申請帳號就在本機測 Session/Cache 功能,一樣會
-直接噴 `RedisTimeoutException`,不是只有上線後才會遇到。
+**依申請狀態分流**（2026-10-01 使用者確認）：
 
-v1.2.x 另外要注意:帳號跟著執行身分走,開發機用自己的 AD 帳號跑(`dotnet run`／IIS Express／
-Kestrel)會登入失敗。要在本機測 Redis,就得用 IIS App Pool 以專案的 AP User 身分執行。
+- **尚未申請或資源未到位**：先用本機 Redis 開發，保留 AA + Redis 目標；不要讓尚未開通的公司帳號阻塞本機功能。
+- **已申請且資源到位**：使用申請帳號連公司 Redis。新申請專案必須用當下最新版連線程式碼／CotaRedis 套件，舊版組件名稱公式不能用來驗證新帳號。
+- **使用公司 CotaRedis 連線路徑時**：套件依 `RedisEnvironment.Internal/Dmz/BrSys` 指向公司 Redis，不會因為在開發機執行就自動切換 localhost。先前核對的版本沒有本機 fallback；不要把這個限制誤寫成「申請前不能先用本機 Redis 開發」。
+
+公司 Redis 帳號跟著執行身分走。開發機以未獲授權的開發者身分跑，登入失敗不能證明申請帳號有問題；在本機 IIS 測公司連線時，用申請的 AP User 身分執行並驗證。
 
 ## 適用情境提醒(專案沒有這個功能時怎麼判斷要不要建議)
 

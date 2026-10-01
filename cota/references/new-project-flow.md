@@ -7,16 +7,21 @@
 
 ## 預設立場:完整流程是預設,精簡才需要理由
 
-內部專案**預設就走公司完整流程**——雙環境抄送、前台雙機高可用、多機時 Redis 共享狀態、
+內部專案**預設就走公司完整流程**——雙環境抄送、AA + Redis 共享狀態、
 接監控看板。不是逐項評估「要不要導入」;要偏離(例如單機、不接看板)才需要明確理由與
 使用者決定。掃描或開案時的預設姿態是「照標準跑」,不是「先問要不要」。
 
-> **雙機高可用有兩種擺法,公司都支援:AA(Active/Active,兩台同時服務)與
-> AP(Active/Passive 主備,一台服務、一台待命,故障切換)。** 預設姿態是「要雙機」,
-> 但 AA 還是 AP **由專案自己決定、不是硬性規定**——skill 與 Confluence 都沒有明訂
-> 「該選哪個」的準則,實務上是每專案在上線申請表勾「Active/Active 模式服務:啟用/
-> 不啟用」+ 系統組在 HAProxy 設定(active/active 或 active/backup)來決定。開案時
-> 要把 AA 與 AP 的取捨攤給使用者選,不要預設替他勾 AA。兩者的工程差異見第三節。
+> **現行預設為 AA + Redis**（2026-10-01 使用者確認）。AA 是兩台同時服務，
+> AP 是一台服務、一台待命；AP 僅在專案已明確採用主備模式時沿用。
+> 開案依 AA 預設進行，不固定要求使用者重新選 AA/AP。兩者的工程差異見第三節。
+
+### 依申請狀態選開發資源
+
+- **尚未申請或資源未到位**：本機 DB / LocalDB + 本機 Redis，先開發核心功能與 AA 行為。
+- **已申請且資源到位**：用取得的 test 帳號在測試 DB 建表；程式用申請帳號讀寫 DB、連 Redis。
+- **新申請專案**：Redis 連線程式碼／CotaRedis 套件使用當下最新版，並以申請帳號的執行身分驗證，不能沿用舊版驗證方式。
+
+使用已申請的測試資源是正常開發方式；不要求先走完固定的本機階段才准接入。
 
 ## 一、環境骨架:測試 + 正式,雙軌是預設(這就是 staging)
 
@@ -42,13 +47,13 @@
 | 進版方式 | 自己的分支,VS 直接跑或本機 IIS | push `dev` → 同步到測試抄送目錄 → 在抄送系統執行 | push `master` → 抄送目錄 → **CotaIT 異動單**(附風險評估表＋測試報告)→ 抄送 |
 | 主機 | 自己的開發機 | 開發 AA 主機,DNS `svr<機號>_aa<編號>.cotabank.com`(底線) | 正式 AA/AP 主機 |
 | 站台網址 | `hosts` 指到自己(注意會蓋掉公司 DNS,驗證前先確認沒被註解) | `prj<專案>.cotabank.com` → **192.168.251.112**(HAProxy) | `prj<專案>.cotabank.com` → **10.1.103.140**(HAProxy) |
-| 雙機 | 單機 | AA 兩台(切換由抄送流程最後一步做) | AA 或 AP,依上線申請單勾選 |
+| 雙機 | 起步/除錯可單機；AA 基礎完成後雙 Web | AA 兩台(切換由抄送流程最後一步做) | 預設 AA；AP 僅在專案已明確採用時沿用 |
 | HAProxy | 無;要模擬用 IIS ARR + URL Rewrite | 有 | 有 |
 | 執行身分 | 自己的 AD 帳號 / IIS 應用程式集區 | ⚠ **AP User**(先辦「系統帳號異動單」`ISMS-3-002-T02-V2.0` 拿到帳號) | ⚠ 同左,正式機的 AP User |
 | 憑證 | 匯入 `star.cotabank.com.tw.p12`(NAS `開發環境Cert`,密碼 `123123`),IIS 繫結 https | 系統組處理 | 系統組處理 |
-| MSSQL | 連測試 DB 開發 | ⚠ 測試 DB:**建表用自己的帳號**,程式跑的是 AP User → 要**申請該 DB 的 R+W 權限** | ⚠ 正式 DB,另外申請;測試/正式各一個 DB |
-| DB 連線寫法 | 三個環境都一樣:`svrdb` + SSPI 整合驗證,**連線字串不帶帳密**(權限綁在執行身分上) | 同左 | 同左 |
-| Redis | 套件預設連內部 Redis cluster(`svrRD1～3` 的 6402／7402),網路本機連得到;但 v1.2.x 帳號跟執行身分走,要在 IIS App Pool 以 AP User 執行才登得進去 | ⚠ 要**申請 RedisDB 帳號**(v1.2.x 為 AP User 大寫;v1.1.0 為組件名大寫,見 `references/cota-redis.md`);連不上會讓站台**啟動就掛** | ⚠ 同左 |
+| MSSQL | 未申請用本機 DB/LocalDB；已申請可連測試 DB | ⚠ **取得的 test 帳號建表**；程式以申請帳號(AP User)的 **R+W 權限**讀寫 | ⚠ 正式 DB,另外申請;測試/正式各一個 DB |
+| DB 連線寫法 | 本機 DB 用本機設定；接公司測試 DB 時走 `svrdb` + SSPI | `svrdb` + SSPI，連線字串不帶帳密，權限綁在申請帳號的執行身分上 | 同左 |
+| Redis | 未申請用本機 Redis；已申請以申請帳號連公司 Redis | ⚠ **新申請專案使用最新版 Redis 連線程式碼／CotaRedis 套件**，以申請帳號的執行身分連線；帳號/權限未到位不可假設已接通 | ⚠ 另核對正式環境的帳號與權限 |
 | Log | 沒接 sink 就完全沒有 log(見 `references/cota-redis-log.md` 的坑) | CotaRedisLog → Redis → **Seq** 查詢 | 同左 |
 | 監控看板 | 不接 | 可接 | **必接**(CotaHealthCheckCore + PerformanceCounter,填申請單的 `GetProjectInfo` 等 URL) |
 | 共享儲存 | 本機磁碟 | ⚠ 多機 → 上傳檔/報表產物要放 UNC 共享(系統組開 share 並授權 AP User) | ⚠ 同左 |
@@ -58,15 +63,14 @@
 
 1. **開發申請** → 管理組＋系統組配開發機、AP User、HostName(開發階段就要辦)。
 2. **系統帳號異動單** → 申請 AP User 帳號本身(是上線申請單 AP User 欄位的前置)。
-3. **DB 權限** → 測試/正式 DB 各自申請 AP User 的 R+W;建表可以用自己的帳號先做。
-4. **RedisDB 帳號** → 有用 Session/Cache/Log 就要,三個環境分別開通。
+3. **DB 權限** → 測試 DB 取得 test 帳號建表，程式以申請帳號的 R+W 權限讀寫；正式 DB 另外申請。
+4. **RedisDB 帳號** → 有用 Session/Cache/Log 就要；新申請專案使用最新版連線程式碼與申請帳號。未申請先用本機 Redis。
 5. **UNC 共享**(有檔案產物才需要)→ 系統組開 share 並授權 AP User。
 6. **上線申請** → 上線前辦,系統組會拿開發申請表核對;AA 要勾「Active/Active 模式服務=啟用」+ HAProxy=啟用。
 7. **CotaIT 異動單** → 每次上正式都要,附風險評估表＋測試報告。
 
-> **未驗證項目**:第 3 項「測試 DB 建表用自己帳號、程式用 AP User 的 R+W」與第 4 項
-> 「Redis 帳號三環境分別開通」是依使用者口述與套件行為整理的,Confluence 上還沒核對到
-> 對應頁面;實際申請時以系統組的表單為準。
+> 申請後的 test 帳號建表、申請帳號讀寫/連 Redis，以及未申請先用本機的分流，
+> 依 2026-10-01 使用者確認的現行做法整理；不是另行宣稱已核對 Confluence。
 
 ## 二、兩次申請,分開辦
 
@@ -77,11 +81,10 @@
 > 前台雙機在申請表就要勾:**Active/Active 模式服務=啟用**、**HAProxy=啟用**。
 > 申請單完整欄位(逐欄填寫)見 `references/web-platform.md`。
 
-## 三、前台雙機高可用是預設(AA 或 AP)→ 多機時 Redis 變標配
+## 三、AA + Redis 是預設
 
-公司預設**前台請求層要雙機高可用**,擺法有 AA 與 AP 兩種(見「預設立場」的說明,兩種都
-支援、由專案選)。一旦多機,下列從「可選」升為「標配」——但**要共享多少狀態,AA 跟 AP
-差很多**,先分清楚:
+公司專案預設**前台 AA + Redis**，跨機即時狀態需要共享。若專案已明確採用 AP，
+才依其主備行為判斷共享需求；保留兩種架構的差異供既有專案核對：
 
 ### AA 與 AP 的工程差異(決定要搬多少東西上 Redis)
 
@@ -165,8 +168,9 @@ Session): https://svrconf.cotabank.com/pages/viewpage.action?pageId=82511127
 - [ ] Gogs 建倉庫 → 轉移所有權給組織(研發組 `Research` 等)
 - [ ] 目標 Framework 確認(net8.0),CotaNuGet 私有來源設好(`references/nuget-setup.md`)
 - [ ] 辦**開發申請**(開發機、AP User、HostName)
-- [ ] DB 走 svrdb + SSPI;正式/測試兩個 DB
-- [ ] 雙機擺法:跟使用者確認走 AA(Active/Active)或 AP(主備)——公司都支援,不預設替他勾
+- [ ] 開發資源依申請狀態：未申請用本機 DB/Redis；已申請用 test 帳號建表、申請帳號讀寫 DB/連 Redis
+- [ ] 公司 DB 走 svrdb + SSPI;正式/測試兩個 DB；新申請專案核對 Redis 連線程式碼／套件為最新版
+- [ ] 預設 AA + Redis；AP 僅在專案已明確採用時沿用
 - [ ] 前台雙機標配:CotaRedis Session/Cache + 申請 RedisDB 帳號;金鑰圈脫離 DPAPI
       (AA:Session＋跨機共享狀態全需;AP:Session 建議、其餘視需求)
 - [ ] 共享儲存:本機檔案產物移到 UNC 共享或落 DB(AA/AP 都要)

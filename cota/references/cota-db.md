@@ -7,6 +7,13 @@ Target netstandard2.0,.NET Framework 跟 .NET Core 專案都能用。上線日 2
 
 ## 內部 MSSQL 連線標準
 
+### 依申請狀態選資源與帳號
+
+依 2026-10-01 使用者確認：尚未申請或資源未到位，先用本機 DB / LocalDB 開發。
+已申請後，取得的 test 帳號可在測試 DB 建表；程式則以申請帳號的 R+W 權限讀寫。
+建表與程式讀寫是不同用途，驗證時分別核對；不要把有建表權限當成執行帳號已可讀寫。
+以下 svrdb + SSPI 規則適用於公司 DB 連線，本機 DB 的開發設定不列為偏離。
+
 內部專案接 MSSQL 的標準連線方式是 **svrdb + SSPI 整合驗證**——也就是
 `CotaDB(string dbName)` 建構子組出的連線字串(`data source=svrdb;...Integrated
 Security=SSPI;...`)。這代表:
