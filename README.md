@@ -24,6 +24,7 @@ Canonical home for reusable Codex and agent skills.
 - `compass` — 把偏掉的對話拉回正確方向
 - `engineering-judgment` — 教你身為工程師如何做技術取捨與判斷
 - `hermes-ops`
+- `handoff` — 整理目前對話成已遮蔽敏感資料的代理交接文件
 - `mmx-cli`
 - `openclaw-ops`
 - `summarize-project-work`
