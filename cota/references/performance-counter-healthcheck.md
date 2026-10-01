@@ -34,7 +34,7 @@ Web 應用程式**(HealthCheckCore)。
       `MapCotaCheckExtraServices` 是否已加 `.AllowAnonymous()`——看板後端(svrotr)
       來 ping 不帶 Windows 驗證,沒放行的話看板會顯示 401
 
-## 接入資訊看板[專案監控](警告系統)的完整規格
+## 接入資訊看板「專案監控」（警告系統）的完整規格
 
 這兩個端點的真正用途:資訊看板後端定時 ping 專案,異常時自動**推播訊息 + 語音告警**
 (語音在推播後 ping 頻率×3 分鐘撥放)。接入時除程式碼外還有以下非程式碼事項:

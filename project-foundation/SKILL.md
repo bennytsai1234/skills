@@ -7,7 +7,7 @@ description: "Initialize or standardize the minimal documentation of a software 
 
 Create the smallest set of project documents that helps humans and coding agents work in the repository. Code and git history are the primary source of truth; documents only hold what they cannot show.
 
-This skill is for repository documentation, not product ideation. `project-genius` handles pre-code product requirements/prototyping.
+This skill is for repository documentation, not product ideation.
 
 Read `references/document-contract.md` before creating or reorganizing files.
 

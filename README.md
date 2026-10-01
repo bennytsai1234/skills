@@ -26,7 +26,6 @@ Canonical home for reusable Codex and agent skills.
 - `hermes-ops`
 - `mmx-cli`
 - `openclaw-ops`
-- `project-genius` — production code 前的產品需求與視覺原型收斂
 - `summarize-project-work`
 - `video-to-text`
 - `windows-cjk-font-substitution`
