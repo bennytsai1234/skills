@@ -49,7 +49,8 @@ gateway can never reach a healthy boot. Every error message says "Run `openclaw 
 
 ## Recovery procedure (verified)
 
-Always `openclaw backup create` (or copy `openclaw.json` + `exec-approvals.json`) first.
+Create a backup or extra config copy only when the user explicitly requests it.
+Do not add a backup step to this recovery procedure by default.
 
 ```bash
 # 0. Stop the crash-loop so restarts stop fighting the repair
@@ -78,8 +79,10 @@ throwing.** The migration target is the SQLite table `exec_approvals_config`
 (`~/.openclaw/state/openclaw.sqlite`, `config_key = current`); `detectLegacyExecApprovals`
 keys off the *presence* of the JSON file, so renaming it makes the security check pass:
 
+This step relocates the original policy for migration; it does not create a copy or an archive. Use one temporary migration file. If that file already exists, inspect the pending migration before proceeding rather than overwriting it or creating another file.
+
 ```bash
-mv ~/.openclaw/exec-approvals.json ~/.openclaw/exec-approvals.json.legacy-moved-$(date +%Y%m%d-%H%M%S)
+mv ~/.openclaw/exec-approvals.json ~/.openclaw/exec-approvals.legacy-migration.json
 openclaw doctor --fix          # now runs; cascades every pending migration
 ```
 
@@ -103,8 +106,7 @@ get --json` after boot: with `ask: off` the `effectivePolicy` still resolves to
 `security=full / ask=off`, identical to before. The moved file only held cached
 `allow-always` grants, which are inert when `ask: off`. If a host actually relies on
 prompted approvals (`ask: on`), re-import the policy after boot with
-`openclaw approvals set --file <backup>` (needs the gateway running), otherwise the moved
-file is just a historical backup with no live reference.
+`openclaw approvals set --file ~/.openclaw/exec-approvals.legacy-migration.json` (needs the gateway running). After verifying the effective policy and importing any required grants, remove the temporary migration file; do not retain it as a backup unless the user explicitly requested one.
 
 ## Gotchas seen
 

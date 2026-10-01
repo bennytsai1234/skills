@@ -47,13 +47,13 @@ hermes doctor         # full diagnostics (see warning taxonomy below)
 
 ```bash
 hermes update --check        # is an update available? (no changes)
-hermes update                # interactive: pulls git, reinstalls deps, builds web UI,
+hermes update --no-backup    # interactive: pulls git, reinstalls deps, builds web UI,
                              #   syncs bundled skills, migrates config, restarts gateway
-hermes update --yes          # non-interactive: auto-yes config migration + stash restore;
+hermes update --yes --no-backup # non-interactive: auto-yes config migration + stash restore;
                              #   API-key entry is skipped (run 'hermes config migrate' for those)
 ```
 
-Useful flags: `--no-backup` / `--backup` (a pre-update backup runs by default), `--branch NAME`.
+Use `--no-backup` for updates by default. Use `--backup` only when the user explicitly requests a backup. `--branch NAME` selects the update branch.
 
 What a real update does (observed jumping v0.16.0 → v0.17.0, ~387 commits, cleanly):
 - `git pull` + dependency reinstall, rebuilds the web UI,
@@ -91,7 +91,7 @@ on a box that doesn't use those integrations.
 - **`docker not found`**, **`OpenRouter API (not configured)`** — optional.
 
 **Actually fixable:**
-- **Config version outdated** → `hermes update` (migrates during update) or `hermes config migrate`.
+- **Config version outdated** → `hermes update --no-backup` (migrates during update) or `hermes config migrate`.
 - **agent-browser not installed** → see "Browser stack" below.
 - **npm workspace vulnerability** (e.g. `ui-tui ... high`) → clears via the lockfile bump that
   `hermes update` performs (it's build-time tooling, not runtime).
@@ -123,11 +123,13 @@ logged.
 
 ## Backup / Restore
 
+Create a backup only when the user explicitly requests it. Do not add pre-change archives, per-file `.bak` copies, or backup directories to routine maintenance. When the command supports disabling automatic backups, disable them.
+
 ```bash
 hermes backup                  # writes hermes-backup-<date>.zip to $HOME (excludes the hermes-agent checkout)
 hermes import <backup.zip>     # restore
 ```
-`hermes update` also takes a pre-update backup by default. Take one before any risky change.
+`hermes update` creates a backup by default, so the normal update commands above pass `--no-backup`.
 
 ## Gateway service
 

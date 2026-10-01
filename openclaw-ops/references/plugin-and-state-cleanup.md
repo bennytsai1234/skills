@@ -4,8 +4,8 @@ Notes from a real maintenance pass (OpenClaw 2026.6.9) where `doctor`/`gateway s
 kept reporting **"Plugin version drift"**, **"conflicting plugin install metadata"**,
 and **"Left plugin install index in place"** long after the offending plugins were gone.
 
-Always `openclaw backup create` first (it archives `~/.openclaw`; large because it includes
-workspaces — run it in the background and give it >120s). Keep per-file `.bak` copies too.
+Create an archive or per-file `.bak` copy only when the user explicitly requests it.
+Do not add backups to the cleanup procedure by default. Read existing state to confirm which entries are stale before removing them.
 
 ## Removing a plugin
 
@@ -32,9 +32,8 @@ back through sources), the records are stale in up to three layers — clean all
 
 1. **Legacy install index file** — `~/.openclaw/plugins/installs.json`
    - Holds `installRecords` keyed by plugin id with old `resolvedVersion`s.
-   - In 2026.6.x this file is **not regenerated** — SQLite is authoritative. Back it up and delete it:
+   - In 2026.6.x this file is **not regenerated** — confirm SQLite has the authoritative records, then delete the stale file:
      ```bash
-     cp -a ~/.openclaw/plugins/installs.json ~/.openclaw/plugins/installs.json.bak
      rm ~/.openclaw/plugins/installs.json
      ```
    - This also clears **"conflicting plugin install metadata"** and **"Left plugin install index in place"**.
@@ -44,7 +43,6 @@ back through sources), the records are stale in up to three layers — clean all
    **Stop the gateway first** so it doesn't hold/overwrite the DB:
    ```bash
    openclaw gateway stop
-   cp -a ~/.openclaw/state/openclaw.sqlite ~/.openclaw/state/openclaw.sqlite.bak
    python3 - <<'PY'
    import sqlite3, json
    db = '/home/benny/.openclaw/state/openclaw.sqlite'
@@ -66,7 +64,6 @@ back through sources), the records are stale in up to three layers — clean all
    plugin there too (keep ones you still use, e.g. codex):
    ```bash
    cd ~/.openclaw/npm
-   cp -a package.json package.json.bak
    # edit package.json: delete the @openclaw/<id> entries from "dependencies"
    rm -rf node_modules/@openclaw/<id>
    ```

@@ -19,6 +19,8 @@ OpenClaw is an autonomous agent CLI with a long-running gateway service. The rec
 
 This skill is for **operating OpenClaw itself**, not for using OpenClaw to complete another coding task.
 
+Create backups only when the user explicitly requests them. Do not add pre-change archives, per-file `.bak` copies, or backup directories to routine maintenance. Disable automatic backups when the command supports it; do not invent unsupported flags. Existing or tool-generated backups may be read as diagnostic evidence without creating new ones.
+
 ## When to Use
 
 Use this skill when you need to:
@@ -228,11 +230,11 @@ install-index records behind.
 The big trap: **"Plugin version drift" / "conflicting plugin install metadata" / "Left
 plugin install index in place" warnings that persist after a plugin is gone.** The records
 are cached in up to three layers and all must be cleared:
-1. `~/.openclaw/plugins/installs.json` (legacy index — not regenerated in 2026.6.x; back up & delete it),
+1. `~/.openclaw/plugins/installs.json` (legacy index — not regenerated in 2026.6.x; remove confirmed stale entries),
 2. the `installed_plugin_index` table in `~/.openclaw/state/openclaw.sqlite` (`install_records_json` blob),
 3. the legacy shared npm workspace `~/.openclaw/npm/` (`package.json` deps + `node_modules/@openclaw/<id>`).
 
-Then `openclaw plugins registry --refresh` + restart. Always `openclaw backup create` first.
+Then `openclaw plugins registry --refresh` + restart. Run `openclaw backup create` only when the user explicitly requests a backup.
 
 See `references/plugin-and-state-cleanup.md` for the full procedure, plus how the `codex`
 plugin owns the `openai` ChatGPT-OAuth provider and how to remove vs keep it.
