@@ -442,6 +442,29 @@ Swal.fire({
 - **上線階段**:請系統組設定正式環境 host,IP 指到 `10.1.103.140`(HAProxy)。
 - HAProxy 負載平衡器管理、Client IP 檢查各有專門頁面(見下方參考)。
 
+**後端主機的查法(自行診斷用)**:HAProxy 後面的實體主機在 DNS 上是
+`svr<機號>_aa<編號>.cotabank.com`(**底線不是連字號**,少數查法會失敗就是這個原因),
+例如 `svr137_aa01.cotabank.com` / `svr137_aa02.cotabank.com`。站台網址
+`prj<專案>.cotabank.com` 指到的則是 HAProxy 本身。
+
+站台出問題時,這兩層分開打就能定位是「程式沒起來」還是「切換沒完成」:
+
+| 現象 | 判讀 |
+|---|---|
+| 打 HAProxy 得到 **503** | 後端健康檢查全不通,HAProxy 沒有可用的機器可轉 |
+| 直接打 AA 主機,專案的 `/health`、`/api/MonitorInfos/GetProjectInfo` 回 **404**,根目錄 **403**,`Server: Microsoft-IIS/10.0` | 接手這個 Host 的是 IIS 預設站台,專案站台沒起來/沒綁上去 |
+| 直接打 AA 主機的 `/health` 回 **200** | 程式本身活著,問題在 HAProxy 這一層 |
+
+診斷指令(公司 proxy 會干擾,一定要 `-NoProxy`;內部憑證要 `-SkipCertificateCheck`):
+
+```powershell
+Invoke-WebRequest -Uri "https://192.168.x.x/health" -Headers @{Host='prj<專案>.cotabank.com'} `
+  -SkipCertificateCheck -NoProxy -MaximumRedirection 0 -TimeoutSec 10
+```
+
+一般開發人員對 AA 主機**沒有 WinRM / admin share 權限**,看不到 IIS 站台狀態與事件記錄,
+到這一步就要把上面的證據交給系統組,不要再自己試。
+
 專案部署在 HAProxy(或其他反向代理)後面時,`HttpContext.Connection.RemoteIpAddress`
 拿到的會是代理伺服器的 IP,不是真實用戶端 IP——這會連帶影響任何以來源 IP 為依據的邏輯
 (例如 per-IP 速率限制、`GetClientIP`/`CheckIP` 判斷)。已驗證的實際案例(`CotaIT2019`

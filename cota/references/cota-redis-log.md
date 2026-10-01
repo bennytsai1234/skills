@@ -37,6 +37,40 @@
 - [ ] 例外處理時是否有把 `Exception` 物件傳給 logger(而不是只記字串
       `ex.Message`),才能保留完整 stack trace 到結構化 Log 裡
 
+## ⚠ 最常見的坑:裝了套件不等於有 Log
+
+`.csproj` 有 `CotaUtility.CotaRedisLog.Serilog`,但 `Program.cs` 只寫了這一行:
+
+```csharp
+builder.Host.UseSerilog();   // 無參數
+```
+
+**這樣一筆 log 都不會產生,Seq 上查不到任何東西。** 無參數的 `UseSerilog()` 掛的是
+Serilog 的全域 `Log.Logger`,而沒被設定過的 `Log.Logger` 是 `SilentLogger`,寫進去
+直接丟掉。更麻煩的是 `UseSerilog()` 會**接管整個 `ILogger`**,所以連 ASP.NET Core
+原本的 Console/EventLog 輸出也一併消失——變成整支程式完全沒有應用層 log,出事時
+無從查起(多機部署時特別致命)。
+
+掃描專案時的偵測方式:`.csproj` 有這個套件,但全專案 grep 不到
+`Log.Logger` / `LoggerConfiguration` / `WriteTo.CotaRedisLog` / `AddGlobalLogger`,
+`appsettings.json` 也沒有 `Serilog` 區段 → 就是這個狀況。
+
+套件提供的兩種接法,擇一:
+
+```csharp
+// 1) IHostBuilder 擴充
+CotaRedisLogHostBuilderExtensions.AddGlobalLogger(IHostBuilder, ILogger, string name = "Global");
+
+// 2) 自建 LoggerConfiguration
+new LoggerConfiguration().WriteTo.CotaRedisLog(/* CotaRedisLogOptions 的各項參數 */)
+```
+
+`CotaRedisLogOptions` 跟 CotaRedis 一樣**不用填連線**:`RedisUrls` 留空會自動產生
+預設 URL,有填才會覆寫。實務上要確認的只有 `ApplicationName`(Seq 上用它篩)、
+`QueueName`,以及系統組有沒有幫這個專案開通 Redis 使用者。
+
+驗證方式:上 Seq 用 `Application = <專案名>` 篩,查得到才算接通。
+
 ## Log 等級使用建議(套件文件提供的分類參考)
 
 | 等級 | 用途 |

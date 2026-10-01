@@ -32,6 +32,42 @@
 - `master` 紀錄不可刪、不支援 `--force`,退版一律 `git revert`。
 - 分支/抄送/異動單細節見 `references/git-workflow.md`。
 
+## 一之二、三環境對照表(本機 / 測試(開發) / 正式)
+
+一個 WEB 專案從本機寫到上線,會經過三套環境。**同一份程式碼在三個環境的差別不在程式,
+而在「跑在誰身上、連到哪、誰幫你開權限」**。標 ⚠ 的是要事先申請、拿不到就卡住的項目。
+
+| 面向 | 本機 | 測試(開發)環境 | 正式環境 |
+|---|---|---|---|
+| 進版方式 | 自己的分支,VS 直接跑或本機 IIS | push `dev` → 同步到測試抄送目錄 → 在抄送系統執行 | push `master` → 抄送目錄 → **CotaIT 異動單**(附風險評估表＋測試報告)→ 抄送 |
+| 主機 | 自己的開發機 | 開發 AA 主機,DNS `svr<機號>_aa<編號>.cotabank.com`(底線) | 正式 AA/AP 主機 |
+| 站台網址 | `hosts` 指到自己(注意會蓋掉公司 DNS,驗證前先確認沒被註解) | `prj<專案>.cotabank.com` → **192.168.251.112**(HAProxy) | `prj<專案>.cotabank.com` → **10.1.103.140**(HAProxy) |
+| 雙機 | 單機 | AA 兩台(切換由抄送流程最後一步做) | AA 或 AP,依上線申請單勾選 |
+| HAProxy | 無;要模擬用 IIS ARR + URL Rewrite | 有 | 有 |
+| 執行身分 | 自己的 AD 帳號 / IIS 應用程式集區 | ⚠ **AP User**(先辦「系統帳號異動單」`ISMS-3-002-T02-V2.0` 拿到帳號) | ⚠ 同左,正式機的 AP User |
+| 憑證 | 匯入 `star.cotabank.com.tw.p12`(NAS `開發環境Cert`,密碼 `123123`),IIS 繫結 https | 系統組處理 | 系統組處理 |
+| MSSQL | 連測試 DB 開發 | ⚠ 測試 DB:**建表用自己的帳號**,程式跑的是 AP User → 要**申請該 DB 的 R+W 權限** | ⚠ 正式 DB,另外申請;測試/正式各一個 DB |
+| DB 連線寫法 | 三個環境都一樣:`svrdb` + SSPI 整合驗證,**連線字串不帶帳密**(權限綁在執行身分上) | 同左 | 同左 |
+| Redis | 套件預設連內部 Redis cluster(`svrRD1～3` 的 6402／7402),網路本機連得到;但 v1.2.x 帳號跟執行身分走,要在 IIS App Pool 以 AP User 執行才登得進去 | ⚠ 要**申請 RedisDB 帳號**(v1.2.x 為 AP User 大寫;v1.1.0 為組件名大寫,見 `references/cota-redis.md`);連不上會讓站台**啟動就掛** | ⚠ 同左 |
+| Log | 沒接 sink 就完全沒有 log(見 `references/cota-redis-log.md` 的坑) | CotaRedisLog → Redis → **Seq** 查詢 | 同左 |
+| 監控看板 | 不接 | 可接 | **必接**(CotaHealthCheckCore + PerformanceCounter,填申請單的 `GetProjectInfo` 等 URL) |
+| 共享儲存 | 本機磁碟 | ⚠ 多機 → 上傳檔/報表產物要放 UNC 共享(系統組開 share 並授權 AP User) | ⚠ 同左 |
+| 驗證方式 | 打 `https://localhost` 或 hosts 指向的網址(**公司 proxy 會干擾,用 `-NoProxy`**) | 直接打 AA 主機的 `/health` 確認程式,再打 `prj` 網址確認 HAProxy(判讀見 `references/network.md`) | 同左 |
+
+### 依序要辦的申請(拿不到就卡住)
+
+1. **開發申請** → 管理組＋系統組配開發機、AP User、HostName(開發階段就要辦)。
+2. **系統帳號異動單** → 申請 AP User 帳號本身(是上線申請單 AP User 欄位的前置)。
+3. **DB 權限** → 測試/正式 DB 各自申請 AP User 的 R+W;建表可以用自己的帳號先做。
+4. **RedisDB 帳號** → 有用 Session/Cache/Log 就要,三個環境分別開通。
+5. **UNC 共享**(有檔案產物才需要)→ 系統組開 share 並授權 AP User。
+6. **上線申請** → 上線前辦,系統組會拿開發申請表核對;AA 要勾「Active/Active 模式服務=啟用」+ HAProxy=啟用。
+7. **CotaIT 異動單** → 每次上正式都要,附風險評估表＋測試報告。
+
+> **未驗證項目**:第 3 項「測試 DB 建表用自己帳號、程式用 AP User 的 R+W」與第 4 項
+> 「Redis 帳號三環境分別開通」是依使用者口述與套件行為整理的,Confluence 上還沒核對到
+> 對應頁面;實際申請時以系統組的表單為準。
+
 ## 二、兩次申請,分開辦
 
 1. **開發申請** → 管理組＋系統組配開發機、AP User、HostName。
@@ -64,7 +100,7 @@
 ### 多機標配項(依上面差異取用)
 
 - **Session / Cache → CotaRedis**(不可 in-memory,否則兩台各存各的)→ 要**申請
-  RedisDB 帳號**(帳號＝專案名大寫,選內部/DMZ/核心區)。見 `references/cota-redis.md`。
+  RedisDB 帳號**(v1.2.x 帳號＝AP User 大寫,通常與專案名相同;選內部/DMZ/核心區)。見 `references/cota-redis.md`。
   (AA:Session＋跨機共享狀態全需;AP:Session 建議、其餘視需求。)
 - **DataProtection 金鑰圈不可綁 DPAPI**(DPAPI 綁機器):改憑證或 Redis 保護,
   否則接手台解不開另一台加密的資料(API 金鑰、antiforgery token 等)。AA/AP 都需要。
@@ -113,9 +149,16 @@ Session): https://svrconf.cotabank.com/pages/viewpage.action?pageId=82511127
 
 ## 六、身分入口
 
-新專案身分入口走**員工入口網串接(CotaPortal,JWT)**——進站驗 token 取 EmpNo、
-回入口網按鈕。舊的 hiseed/RSASign 不用;需要標準 OIDC 才評估 KeycloakAdapter。
-見 `references/cota-portal.md`;角色查詢照舊走 PermProvider(`references/perm-provider.md`)。
+身分入口走**員工入口網簽章**:入口網以 POST 帶 `hiseed` + `hisignedhash` 進站,站台用
+`CryptUtilLib.IRSAHandler.VerifySignature` 驗章(回 `0000` 才算過),再把 `hiseed` 拆成
+員編/姓名/卡片資訊寫 Session;回入口網時把兩個值原封不動送回。這是公司標準做法,
+見 `references/network.md`、`references/cota-employee.md`(`EmpCardModel.GetByCryptUtil`
+是包好的版本)。
+
+部署前置條件:主機要 `regsvr32` 註冊 DataEnc/CryptUtil 並匯入 `HKLM\SOFTWARE\CotaBank\Portal`
+機碼,專案的 `COMReference` 讓 `dotnet build`/`publish` 不可用,要改用 VS 的 MSBuild。
+
+需要標準 OIDC 才評估 KeycloakAdapter。角色查詢走 PermProvider(`references/perm-provider.md`)。
 
 ## 開案檢查清單(照這條線走一遍)
 
@@ -129,7 +172,7 @@ Session): https://svrconf.cotabank.com/pages/viewpage.action?pageId=82511127
 - [ ] 共享儲存:本機檔案產物移到 UNC 共享或落 DB(AA/AP 都要)
 - [ ] HAProxy:若專案用來源 IP 做白名單/限流,Client IP 走 CotaNetwork;確認信任代理網段
 - [ ] 背景服務盤點:能否跟前台一起雙跑?不能 → 拆單一 worker + Redis 協調
-- [ ] 身分入口:CotaPortal 串接;角色 PermProvider
+- [ ] 身分入口:入口網簽章(hiseed/hisignedhash + CryptUtilLib,主機需註冊 COM 元件);角色 PermProvider
 - [ ] 監控:CotaHealthCheckCore + PerformanceCounter 接看板
 - [ ] 資安:HSTS、Cookie 政策、CSP、Mend 原始碼掃描過(SAST;相依漏洞另計)
 - [ ] 辦**上線申請**(正式機;AA→「Active/Active 模式服務=啟用」+ HAProxy=啟用,

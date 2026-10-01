@@ -164,7 +164,7 @@ IIS 安裝:「程式和功能 → 開啟或關閉 Windows 功能」勾選 IIS �
 **入口網選單設定**
 
 - 入口網選單路徑
-- 連結
+- 連結:**帶子應用程式別名的完整 URL**，見下方「入口網選單連結為什麼帶子路徑」
 - 是否權限設定?(姓名／員編、分行單位)
 - 是否設定選單排序?(排序編號)
 - 是否另開分頁:`是 / 否`
@@ -172,6 +172,44 @@ IIS 安裝:「程式和功能 → 開啟或關閉 Windows 功能」勾選 IIS �
 - 是否使用員工晶片卡:`是 / 否`
 - 條件:晶片卡版本:`新 / 舊`
 - 是否只允許 GET:`是 / 否`(預設 Method 為 POST)
+
+#### 入口網選單連結為什麼帶子路徑
+
+「每個 WEB 專案有自己的網域名稱」與「連結帶子路徑」並不衝突，
+因為這是兩層不同的東西：hostname 是 HAProxy 前端識別（開發指 `192.168.251.112`、
+正式指 `10.1.103.140`，見 `references/network.md`），子路徑則是後端 IIS 上的
+application 別名。HAProxy 只轉發、不重寫路徑，所以別名會出現在對外網址。
+
+```
+prjaistt.cotabank.com  ─┐
+prjcotavisiondoc...    ─┼─> HAProxy ─> IIS 主機
+prjboardmonitor...     ─┘              └─ Default Web Site
+                                       ├─ /AISTT         (application)
+                                       ├─ /CotaVisionDoc (application)
+                                       └─ /BoardMonitor  (application)
+```
+
+實例：AISTT 的連結是 `https://prjaistt.cotabank.com/AISTT/Transcription`，
+範例單 CotaVisionDoc 是 `https://prjcotavisiondoc.cotabank.com/CotaVisionDoc/`。
+填成站台根（不帶別名）會讓選單連結 404。別名預設同專案名，實際值與所掛的
+父站台由系統組決定。「其他設定」的三個 API URL 同樣要帶別名。
+
+**程式端配套（ASP.NET Core）**：不要加 `UsePathBase`，IIS 子應用程式會自己帶入
+PathBase，寫死會讓本機與正式行為分歧。只要確保所有 URL 都經過 PathBase：
+
+- Razor 一律用 `~/`（`Url.Content("~/...")`、`asp-` tag helper）。
+- 要給 JS 的路徑由 View 以 `@Url.Action(...)` 或 `@Url.Content("~/")` 輸出到
+  `data-*` 屬性，JS 只讀屬性，不自己組路徑、也不寫死別名。
+- JS 裡不能出現 root-absolute 的 `href="/Xxx"`、`fetch("/api/...")`；掛在子應用程式
+  底下會導到父站台根而 404。
+- 未登入、錯誤、timeout 的 fallback 導向要以 `request.PathBase` 組出，不能寫死
+  `/Home/Index`。
+- `Request.Path` 不含 PathBase，所以 `StartsWithSegments("/api")` 這類判斷不用改。
+- Session cookie 不要設 `Cookie.Path`，預設會跟著 PathBase。
+
+AISTT（`AISTT_frontend`）是現成的正確範例：全檔抓不到 root-absolute 路徑，
+`Views/Transcription/Index.cshtml` 以 `data-submit-url="@Url.Action(...)"` 交給
+`wwwroot/js/transcription.js` 使用。
 
 **新增 Keycloak 客戶端應用**
 

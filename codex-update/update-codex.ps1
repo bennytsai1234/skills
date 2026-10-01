@@ -50,10 +50,25 @@ Write-Host ""
 Write-Step "執行內建更新：codex update"
 codex update
 
-if ($LASTEXITCODE -eq 0) {
+$updated = $LASTEXITCODE -eq 0
+if ($updated) {
     Write-Success "codex update 成功！"
-} else {
-    Write-WarningMsg "內建更新失敗 (exit code: $LASTEXITCODE)，準備降級使用官方安裝腳本..."
+}
+
+# registry.npmjs.org 被 McAfee Web Gateway 政策封鎖（ERR_SSL_WRONG_VERSION_NUMBER），
+# npm 安裝的 codex 改由內部 Verdaccio 取得；只影響本次 process，不改 ~/.npmrc。
+$codexSource = (Get-Command codex).Source
+if (-not $updated -and $codexSource -like "$env:APPDATA\npm\*") {
+    Write-WarningMsg "內建更新失敗 (exit code: $LASTEXITCODE)，改由內部 Verdaccio 重試 npm 安裝..."
+    $env:npm_config_registry = "https://ctverdaccio.cotabank.com/"
+    npm install -g @openai/codex@latest
+    $updated = $LASTEXITCODE -eq 0
+    Remove-Item Env:npm_config_registry
+    if ($updated) { Write-Success "已由內部 Verdaccio 更新完成！" }
+}
+
+if (-not $updated) {
+    Write-WarningMsg "更新失敗 (exit code: $LASTEXITCODE)，準備降級使用官方安裝腳本..."
     Write-Host ""
     Write-Step "降級：以 -NoProfile 執行官方安裝腳本（保留 TLS 驗證）"
     powershell.exe -NoProfile -ExecutionPolicy Bypass -Command '$env:CODEX_NON_INTERACTIVE="1"; Invoke-RestMethod https://chatgpt.com/codex/install.ps1 | Invoke-Expression'
