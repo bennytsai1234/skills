@@ -49,7 +49,7 @@ Owns:
 - waiting without interfering with active workers;
 - independent acceptance;
 - returning precise gaps;
-- completion records and `docs/changes/completed/**`;
+- completion records (commit messages or the Relay report) and removing accepted packages from the queue;
 - delivery according to the plan/project policy;
 - final shared verification;
 - incremental atlas updates when accepted work changed map facts.
@@ -225,20 +225,17 @@ When a fixable gap exists, return only the gaps to the same package/worker.
 
 ## 10. Completion protocol
 
-```text
-docs/changes/planning/   = not yet accepted
-docs/changes/completed/  = accepted and recorded
-```
+`docs/changes/planning/` is a work queue, not an archive: it holds only packages that are not yet accepted and the running dispatch plan. Completed work is recorded in git commit messages, not in files.
 
 After accepting a package, Relay:
 
-1. fills the `Completion record` with actual changes, adjustments, verification, unavailable resources, and residual risk;
-2. moves it to `docs/changes/completed/{{DATE}}/{{SLUG}}.md`;
-3. appends a concise line to `docs/changes/completed/{{DATE}}/summary.md`;
-4. commits/pushes only when `DELIVERY_POLICY` calls for it;
+1. writes the `Completion record` (actual changes, adjustments, verification, unavailable resources, residual risk);
+2. pulls a decision the accepted work verified, and still-open residual risk, up into the repository `AGENTS.md` (decision labeled `[verified]`, pointing at the commit or evidence);
+3. deletes the package file;
+4. applies `DELIVERY_POLICY`, putting the completion record in the commit message body when it commits; under `no commit` the record goes into the Relay report;
 5. then starts the next package.
 
-After the last package, run Shared Verification. If it succeeds, archive the dispatch plan under the same completed date and refresh only atlas facts affected by accepted boundary/ownership/routing changes.
+After the last package, run Shared Verification. If it succeeds, delete the dispatch plan, remove `docs/changes/planning/` (and `docs/changes/`, `docs/`) when empty, and refresh only atlas facts affected by accepted boundary/ownership/routing changes.
 
 ## 11. Cost and context discipline
 

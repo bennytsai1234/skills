@@ -1,6 +1,6 @@
 ---
 name: atlas-planner
-description: "Formal planning path for software changes. Use when the human explicitly wants to discuss the problem first, plan or decompose work, prepare detailed task packages, hand work to Relay/Worker, or require an independent acceptance loop. Investigate with the human until the problem, root cause, target state, and recommended solution are understood and explicitly confirmed; only then write task packages and a dispatch plan. Do not implement source code."
+description: "Formal Atlas planning path for software changes: investigate with the human until problem, root cause, target state and solution are explicitly confirmed, then write task packages and a dispatch plan for Relay/Worker; never implements code. Use ONLY when the human explicitly says planner / atlas-planner. Ordinary requests to plan, discuss first, or decompose work do not trigger it."
 ---
 
 # Atlas Planner
@@ -15,8 +15,8 @@ Read `references/delegation.md` for the shared Planner -> Relay -> Worker contra
 
 - `ROLE: worker` -> use `atlas-worker`.
 - `ROLE: relay-lead`, or a dispatch plan -> use `atlas-relay`.
-- Human wants ordinary direct execution without formal planning -> handle it directly without an atlas skill.
-- Human explicitly wants discussion/planning/decomposition/formal handoff -> continue here.
+- Human did not explicitly ask for the planner (including ordinary planning or discussion) -> handle it directly without an atlas skill.
+- Human explicitly asked for planner / atlas-planner -> continue here.
 
 ## Enter the repository
 
@@ -139,4 +139,4 @@ Use the `atlas/v4` dispatch shape from `references/delegation.md`.
 
 ## Review
 
-Review completed work only when the human explicitly asks. Check the confirmed Goal, Recommended Solution, Acceptance, real diff, and completion evidence. Report precise gaps; do not silently implement them in Planner role.
+Review completed work only when the human explicitly asks. Check the confirmed Goal, Recommended Solution, Acceptance, real diff, and completion evidence (commit messages or the Relay report). Report precise gaps; do not silently implement them in Planner role.

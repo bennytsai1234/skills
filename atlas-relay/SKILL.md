@@ -15,7 +15,7 @@ Read `../atlas-planner/references/delegation.md` for the shared `atlas/v4` contr
 
 - `ROLE: relay-lead`, or a dispatch plan -> continue here.
 - `ROLE: worker` -> use `atlas-worker`.
-- Human is still discussing what to build -> use `atlas-planner`.
+- Human is still discussing what to build -> use `atlas-planner` only if they explicitly asked for the planner; otherwise handle it directly.
 - Ordinary direct development -> handle it directly without an atlas skill.
 
 ## Entry
@@ -76,17 +76,17 @@ When a fixable gap exists, return only the concrete gaps to the same package/wor
 
 After acceptance:
 
-1. Fill the package `Completion record` with actual changes, implementation adjustments, verification evidence, unavailable resources, and residual risk.
-2. Move it from `docs/changes/planning/` to `docs/changes/completed/{{DATE}}/`.
-3. Append one concise line to that date's `summary.md`.
+1. Write the `Completion record`: actual changes, implementation adjustments, verification evidence, unavailable resources, and residual risk.
+2. Pull a decision the accepted work verified, and still-open residual risk, up into the repository `AGENTS.md` (decision labeled `[verified]`, pointing at the commit or evidence).
+3. Delete the package file from `docs/changes/planning/`; there is no completed archive.
 4. Apply `DELIVERY_POLICY`:
-   - `no commit` -> leave accepted changes in the working tree;
-   - `commit only` -> commit the accepted package and record;
-   - `commit and push` -> commit then push without force.
+   - `no commit` -> leave accepted changes in the working tree and put the completion record in the report;
+   - `commit only` -> commit the accepted changes with the completion record as the commit message body;
+   - `commit and push` -> the same, then push without force.
 5. Only then start the next package.
 
-After the final package, run the dispatch plan's Shared Verification. Archive the dispatch plan only after shared verification succeeds.
+After the final package, run the dispatch plan's Shared Verification. Only after it succeeds, delete the dispatch plan and remove `docs/changes/planning/` (and `docs/changes/`, `docs/`) when empty.
 
 ## Report
 
-Report package results, Shared Verification, delivery, and any unresolved conflict. Never claim a package or batch is accepted when mandatory evidence is missing.
+Report package results (with each completion record when nothing was committed), Shared Verification, delivery, and any unresolved conflict. Never claim a package or batch is accepted when mandatory evidence is missing.
