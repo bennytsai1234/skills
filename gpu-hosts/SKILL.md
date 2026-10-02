@@ -24,7 +24,7 @@ Use the known GPU machines only when the task actually involves them. Read `refe
 
 ## Line endings
 
-Scripts and config files copied from Windows to these hosts must not contain CRLF. Run as `./script.sh`, a CRLF script fails with `cannot execute: required file not found` (the shebang ends in `\r`). Run as `bash script.sh`, blank lines print `$'\r': command not found` and every other line runs with a trailing `\r` in its last argument, which breaks paths and values without an error. Files written on Windows by Python text mode or PowerShell `Set-Content`／`Out-File` get CRLF, so write them with LF (Python `newline="\n"`), or check before copying: `grep -l $'\r' <files>` must print nothing.
+Scripts and config files copied from Windows to these hosts must not contain CRLF. Run as `./script.sh`, a CRLF script fails with `cannot execute: required file not found` (the shebang ends in `\r`). Run as `bash script.sh`, blank lines print `$'\r': command not found` and every other line runs with a trailing `\r` in its last argument, which breaks paths and values without an error. Files written on Windows by Python text mode or PowerShell `Set-Content`／`Out-File` get CRLF, so write them with LF (Python `newline="\n"`), or check before copying: `grep -lU $'\r' <files>` must print nothing (Git Bash's grep strips CR without `-U` and misses them).
 
 ## Secrets
 
