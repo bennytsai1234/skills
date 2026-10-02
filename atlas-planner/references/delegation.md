@@ -29,7 +29,7 @@ The Planner confirmation gate happens before any package is written. The later h
 Owns:
 
 - discussion with the human;
-- repository/atlas investigation;
+- repository investigation;
 - root-cause diagnosis;
 - target-state and solution design;
 - resolving real product/compatibility decisions;
@@ -51,8 +51,7 @@ Owns:
 - returning precise gaps;
 - completion records (commit messages or the Relay report) and removing accepted packages from the queue;
 - delivery according to the plan/project policy;
-- final shared verification;
-- incremental atlas updates when accepted work changed map facts.
+- final shared verification.
 
 ### Worker
 
@@ -73,7 +72,7 @@ Worker does not plan the batch, archive packages, commit/push, or rewrite the ag
 |---|---|
 | `ROLE: worker` | Worker / `atlas-worker` |
 | `ROLE: relay-lead` or dispatch plan | Relay / `atlas-relay` |
-| human explicitly asks to plan/discuss/decompose/formalize | Planner / `atlas-planner` |
+| human explicitly asks for planner / `atlas-planner` | Planner / `atlas-planner` |
 | ordinary direct development | direct handling (no atlas skill) |
 
 ## 4. Dispatch plan (`atlas/v4`)
@@ -235,13 +234,12 @@ After accepting a package, Relay:
 4. applies `DELIVERY_POLICY`, putting the completion record in the commit message body when it commits; under `no commit` the record goes into the Relay report;
 5. then starts the next package.
 
-After the last package, run Shared Verification. If it succeeds, delete the dispatch plan, remove `docs/changes/planning/` (and `docs/changes/`, `docs/`) when empty, and refresh only atlas facts affected by accepted boundary/ownership/routing changes.
+After the last package, run Shared Verification. If it succeeds, delete the dispatch plan, remove `docs/changes/planning/` (and `docs/changes/`, `docs/`) when empty.
 
 ## 11. Cost and context discipline
 
 - Discuss and discover once in Planner; carry those conclusions into packages.
 - Do not paste chat history into Worker prompts.
-- Read the atlas for routing, then live code for implementation.
 - One package at a time.
 - Split only when the split improves ownership, dependency clarity, failure isolation, or acceptance.
 - Do not repeat full-repository exploration in every tier.

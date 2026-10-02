@@ -15,15 +15,11 @@ description: "Update or diagnose the OpenAI Codex CLI and ChatGPT/Codex Windows 
 
 ## Quick Run（固定腳本，免逐行讀取）
 
+腳本在本 skill 目錄（`~/skills/codex-update/update-codex.ps1`）：
+
 ```powershell
 # 以系統管理員身份執行
-powershell -NoProfile -ExecutionPolicy Bypass -File "path\to\update-codex.ps1"
-```
-
-或直接在存放腳本的目錄下：
-
-```powershell
-.\update-codex.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\skills\codex-update\update-codex.ps1"
 ```
 
 腳本會自動：檢查目前版本 → 嘗試內建 `codex update` → 失敗且為 npm 安裝時改走內部 Verdaccio 重試 → 仍失敗才降級官方安裝腳本 → 驗證結果。

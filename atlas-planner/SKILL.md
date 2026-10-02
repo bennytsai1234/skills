@@ -40,7 +40,7 @@ Investigate and discuss until the following are grounded:
 - **Trade-offs** — only real alternatives or consequences worth deciding.
 - **Boundaries** — compatibility, ownership, contracts, or behavior that must not be broken.
 
-Ask one useful question at a time when the repository cannot settle a real product or compatibility decision. Do not ask for information that code, configuration, tests, docs, or the atlas can answer.
+Ask one useful question at a time when the repository cannot settle a real product or compatibility decision. Do not ask for information that code, configuration, tests, or docs can answer.
 
 The human may challenge the diagnosis or solution. Re-investigate, revise, and continue the discussion as needed. The purpose of this phase is shared understanding, not speed.
 

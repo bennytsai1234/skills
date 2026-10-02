@@ -1,0 +1,4 @@
+interface:
+  display_name: "CUA Runtime Repair"
+  short_description: "Repair Windows CUA package-resolution failures"
+  default_prompt: "Use $cua-runtime-repair to repair and verify the Windows CUA runtime."
