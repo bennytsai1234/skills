@@ -52,7 +52,7 @@ done
 | `bro` | 1 / 2 | Codex 補上 `allow_implicit_invocation: false`，和 Claude 端一樣只能手動叫用 |
 | `codex-update` | 1 / 0 | 腳本佔位路徑改成實際位置 |
 | `cua-runtime-repair` | 2 / 0 | 原本只放在公司的 `~/.codex/skills/`，現在搬進 repo，再連結回去 |
-| `summarize-project-work` | 0 / 1 | 拿掉已移除的 `trace_path`；`--stat` 只看候選任務的提交範圍，不一次展開全部歷史 |
+| `summarize-project-work` | 0 / 1 | 先前拿掉已移除的 `trace_path`、`--stat` 只看候選範圍；10-02 晚上改版：輸出改成對到專案管理系統的子任務（預設一層，少數專案有前端／後端群組），每項附 0–100% 進度（要寫依據，沒有清單時標建議值）和可貼進專案管理系統的進度回報；預設期間是今天，沿用系統現有的子任務，做到一半冒出的新工作（操作手冊、模型微調）列成建議新增；證據深度看疑點調整，不再全面盤點 |
 | `handoff` | 0 / 0（10-01 新增） | 不變 |
 | 封存組 6 個 | 0 / 0 | 拿掉公司 Codex 上的連結，內容保留 |
 
@@ -95,7 +95,7 @@ done
 - `compass` — 校正偏掉的對話，或把已確認內容收斂成最小充分方案
 - `engineering-judgment` — 明確要求時，教你身為工程師如何做技術取捨
 - `handoff` — 整理目前對話成已遮蔽敏感資料的代理交接文件
-- `summarize-project-work` — 依程式碼與 Git 紀錄整理會報式工作摘要
+- `summarize-project-work` — 依 Git 與目前程式證據，把專案工作對到系統的子任務，輸出百分比和可直接貼上的進度回報
 
 ## Archived（保留但不掛載）
 
