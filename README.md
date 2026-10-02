@@ -45,7 +45,7 @@ done
 | `gpu-hosts` | 3 / 14 | 不變 |
 | `project-foundation` | 3 / 2 | 不變 |
 | `atlas-planner` | 0 / 4 | 刪掉 5 處對已移除 codebase-atlas 的引用；`delegation.md` 角色表改成「明確說 planner 才進 Planner」，和觸發規則一致 |
-| `atlas-worker`、`atlas-relay` | dispatch 5 / 9、1 / 0 | 不變（共用 contract 的修正見上一列） |
+| `atlas-worker`、`atlas-relay` | Codex 用 `/goal` 交付派工計畫約 10 批（08-07～09-23，relay 多為 luna、worker 多為 sol）；Claude worker 9 次 | 不變（共用 contract 的修正見上一列）。成效紀錄見下方「Relay 派工成效」 |
 | `dev-flow` | 5 / 0（全在 08-27） | 濃縮：申請狀態規則只寫一次並以 `cota` 為準，偏航改成表格；階段、AA 檢查項與輸出不變 |
 | `engineering-judgment` | 2 / 1 | 觸發條件收窄：只有明確要求「教我判斷」時才用；一般的 A／B 選擇照全域規則直接給推薦 |
 | `compass` + `blueprint` | 各 1 / 0 | 合併成 `compass`，分成「校正」與「收斂成方案」兩個模式；`blueprint` 刪除 |
@@ -55,6 +55,22 @@ done
 | `summarize-project-work` | 0 / 1 | 拿掉已移除的 `trace_path`；`--stat` 只看候選任務的提交範圍，不一次展開全部歷史 |
 | `handoff` | 0 / 0（10-01 新增） | 不變 |
 | 封存組 6 個 | 0 / 0 | 拿掉公司 Codex 上的連結，內容保留 |
+
+### Relay 派工成效（對照各專案 git）
+
+| 批次 | 耗時 | 結果 |
+|---|---|---|
+| BoardMonitor VLM 端點切換（08-07） | 58 分、325k tokens | commit 還在 HEAD；測試 140→175 |
+| BoardMonitor 巡檢回饋（08-07） | 約 40 分 | 還在 HEAD；測試 175→186 |
+| BoardMonitor agent readiness（08-07） | 約 30 分 | `f861379`、`85e8944` 還在 HEAD；測試 186→189 |
+| mend_ai_reviewer CSV v2（08-07） | 約 40 分 | `acc7c7b` 還在 HEAD |
+| owasp_ai_scanner 從零建置（08-17） | 約 2.5 小時、10 個 commit | **隔天 `7fd8497` 改用 Strix，自建的 agent／LLM／HTTP 工具約 4,500 行整批刪除** |
+| LlmEvaluation AA Active/Active（08-28） | 4.7 小時、1.1M tokens | `113ab4e` 還在 HEAD；測試 56/56 |
+| BoardMonitor AA ownership（08-28） | 1.3 小時 | `6843b3c` 還在 HEAD |
+| AISTT 2GB 上傳（09-02） | 1 小時、934k tokens | 包 1、2 還在 HEAD；包 3 因時間限制沒跑 |
+| AISTT Qwen3-ASR 串流（09-23） | 同一 session 8 小時（含後續其他對話） | 結束時程式還沒 commit，已手動部署到 H200；隔天 09-24 才 commit |
+
+能 build、單元測試能測的批次都推進了，產出到今天還在。驗收大多只到 build 加單元測試，SQL Server、實機 VLM、正式 IIS 這類實際環境多半註明「沒驗證」。整批白做的是 owasp：執行面沒問題，是規劃時方向沒定好。
 
 不由本 repo 管理：Codex 內建的 `~/.codex/skills/.system/`（`imagegen`、`openai-docs`、`review-agent`、`skill-creator`、`skill-installer`）。
 
