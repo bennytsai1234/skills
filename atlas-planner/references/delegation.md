@@ -16,7 +16,8 @@ Relay   -> executes package 1
 Worker  -> implements and verifies package 1
 Relay   -> independently accepts; returns gaps if needed
 Relay   -> records/delivers package 1
-Relay   -> repeats for the next package, strictly in sequence
+Relay   -> repeats for the next package, strictly in sequence;
+           at a stop point, hands back to the human before continuing
 Relay   -> runs final shared verification and reports the batch
 ```
 
@@ -90,9 +91,9 @@ DELIVERY_POLICY: no commit | commit only | commit and push
 <what is true when the whole batch is complete>
 
 ## Task Packages
-| # | Package | Route | Goal |
-|---|---|---|---|
-| 1 | `docs/changes/planning/...md` | `gpt-subagent` or `claude-p` | ... |
+| # | Package | Route | Goal | Stop |
+|---|---|---|---|---|
+| 1 | `docs/changes/planning/...md` | `gpt-subagent` or `claude-p` | ... | `yes` / `no` |
 
 ## Execution Order
 <exact order and real dependency reason>
@@ -102,6 +103,8 @@ DELIVERY_POLICY: no commit | commit only | commit and push
 ```
 
 The plan names route classes, not model versions. Relay maps a route to the current supported executor.
+
+`Stop: yes` marks a package after which Relay delivers and hands back to the human: a spike's go/no-go, or Human Verification that later packages depend on.
 
 ## 5. Task package (`atlas/v4`)
 
@@ -133,9 +136,13 @@ EXECUTION_ROUTE: gpt-subagent | claude-p
 - <likely module / area / contract; not a hard fence>
 
 ## Acceptance
-- <observable behavior or command plus expected result>
+### Agent Verification
+- <command or observable behavior an agent can run here, plus expected result>
 - <important regression/negative case when relevant>
 - <what must not change>
+
+### Human Verification
+- <check that needs a remote/GPU host, desktop app, browser, mic/camera, production-like infrastructure, or human judgment; omit when none>
 
 ## Constraints
 - <only real non-inferable requirements; omit when none>
@@ -156,6 +163,8 @@ A package is portable when a competent worker with no chat history can understan
 - `Implementation Steps` are a concrete route, not a transcript or line-by-line patch.
 - `Expected Change Surface` and `Starting Points` are maps, not fences.
 - `Acceptance` is objective. "Works correctly" is not acceptance.
+- Agent Verification proves the core result; Human Verification lists only what an agent cannot run.
+- When the direction rests on an unproven assumption, the first package is an `investigate` spike with go/no-go criteria and `Stop: yes`.
 - Split packages by independently verifiable engineering result and dependency boundary, not by file count.
 
 ## 6. Sequential execution
@@ -169,6 +178,16 @@ package 2 -> worker -> accept -> record/deliver
 ```
 
 Do not start the next worker while the current package is active or awaiting acceptance. This keeps each diff and verification attributable to one package.
+
+After a `Stop: yes` package is accepted and delivered, Relay reports the result (spike go/no-go evidence, or the Human Verification checklist) and waits for the human before starting the next package.
+
+### Environment blockers
+
+An environment blocker is something outside the repository that the work needs but the agent cannot fix by command within the package: Docker or another daemon not running, a host or service unreachable, missing credentials or permissions, a step that needs a GUI, browser, microphone, or a person.
+
+- Use the repository's scripted, headless way to start local services when one exists.
+- If a direct attempt fails, or fixing it would mean changing things outside the repository (system services, desktop apps, hosts, credentials), stop. Worker reports it under `Needs Relay`; Relay tells the human what is blocked and the smallest action that unblocks it, then waits.
+- Do not cycle through workarounds, swap in a different environment, or weaken Acceptance to get past the blocker.
 
 Use the executor's completion primitive. A wait timeout means "still running" unless the tool explicitly reports failure; do not redispatch merely because a wait call timed out.
 
@@ -219,6 +238,7 @@ Relay acceptance is independent of Worker confidence.
 - Inspect the diff against Goal, Recommended Solution, Acceptance, and Constraints.
 - Reject test-only shortcuts, weakened assertions, swallowed failures, duplicated logic, or downstream patches that leave the diagnosed cause in place unless the confirmed solution intentionally requires them.
 - Missing infrastructure is not automatic rejection when the package explicitly allows conditional evidence, but a mandatory core result may never be called accepted without reasonable proof.
+- Relay accepts on Agent Verification. Human Verification items are not attempted beyond what the tools can actually drive; they go to the human as a checklist in the report.
 
 When a fixable gap exists, return only the gaps to the same package/worker.
 

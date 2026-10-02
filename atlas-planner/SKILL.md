@@ -39,6 +39,7 @@ Investigate and discuss until the following are grounded:
 - **Recommended Solution** — the concrete technical direction you recommend.
 - **Trade-offs** — only real alternatives or consequences worth deciding.
 - **Boundaries** — compatibility, ownership, contracts, or behavior that must not be broken.
+- **Unproven Assumptions** — what the solution depends on that has not yet been shown to work here: feasibility, tool or library choice, performance, external API or model behavior.
 
 Ask one useful question at a time when the repository cannot settle a real product or compatibility decision. Do not ask for information that code, configuration, tests, or docs can answer.
 
@@ -63,6 +64,9 @@ Before writing any package or dispatch plan, summarize the settled understanding
 
 ## Boundaries
 ...
+
+## Unproven Assumptions
+... (or: none)
 ```
 
 Wait for explicit human confirmation that the planner has understood the problem and the intended solution. A vague acknowledgment earlier in the conversation is not enough if the solution changed afterward.
@@ -88,6 +92,16 @@ Prefer a separate package when it creates a distinct engineering result that can
 Do not split merely by file count. Do not create one-file or one-function packages when they do not represent a real result.
 
 A good package has one clear Goal, one coherent solution, and objective Acceptance.
+
+### Spike first when the direction is unproven
+
+When an Unproven Assumption decides the direction (build vs. adopt, which engine, whether an approach is feasible at all), the first package is `TASK_TYPE: investigate` with explicit go/no-go criteria in Acceptance and `Stop: yes` in the dispatch plan. Write the later packages for the go case. If the spike returns no-go, revise or drop them with the human before Relay continues.
+
+Do not spike assumptions that only affect implementation details a worker can safely choose.
+
+### Stop points
+
+Mark `Stop: yes` on a package when the next package must not start until the human acts: a spike's go/no-go, or Human Verification that later packages depend on. Relay delivers that package and hands back to the human. Everything else runs unattended.
 
 ## Write detailed task packages
 
@@ -122,7 +136,12 @@ Write an ordered implementation path. Each step should describe a meaningful cha
 
 Acceptance must be independently checkable. Prefer observable behavior, exact expected values, decisive commands, regression cases, and important negative cases. State what must not regress.
 
-When a check depends on unavailable infrastructure, say what evidence is still mandatory and what may be conditional.
+Split Acceptance by who can run it:
+
+- **Agent Verification** — checks an agent can run on its own in the execution environment: build, tests, scripts, headless runs of local services the repository can start by command.
+- **Human Verification** — checks that need something the agent cannot drive or does not have: a GPU or remote host, a desktop application such as Docker Desktop, a browser session, a microphone or camera, production-like infrastructure, or human judgment.
+
+Every package needs Agent Verification that proves its core result. Provide a scripted, headless way to start local services when one exists. If a package's core result can only be shown by Human Verification, say so and add a stop point when later packages depend on it.
 
 ## Write the dispatch plan
 
@@ -133,6 +152,7 @@ After all packages are internally consistent, write:
 Use the `atlas/v4` dispatch shape from `references/delegation.md`.
 
 - Record the exact package order and dependency reason.
+- Mark stop points (`Stop: yes`) for spikes and for Human Verification that later packages depend on.
 - Resolve delivery policy from the human's current instruction first, then project guidance; if neither defines one, use `no commit` rather than guessing.
 - Choose `EXECUTION_ROUTE` per package by capability, not by hard-coded model version. `gpt-subagent` and `claude-p` are route names; Relay resolves the concrete current executor.
 - Hand the human one dispatch-plan path. The human handing that file to Relay is the execution handoff.

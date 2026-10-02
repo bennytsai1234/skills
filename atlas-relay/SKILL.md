@@ -22,7 +22,7 @@ Read `../atlas-planner/references/delegation.md` for the shared `atlas/v4` contr
 
 1. Read the dispatch plan in full.
 2. Read every named task package before dispatching anything.
-3. Confirm package order, dependency reasons, batch objective, and `DELIVERY_POLICY`.
+3. Confirm package order, dependency reasons, stop points, batch objective, and `DELIVERY_POLICY`.
 4. Execute packages strictly one at a time.
 
 Do not reinterpret the human-confirmed Goal or Recommended Solution just because another implementation would be easier.
@@ -37,6 +37,10 @@ Read each package's `EXECUTION_ROUTE`.
 Route names are stable capability labels; model versions are not part of the package contract. If a route is unavailable, choose an equivalent executor only when the package Goal, confirmed solution intent, Acceptance, and important Constraints remain unchanged. Record the adjustment.
 
 Hand the worker the package, not chat history or a second specification.
+
+## Environment blockers
+
+When a worker reports, or Relay hits, an environment blocker (daemon not running, host unreachable, missing credentials or permissions, a step needing a GUI, browser, microphone, or a person), follow the shared contract: use the repository's scripted headless path if there is one; otherwise stop, tell the human what is blocked and the smallest action that unblocks it, and wait. Do not cycle through workarounds, change environments, or weaken Acceptance to get past it.
 
 ## Wait
 
@@ -58,7 +62,7 @@ For each package:
 
 1. Read the returned diff/change surface.
 2. Compare it against Goal, Problem / Root Cause, Recommended Solution, Acceptance, and Constraints.
-3. Re-run the decisive checks when the environment supports them.
+3. Re-run the decisive Agent Verification checks when the environment supports them. Human Verification items are not attempted beyond what the tools can drive; carry them to the report as a checklist.
 4. Verify the change solves the diagnosed cause rather than merely making a check green.
 5. Check for silent solution drift: weakened tests, swallowed exceptions, hidden special cases, duplicated ownership, downstream patches that leave the cause intact, or contract changes not allowed by the package.
 
@@ -83,10 +87,10 @@ After acceptance:
    - `no commit` -> leave accepted changes in the working tree and put the completion record in the report;
    - `commit only` -> commit the accepted changes with the completion record as the commit message body;
    - `commit and push` -> the same, then push without force.
-5. Only then start the next package.
+5. If the package is marked `Stop: yes`, report the result (spike go/no-go evidence, or the Human Verification checklist) and wait for the human. Otherwise start the next package.
 
 After the final package, run the dispatch plan's Shared Verification. Only after it succeeds, delete the dispatch plan and remove `docs/changes/planning/` (and `docs/changes/`, `docs/`) when empty.
 
 ## Report
 
-Report package results (with each completion record when nothing was committed), Shared Verification, delivery, and any unresolved conflict. Never claim a package or batch is accepted when mandatory evidence is missing.
+Report package results (with each completion record when nothing was committed), Shared Verification, delivery, the Human Verification checklist, any environment blocker, and any unresolved conflict. Never claim a package or batch is accepted when mandatory evidence is missing.

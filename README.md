@@ -45,7 +45,7 @@ done
 | `gpu-hosts` | 3 / 14 | 不變 |
 | `project-foundation` | 3 / 2 | 不變 |
 | `atlas-planner` | 0 / 4 | 刪掉 5 處對已移除 codebase-atlas 的引用；`delegation.md` 角色表改成「明確說 planner 才進 Planner」，和觸發規則一致 |
-| `atlas-worker`、`atlas-relay` | Codex 用 `/goal` 交付派工計畫約 10 批（08-07～09-23，relay 多為 luna、worker 多為 sol）；Claude worker 9 次 | 不變（共用 contract 的修正見上一列）。成效紀錄見下方「Relay 派工成效」 |
+| `atlas-worker`、`atlas-relay` | Codex 用 `/goal` 交付派工計畫約 10 批（08-07～09-23，relay 多為 luna、worker 多為 sol）；Claude worker 9 次 | 依下方「Relay 派工成效」加三條規則：(1) 方向取決於未證實的假設時，第一包先做探勘並設停點；(2) 驗收拆成 Agent／Human Verification，要人驗或依賴實際環境的項目列成清單交給人，必要時設停點；(3) 遇到 repo 外的環境阻塞（Docker、主機、權限、GUI）就回報最小解法並停下，不自己繞 |
 | `dev-flow` | 5 / 0（全在 08-27） | 濃縮：申請狀態規則只寫一次並以 `cota` 為準，偏航改成表格；階段、AA 檢查項與輸出不變 |
 | `engineering-judgment` | 2 / 1 | 觸發條件收窄：只有明確要求「教我判斷」時才用；一般的 A／B 選擇照全域規則直接給推薦 |
 | `compass` + `blueprint` | 各 1 / 0 | 合併成 `compass`，分成「校正」與「收斂成方案」兩個模式；`blueprint` 刪除 |

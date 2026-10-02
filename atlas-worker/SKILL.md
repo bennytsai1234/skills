@@ -40,7 +40,7 @@ If these are materially contradictory, stop and report the conflict to Relay. Do
 4. Check whether an existing abstraction already owns the intended behavior and avoid duplicating that ownership.
 5. Follow the confirmed Recommended Solution and ordered Implementation Steps.
 6. Modify every source/test file genuinely required by the Goal.
-7. Run the package Acceptance checks and any directly necessary supporting checks.
+7. Run the package Agent Verification checks and any directly necessary supporting checks.
 8. Check the final result directly against Goal and negative/regression cases.
 
 Do not redo Planner's broad product discussion or architecture exploration unless the repository presents evidence that the package is based on a false premise.
@@ -68,7 +68,8 @@ Use evidence that proves the package, not maximal testing by default.
 - Add or extend tests when they directly prove an Acceptance item or prevent the diagnosed regression.
 - Run the smallest decisive checks first.
 - Expand for new failures, unresolved uncertainty, cross-cutting impact, or explicit package requirements.
-- If a required service/tool/resource is unavailable, report exactly what could not run and what equivalent evidence exists.
+- Run Agent Verification. Do not try to perform Human Verification items the tools cannot drive; list them as not run.
+- If a required service/tool/resource is unavailable, use the repository's scripted headless way to start it when one exists. If that fails, or fixing it would mean changing things outside the repository (system services, desktop apps, hosts, credentials), stop and report the blocker under `Needs Relay` with the smallest action that unblocks it. Do not cycle through workarounds or swap environments.
 
 Never weaken a test, swallow an exception, add a test-only production branch, or hardcode a special case merely to satisfy Acceptance.
 
