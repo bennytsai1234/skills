@@ -22,6 +22,10 @@ Use the known GPU machines only when the task actually involves them. Read `refe
 - On a host documented as having no public Internet access, do not waste time repeatedly attempting public package/model downloads. Use already-present resources, internal mirrors, or stage files through an allowed connected machine when that is part of the requested workflow.
 - On an Internet-capable host, normal external downloads are possible but still follow project/version requirements.
 
+## Line endings
+
+Scripts and config files copied from Windows to these hosts must not contain CRLF; a shell script with CRLF fails on the host (`$'\r': command not found`). Files written on Windows by Python text mode or PowerShell `Set-Content`／`Out-File` get CRLF, so write them with LF (Python `newline="\n"`), or check the files before copying them.
+
 ## Secrets
 
 The reference contains non-secret connection metadata only. Never write private key bytes, passwords, tokens, passphrases, or other secrets into this skill/repository or user-visible logs.

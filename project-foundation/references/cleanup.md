@@ -68,13 +68,10 @@ A cleanup only lasts if everyday work keeps the shape. Every repository this ski
 - No `docs/` documents: rules go here, results go into the run's `notes.md`, deploy steps go into the target's run script, behavior specs go into tests, work history goes into commit messages.
 - Scratch files, downloads and handoff bundles stay outside the repository or in ignored paths, and are removed when the task ends.
 - Deploying a new version overwrites the service's fixed tag and keeps nothing else (no rollback copies); this project's leftover tags, stopped containers and unused weights on the host are listed and, after confirmation, removed as part of the same deployment.
-- Text files are LF (`.gitattributes` and `.editorconfig` enforce it). Code that writes files on Windows passes `newline="\n"`. Before copying anything to a Linux host, `git ls-files --eol | grep w/crlf` must print nothing.
 - Before reporting a task done, check `git status` and the top level for new stray files.
 ```
 
 Leave out lines that do not apply (for example the host rule in a repository that deploys nowhere) rather than keeping them as placeholders.
-
-Every repository also gets `.gitattributes` (`* text=auto eol=lf`, with `*.bat`/`*.cmd` as `eol=crlf`) and `.editorconfig` (`end_of_line = lf`). When adding them, convert working-tree files that are still CRLF and run `git add --renormalize .`; with non-ASCII paths, list files with `git -c core.quotepath=off ls-files --eol`.
 
 ## The `AGENTS.md` delivery workflow (addressed to GPT／Codex)
 
@@ -87,7 +84,7 @@ Every repository this skill organizes gets the section below in `AGENTS.md`, und
 
 Each step has a fixed name and a fixed place, so a deploy overwrites what was there and leaves nothing behind.
 
-1. Source is a commit. Commit first, then package with `git archive HEAD`, not from the working tree; the content is exactly what was committed and line endings are LF.
+1. Source is a commit. Commit first, then package with `git archive HEAD`, not from the working tree; the content is exactly what was committed.
 2. Fixed staging. Each target has one staging directory on the host (`<deploy root>/staging/<target>/`). Empty it, unpack, build, empty it again.
 3. Fixed tag. Each service has one tag named after it (`<service>:<target>`); the build overwrites it. Dockerfiles carry `LABEL project=<project>`, so after the deploy `docker image prune -f --filter label=project=<project>` removes the layers the overwrite left dangling, without touching other users' images.
 4. Stream images. Move images with `docker save <tag> | gzip | ssh <host> 'gunzip | docker load'`: no tarball lands anywhere. Only an offline target that cannot be reached gets a delivery directory, at one fixed path, overwritten by the next package.
@@ -96,7 +93,7 @@ Each step has a fixed name and a fixed place, so a deploy overwrites what was th
 7. History lives in git. Code history is git; data the service maintains (term lists, caches) lives in the persistent data volume that deploys do not overwrite. So no backup copies are made; a temporary copy needed mid-operation is deleted in the same step.
 8. One script per job. A new model version is a new parameter value of the existing script, not a copied `build_vN.py`.
 9. Records: the commit message says what changed and how it was verified; a lasting rule goes into this file; an experiment result goes into its run's `notes.md`. Probes and test audio live in that run, not in the deploy root.
-10. Report in three short parts: what changed, what was verified, what is still pending. No restating the scope, no step-by-step narration.
+10. Keep the report short: what changed and how it was verified. No restating the scope, no step-by-step narration.
 ```
 
 Drop steps that cannot apply (for example image steps in a repository that builds no images) rather than keeping placeholders.
