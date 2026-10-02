@@ -19,7 +19,7 @@ The desired result is a working CUA session whose cua.getState() returns the cur
 
 2. The script must verify all of these with the same runtime Node executable:
 
-   - @oai/cua/tinyskyAlt exports setupCUA.
+   - @oai/cua/tinyskyAlt resolves. It is not imported here: since runtime 0.0.27 it reads CUA_REPL_ENABLED_SURFACES from node_repl's globalThis.nodeRepl, so a plain Node import always fails with "CUA_REPL_ENABLED_SURFACES is required"; step 3 covers it.
    - @oai/sky and @oai/sky/service import successfully.
    - The runtime's own setup.ps1 validation passes.
 
@@ -32,4 +32,4 @@ The desired result is a working CUA session whose cua.getState() returns the cur
 - Do not use Computer Use to open a terminal or execute repair commands. Run the PowerShell script through the normal command tool, then use CUA only for the final runtime/UI verification.
 - Do not print or persist passwords, tokens, or other sensitive values while testing.
 
-Report the exact runtime root, the number of aliases created or skipped, the three import results, the setup.ps1 result, and whether cua.getState() succeeded. If final CUA verification is unavailable, distinguish that from a failed package repair.
+Report the exact runtime root, the number of aliases created or skipped, the three package check results, the setup.ps1 result, and whether cua.getState() succeeded. If final CUA verification is unavailable, distinguish that from a failed package repair.

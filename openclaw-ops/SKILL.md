@@ -165,8 +165,8 @@ This is the fastest ground-truth command because it checks both runtime state an
    If a provider's auth starts failing after an update, inspect both auth profiles and auth state:
    ```bash
    openclaw models auth list
-   cat ~/.openclaw/agents/main/agent/auth-profiles.json
-   cat ~/.openclaw/agents/main/agent/auth-state.json
+   jq 'walk(if type == "object" then with_entries(if (.key | test("key|token|secret|password"; "i")) then .value = "<redacted>" else . end) else . end)' ~/.openclaw/agents/main/agent/auth-profiles.json
+   jq 'walk(if type == "object" then with_entries(if (.key | test("key|token|secret|password"; "i")) then .value = "<redacted>" else . end) else . end)' ~/.openclaw/agents/main/agent/auth-state.json
    ```
    Watch for `lastGood` still pointing at an older OAuth profile with `expires = 0`, `unknown`, cooldown markers, or prior auth failures. **This pitfall only applies to OAuth providers (e.g. `openai-codex`). Static API key providers (e.g. `minimax`, `minimax-portal`) store the key in `auth-profiles.json` and it survives updates without any re-login.**
 
@@ -217,8 +217,8 @@ If the gateway is up but model behavior changed after an update:
 9. After re-login, inspect the resulting profile shape before declaring victory:
    ```bash
    openclaw models auth list
-   cat ~/.openclaw/agents/main/agent/auth-profiles.json
-   cat ~/.openclaw/agents/main/agent/auth-state.json
+   jq 'walk(if type == "object" then with_entries(if (.key | test("key|token|secret|password"; "i")) then .value = "<redacted>" else . end) else . end)' ~/.openclaw/agents/main/agent/auth-profiles.json
+   jq 'walk(if type == "object" then with_entries(if (.key | test("key|token|secret|password"; "i")) then .value = "<redacted>" else . end) else . end)' ~/.openclaw/agents/main/agent/auth-state.json
    ```
 
 ## Plugin & State Maintenance

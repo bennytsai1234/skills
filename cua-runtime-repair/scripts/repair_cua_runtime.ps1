@@ -146,14 +146,19 @@ foreach ($item in $encodedItems) {
 Write-Info "aliases created=$createdCount skipped=$skippedCount pending=$pendingCount invalid=$invalidCount"
 
 $probe = @'
+// tinyskyAlt reads its config from node_repl's globalThis.nodeRepl when imported, so outside
+// the REPL only its resolution can be checked; cua.getState() in the REPL is the final check.
+const resolveOnly = new Set(["@oai/cua/tinyskyAlt"]);
 const packages = ["@oai/cua/tinyskyAlt", "@oai/sky", "@oai/sky/service"];
 let failed = false;
 for (const packageName of packages) {
   try {
-    const imported = await import(packageName);
-    if (packageName === "@oai/cua/tinyskyAlt" && typeof imported.setupCUA !== "function") {
-      throw new Error("setupCUA export missing");
+    if (resolveOnly.has(packageName)) {
+      import.meta.resolve(packageName);
+      console.log(packageName + ":resolved");
+      continue;
     }
+    await import(packageName);
     console.log(packageName + ":ok");
   } catch (error) {
     failed = true;

@@ -141,7 +141,7 @@ EXECUTION_ROUTE: gpt-subagent | claude-p
 - <only real non-inferable requirements; omit when none>
 
 ## Starting Points
-- <module docs, symbols, routes, tests, or files that accelerate orientation>
+- <symbols, routes, tests, or files that accelerate orientation>
 
 ## Completion record
 <left empty by Planner; Relay fills it only after acceptance>
@@ -203,13 +203,13 @@ Worker reports:
   <actual output>
 
 ## Risks
-- <real remaining uncertainty or none>
+- <real remaining uncertainty>
 
 ## Needs Relay
-- <conflict/adjustment request or none>
+- <conflict/adjustment request>
 ```
 
-Evidence is actual output or observable result, not a claim that something passed.
+Omit `Risks` and `Needs Relay` when there is nothing to report. Evidence is actual output or observable result, not a claim that something passed.
 
 ## 9. Acceptance
 
@@ -229,7 +229,7 @@ When a fixable gap exists, return only the gaps to the same package/worker.
 After accepting a package, Relay:
 
 1. writes the `Completion record` (actual changes, adjustments, verification, unavailable resources, residual risk);
-2. pulls a decision the accepted work verified, and still-open residual risk, up into the repository `AGENTS.md` (decision labeled `[verified]`, pointing at the commit or evidence);
+2. if the accepted work established a lasting rule that future work in this repository must follow, adds it to the repository `AGENTS.md` as a plain rule; residual risk stays in the completion record;
 3. deletes the package file;
 4. applies `DELIVERY_POLICY`, putting the completion record in the commit message body when it commits; under `no commit` the record goes into the Relay report;
 5. then starts the next package.

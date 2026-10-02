@@ -34,7 +34,7 @@ If these are materially contradictory, stop and report the conflict to Relay. Do
 
 ## Implement
 
-1. Start from the provided module docs / Starting Points when present.
+1. Start from the Starting Points when present.
 2. Inspect the live code, data flow, call sites, and tests needed to implement the package correctly.
 3. Confirm the diagnosed cause still matches repository reality.
 4. Check whether an existing abstraction already owns the intended behavior and avoid duplicating that ownership.
@@ -87,11 +87,9 @@ Never weaken a test, swallow an exception, add a test-only production branch, or
 
 ## Risks
 - <real remaining uncertainty>
-- <or: none>
 
 ## Needs Relay
 - <adjustment/conflict Relay must resolve>
-- <or: none>
 ```
 
-Use actual output or observable result. Do not restate the whole package or add exploration narration.
+Omit `Risks` and `Needs Relay` when there is nothing to report. Use actual output or observable result. Do not restate the whole package or add exploration narration.

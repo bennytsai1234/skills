@@ -77,7 +77,7 @@ When a fixable gap exists, return only the concrete gaps to the same package/wor
 After acceptance:
 
 1. Write the `Completion record`: actual changes, implementation adjustments, verification evidence, unavailable resources, and residual risk.
-2. Pull a decision the accepted work verified, and still-open residual risk, up into the repository `AGENTS.md` (decision labeled `[verified]`, pointing at the commit or evidence).
+2. If the accepted work established a lasting rule that future work in this repository must follow, add it to the repository `AGENTS.md` as a plain rule. Residual risk stays in the completion record.
 3. Delete the package file from `docs/changes/planning/`; there is no completed archive.
 4. Apply `DELIVERY_POLICY`:
    - `no commit` -> leave accepted changes in the working tree and put the completion record in the report;

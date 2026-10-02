@@ -177,8 +177,8 @@ Recommended checks:
 ```bash
 openclaw models auth list
 openclaw models status
-cat ~/.openclaw/agents/main/agent/auth-profiles.json
-cat ~/.openclaw/agents/main/agent/auth-state.json
+jq 'walk(if type == "object" then with_entries(if (.key | test("key|token|secret|password"; "i")) then .value = "<redacted>" else . end) else . end)' ~/.openclaw/agents/main/agent/auth-profiles.json
+jq 'walk(if type == "object" then with_entries(if (.key | test("key|token|secret|password"; "i")) then .value = "<redacted>" else . end) else . end)' ~/.openclaw/agents/main/agent/auth-state.json
 systemctl --user status openclaw-gateway.service --no-pager -n 25
 ```
 
